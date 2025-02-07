@@ -1,0 +1,78 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Build and Publish
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    name: Build Binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [ "linux", "darwin" ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.18'
+
+      - name: Build binary for ${{ matrix.goos }}
+        shell: bash
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=amd64 go build \
+            -ldflags "-X main.Version=dev-$(date -u +%Y%m%d%H%M)" \
+            -o gibidi-${{ matrix.goos }} \
+            .
+
+      - name: Upload artifact for ${{ matrix.goos }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: gibidify-${{ matrix.goos }}
+          path: gibidify-${{ matrix.goos }}
+
+  docker:
+    name: Build and Publish Docker Image
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Download Linux binary artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: gibidify-linux
+          path: ./build
+
+      - name: Build Docker image
+        shell: bash
+        run: |
+          cp ./build/gibidi-linux ./gibidi
+          chmod +x ./gibidi
+          docker build -t ghcr.io/${{ github.repository }}/gibidi:${{ github.ref_name }} .
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
+        uses: docker/push-action@v2
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/gibidi:${{ github.ref_name }}
