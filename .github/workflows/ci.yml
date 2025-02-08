@@ -31,7 +31,7 @@ jobs:
         run: |
           GOOS=${{ matrix.goos }} GOARCH=amd64 go build \
             -ldflags "-X main.Version=dev-$(date -u +%Y%m%d%H%M)" \
-            -o gibidi-${{ matrix.goos }} \
+            -o gibidify-${{ matrix.goos }} \
             .
 
       - name: Upload artifact for ${{ matrix.goos }}
