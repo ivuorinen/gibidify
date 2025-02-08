@@ -14,7 +14,7 @@ import (
 // TestIntegrationFullCLI simulates a full run of the CLI application using adaptive concurrency.
 func TestIntegrationFullCLI(t *testing.T) {
 	// Create a temporary source directory and populate it with test files.
-	srcDir, err := ioutil.TempDir("", "gibidi_src")
+	srcDir, err := ioutil.TempDir("", "gibidify_src")
 	if err != nil {
 		t.Fatalf("Failed to create temp source directory: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestIntegrationFullCLI(t *testing.T) {
 	}
 
 	// Create a temporary output file.
-	outFile, err := ioutil.TempFile("", "gibidi_output.txt")
+	outFile, err := ioutil.TempFile("", "gibidify_output.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp output file: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestIntegrationFullCLI(t *testing.T) {
 // TestIntegrationCancellation verifies that the application correctly cancels processing when the context times out.
 func TestIntegrationCancellation(t *testing.T) {
 	// Create a temporary source directory with many files to simulate a long-running process.
-	srcDir, err := ioutil.TempDir("", "gibidi_src_long")
+	srcDir, err := ioutil.TempDir("", "gibidify_src_long")
 	if err != nil {
 		t.Fatalf("Failed to create temp source directory: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestIntegrationCancellation(t *testing.T) {
 	}
 
 	// Create a temporary output file.
-	outFile, err := ioutil.TempFile("", "gibidi_output.txt")
+	outFile, err := ioutil.TempFile("", "gibidify_output.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp output file: %v", err)
 	}

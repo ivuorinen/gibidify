@@ -13,20 +13,29 @@ func TestProcessFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}(tmpFile.Name())
 
 	content := "Test content"
 	if _, err := tmpFile.WriteString(content); err != nil {
 		t.Fatal(err)
 	}
-	tmpFile.Close()
+	errTmpFile := tmpFile.Close()
+	if errTmpFile != nil {
+		t.Fatal(errTmpFile)
+		return
+	}
 
 	ch := make(chan WriteRequest, 1)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ProcessFile(tmpFile.Name(), ch, nil)
+		ProcessFile(tmpFile.Name(), ch, "")
 	}()
 	wg.Wait()
 	close(ch)

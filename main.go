@@ -7,12 +7,12 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/fileproc"
-	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,6 +22,7 @@ var (
 	prefix      string
 	suffix      string
 	concurrency int
+	format      string
 )
 
 func init() {
@@ -29,6 +30,7 @@ func init() {
 	flag.StringVar(&destination, "destination", "", "Output file to write aggregated code")
 	flag.StringVar(&prefix, "prefix", "", "Text to add at the beginning of the output file")
 	flag.StringVar(&suffix, "suffix", "", "Text to add at the end of the output file")
+	flag.StringVar(&format, "format", "json", "Output format (json, markdown, yaml)")
 	flag.IntVar(&concurrency, "concurrency", runtime.NumCPU(), "Number of concurrent workers (default: number of CPU cores)")
 }
 
@@ -36,115 +38,96 @@ func init() {
 func Run(ctx context.Context) error {
 	flag.Parse()
 
-	if sourceDir == "" || destination == "" {
-		return fmt.Errorf(
-			"usage: gibidify " +
-				"-source <source_directory> " +
-				"-destination <output_file> " +
-				"[--prefix=\"...\"] " +
-				"[--suffix=\"...\"] " +
-				"[-concurrency=<num>]",
-		)
+	// We need at least a source directory
+	if sourceDir == "" {
+		return fmt.Errorf("usage: gibidify -source <source_directory> [--destination <output_file>] [--format=json|yaml|markdown] ")
 	}
 
-	// Load configuration using Viper.
+	// If destination is not specified, auto-generate it using the base name of sourceDir + "." + format
+	if destination == "" {
+		absRoot, err := filepath.Abs(sourceDir)
+		if err != nil {
+			return fmt.Errorf("failed to get absolute path for %s: %w", sourceDir, err)
+		}
+		baseName := filepath.Base(absRoot)
+		// If sourceDir ends with a slash, baseName might be "." so handle that case as needed
+		if baseName == "." || baseName == "" {
+			baseName = "output"
+		}
+		destination = baseName + "." + format
+	}
+
 	config.LoadConfig()
 
-	logrus.Infof(
-		"Starting gibidify. Source: %s, Destination: %s, Workers: %d",
-		sourceDir,
-		destination,
-		concurrency,
-	)
+	logrus.Infof("Starting gibidify. Format: %s, Source: %s, Destination: %s, Workers: %d", format, sourceDir, destination, concurrency)
 
-	// 1. Collect files using the file walker (ProdWalker).
+	// Collect files
 	files, err := fileproc.CollectFiles(sourceDir)
 	if err != nil {
 		return fmt.Errorf("error collecting files: %w", err)
 	}
 	logrus.Infof("Found %d files to process", len(files))
 
-	// 2. Open the destination file and write the header.
+	// Open output file
 	outFile, err := os.Create(destination)
 	if err != nil {
 		return fmt.Errorf("failed to create output file %s: %w", destination, err)
 	}
 	defer func(outFile *os.File) {
-		err := outFile.Close()
-		if err != nil {
-			logrus.Errorf("failed to close output file %s: %v", destination, err)
+		if err := outFile.Close(); err != nil {
+			logrus.Errorf("Error closing output file: %v", err)
 		}
 	}(outFile)
 
-	header := prefix + "\n" +
-		"The following text is a Git repository with code. " +
-		"The structure of the text are sections that begin with ----, " +
-		"followed by a single line containing the file path and file name, " +
-		"followed by a variable amount of lines containing the file contents. " +
-		"The text representing the Git repository ends when the symbols --END-- are encountered.\n"
-
-	if _, err := outFile.WriteString(header); err != nil {
-		return fmt.Errorf("failed to write header: %w", err)
-	}
-
-	// 3. Set up channels and a worker pool for processing files.
+	// Create channels
 	fileCh := make(chan string)
 	writeCh := make(chan fileproc.WriteRequest)
+	writerDone := make(chan struct{})
+
+	// Start writer goroutine
+	go fileproc.StartWriter(outFile, writeCh, writerDone, format, prefix, suffix)
+
 	var wg sync.WaitGroup
 
-	// Start the writer goroutine.
-	writerDone := make(chan struct{})
-	go fileproc.StartWriter(outFile, writeCh, writerDone)
-
-	// Start worker goroutines.
+	// Start worker goroutines with context cancellation
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for {
 				select {
-				case fp, ok := <-fileCh:
+				case <-ctx.Done():
+					return
+				case filePath, ok := <-fileCh:
 					if !ok {
 						return
 					}
-					// Process the file.
-					fileproc.ProcessFile(fp, writeCh, nil)
-				case <-ctx.Done():
-					return
+					// Pass sourceDir to ProcessFile so it knows the 'root'
+					absRoot, err := filepath.Abs(sourceDir)
+					if err != nil {
+						logrus.Errorf("Failed to get absolute path for %s: %v", sourceDir, err)
+						return
+					}
+					fileproc.ProcessFile(filePath, writeCh, absRoot)
 				}
 			}
 		}()
 	}
 
-	// Feed file paths to the worker pool with progress bar feedback.
-	bar := progressbar.Default(int64(len(files)))
-loop:
+	// Feed files to worker pool while checking for cancellation
 	for _, fp := range files {
 		select {
-		case fileCh <- fp:
-			_ = bar.Add(1)
 		case <-ctx.Done():
 			close(fileCh)
-			break loop
+			return ctx.Err()
+		case fileCh <- fp:
 		}
 	}
 	close(fileCh)
 
-	// Wait for all workers to finish.
 	wg.Wait()
 	close(writeCh)
 	<-writerDone
-
-	// Check for context cancellation.
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
-	// 4. Write footer.
-	footer := "--END--\n" + suffix
-	if _, err := outFile.WriteString(footer); err != nil {
-		return fmt.Errorf("failed to write footer: %w", err)
-	}
 
 	logrus.Infof("Processing completed. Output saved to %s", destination)
 	return nil

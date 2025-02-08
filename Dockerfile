@@ -9,4 +9,3 @@ RUN chmod +x /usr/local/bin/gibidify
 
 # Set the entrypoint
 ENTRYPOINT ["/usr/local/bin/gibidify"]
-

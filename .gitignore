@@ -1,2 +1,9 @@
+.DS_Store
+.idea
 gibidify
+gibidify.json
 gibidify.txt
+gibidify.yaml
+output.json
+output.txt
+output.yaml
