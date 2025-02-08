@@ -53,11 +53,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gibidify-linux
-          path: ./build
+          path: .
 
       - name: Build Docker image
         shell: bash
         run: |
-          cp ./build/gibidi-linux ./gibidi
+          cp ./gibidi-linux ./gibidi
           chmod +x ./gibidi
           docker build -t ghcr.io/${{ github.repository }}/gibidi:${{ github.ref_name }} .
