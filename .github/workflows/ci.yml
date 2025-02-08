@@ -58,6 +58,6 @@ jobs:
       - name: Build Docker image
         shell: bash
         run: |
-          cp ./gibidi-linux ./gibidi
-          chmod +x ./gibidi
-          docker build -t ghcr.io/${{ github.repository }}/gibidi:${{ github.ref_name }} .
+          cp ./gibidify-linux ./gibidify
+          chmod +x ./gibidify
+          docker build -t ghcr.io/${{ github.repository }}/gibidify:${{ github.ref_name }} .
