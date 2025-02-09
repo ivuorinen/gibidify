@@ -4,13 +4,18 @@ name: Go Tests with Coverage to SARIF
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
+permissions: read-all
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    permissions:
+      statuses: write
 
     steps:
       - name: Checkout code
@@ -38,8 +43,8 @@ jobs:
         shell: bash
         run: |
           coverage=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
-          echo “total_coverage=$coverage” >> $GITHUB_OUTPUT
-          echo “Coverage: $coverage%”
+          echo "total_coverage=$coverage" >> $GITHUB_OUTPUT
+          echo "Coverage: $coverage%"
 
       - name: Cleanup
         shell: bash
@@ -48,7 +53,7 @@ jobs:
       - name: Fail if coverage is below threshold
         shell: bash
         run: |
-          if (( $(echo “$total_coverage < 50” | bc -l) )); then
-            echo “Coverage ($total_coverage%) is below the threshold (50%)”
+          if (( $(echo "$total_coverage < 50" | bc -l) )); then
+            echo "Coverage ($total_coverage%) is below the threshold (50%)"
             exit 1
           fi
