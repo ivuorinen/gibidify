@@ -4,41 +4,51 @@ name: Go Tests with Coverage to SARIF
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  coverage:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: ‘1.23’
 
-      - name: Get dependencies
+      - name: Install dependencies
         shell: bash
         run: go mod tidy
 
-      - name: Run tests with coverage
+      - name: Run tests
+        shell: bash
+        run: go test -v ./...
+
+      - name: Generate coverage report
+        shell: bash
+        run: go test -coverprofile=coverage.out ./...
+
+      - name: Check coverage
+        id: coverage
         shell: bash
         run: |
-          go test -v -covermode=atomic -coverprofile=coverage.out ./...
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo “total_coverage=$coverage” >> $GITHUB_OUTPUT
+          echo “Coverage: $coverage%”
 
-      - name: Install go-coverage-to-sarif
+      - name: Cleanup
         shell: bash
-        run: go install github.com/michaelestrin/go-coverage-to-sarif@latest
+        run: rm coverage.out
 
-      - name: Convert Go coverage to SARIF
+      - name: Fail if coverage is below threshold
         shell: bash
-        run: go-coverage-to-sarif coverage.out coverage.sarif
-
-      - name: Upload SARIF to GitHub
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: coverage.sarif
+        run: |
+          if (( $(echo “$total_coverage < 50” | bc -l) )); then
+            echo “Coverage ($total_coverage%) is below the threshold (50%)”
+            exit 1
+          fi
