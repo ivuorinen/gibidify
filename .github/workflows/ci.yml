@@ -2,13 +2,16 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Build and Publish
 
+# yamllint disable-line rule:truthy
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   release:
-    types: [ created ]
+    types: [created]
+
+permissions: read-all
 
 permissions: read-all
 
@@ -16,9 +19,16 @@ jobs:
   build:
     name: Build Binaries
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      actions: write
+
     strategy:
       matrix:
-        goos: [ "linux", "darwin" ]
+        goos: ["linux", "darwin"]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
@@ -44,9 +54,15 @@ jobs:
 
   docker:
     name: Build and Publish Docker Image
+    if: github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+
+    permissions:
+      contents: read
+      packages: write
+      actions: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
