@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,24 +13,24 @@ import (
 // TestIntegrationFullCLI simulates a full run of the CLI application using adaptive concurrency.
 func TestIntegrationFullCLI(t *testing.T) {
 	// Create a temporary source directory and populate it with test files.
-	srcDir, err := ioutil.TempDir("", "gibidify_src")
+	srcDir, err := os.CreateTemp("", "gibidify_src")
 	if err != nil {
 		t.Fatalf("Failed to create temp source directory: %v", err)
 	}
-	defer os.RemoveAll(srcDir)
+	defer os.Remove(srcDir.Name())
 
 	// Create two test files.
-	file1 := filepath.Join(srcDir, "file1.txt")
-	if err := ioutil.WriteFile(file1, []byte("Hello World"), 0644); err != nil {
+	file1 := filepath.Join(srcDir.Name(), "file1.txt")
+	if err := os.WriteFile(file1, []byte("Hello World"), 0644); err != nil {
 		t.Fatalf("Failed to write file1: %v", err)
 	}
-	file2 := filepath.Join(srcDir, "file2.go")
-	if err := ioutil.WriteFile(file2, []byte("package main\nfunc main() {}"), 0644); err != nil {
+	file2 := filepath.Join(srcDir.Name(), "file2.go")
+	if err := os.WriteFile(file2, []byte("package main\nfunc main() {}"), 0644); err != nil {
 		t.Fatalf("Failed to write file2: %v", err)
 	}
 
 	// Create a temporary output file.
-	outFile, err := ioutil.TempFile("", "gibidify_output.txt")
+	outFile, err := os.CreateTemp("", "gibidify_output.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp output file: %v", err)
 	}
@@ -42,7 +41,7 @@ func TestIntegrationFullCLI(t *testing.T) {
 	// Set up CLI arguments.
 	os.Args = []string{
 		"gibidify",
-		"-source", srcDir,
+		"-source", srcDir.Name(),
 		"-destination", outFilePath,
 		"-prefix", "PREFIX",
 		"-suffix", "SUFFIX",
@@ -56,7 +55,7 @@ func TestIntegrationFullCLI(t *testing.T) {
 	}
 
 	// Verify the output file contains the expected prefix, file contents, and suffix.
-	data, err := ioutil.ReadFile(outFilePath)
+	data, err := os.ReadFile(outFilePath)
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}
@@ -75,22 +74,22 @@ func TestIntegrationFullCLI(t *testing.T) {
 // TestIntegrationCancellation verifies that the application correctly cancels processing when the context times out.
 func TestIntegrationCancellation(t *testing.T) {
 	// Create a temporary source directory with many files to simulate a long-running process.
-	srcDir, err := ioutil.TempDir("", "gibidify_src_long")
+	srcDir, err := os.CreateTemp("", "gibidify_src_long")
 	if err != nil {
 		t.Fatalf("Failed to create temp source directory: %v", err)
 	}
-	defer os.RemoveAll(srcDir)
+	defer os.RemoveAll(srcDir.Name())
 
 	// Create a large number of small files.
 	for i := 0; i < 1000; i++ {
-		filePath := filepath.Join(srcDir, fmt.Sprintf("file%d.txt", i))
-		if err := ioutil.WriteFile(filePath, []byte("Content"), 0644); err != nil {
+		filePath := filepath.Join(srcDir.Name(), fmt.Sprintf("file%d.txt", i))
+		if err := os.WriteFile(filePath, []byte("Content"), 0644); err != nil {
 			t.Fatalf("Failed to write %s: %v", filePath, err)
 		}
 	}
 
 	// Create a temporary output file.
-	outFile, err := ioutil.TempFile("", "gibidify_output.txt")
+	outFile, err := os.CreateTemp("", "gibidify_output.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp output file: %v", err)
 	}
@@ -101,7 +100,7 @@ func TestIntegrationCancellation(t *testing.T) {
 	// Set up CLI arguments.
 	os.Args = []string{
 		"gibidify",
-		"-source", srcDir,
+		"-source", srcDir.Name(),
 		"-destination", outFilePath,
 		"-prefix", "PREFIX",
 		"-suffix", "SUFFIX",
@@ -109,7 +108,10 @@ func TestIntegrationCancellation(t *testing.T) {
 	}
 
 	// Create a context with a very short timeout to force cancellation.
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		10*time.Millisecond,
+	)
 	defer cancel()
 
 	// Run the application; we expect an error due to cancellation.

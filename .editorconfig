@@ -8,5 +8,8 @@ indent_size = 2
 indent_style = tab
 tab_width = 2
 
+[*.yml]
+indent_style = space
+
 [*.md]
 trim_trailing_whitespace = false
