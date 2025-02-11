@@ -24,4 +24,4 @@ jobs:
       # kics-scan ignore
       - uses: ivuorinen/actions/pr-lint@main
         env:
-          TRIVY_SEVERITY=CRITICAL,HIGH
+          TRIVY_SEVERITY: CRITICAL,HIGH
