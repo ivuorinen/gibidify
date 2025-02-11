@@ -2,6 +2,8 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Sync labels
 
+permissions: read-all
+
 # yamllint disable-line rule:truthy
 on:
   push:

@@ -52,8 +52,8 @@ func TestLoadConfigFile(t *testing.T) {
 	configContent := []byte(`
 fileSizeLimit: 123456
 ignoreDirectories:
-  - "testdir1"
-  - "testdir2"
+	- "testdir1"
+	- "testdir2"
 `)
 
 	configPath := filepath.Join(tmpDir, "config.yaml")
