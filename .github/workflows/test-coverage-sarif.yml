@@ -16,9 +16,10 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      statuses: write
+      checks: write
       pull-requests: write
       security-events: write
+      statuses: write
 
     steps:
       - name: Checkout code
