@@ -13,15 +13,12 @@ on:
 
 permissions: read-all
 
-permissions: read-all
-
 jobs:
   build:
     name: Build Binaries
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
       packages: write
       actions: write
 
@@ -59,7 +56,6 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: read
       packages: write
       actions: write
 
