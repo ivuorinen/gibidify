@@ -20,6 +20,7 @@ on:
 jobs:
   SyncLabels:
     permissions:
+      contents: read
       issues: write
     runs-on: ubuntu-latest
     steps:

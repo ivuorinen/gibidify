@@ -30,7 +30,7 @@ func init() {
 	flag.StringVar(&destination, "destination", "", "Output file to write aggregated code")
 	flag.StringVar(&prefix, "prefix", "", "Text to add at the beginning of the output file")
 	flag.StringVar(&suffix, "suffix", "", "Text to add at the end of the output file")
-	flag.StringVar(&format, "format", "json", "Output format (json, markdown, yaml)")
+	flag.StringVar(&format, "format", "markdown", "Output format (json, markdown, yaml)")
 	flag.IntVar(&concurrency, "concurrency", runtime.NumCPU(), "Number of concurrent workers (default: number of CPU cores)")
 }
 
@@ -59,7 +59,13 @@ func Run(ctx context.Context) error {
 
 	config.LoadConfig()
 
-	logrus.Infof("Starting gibidify. Format: %s, Source: %s, Destination: %s, Workers: %d", format, sourceDir, destination, concurrency)
+	logrus.Infof(
+		"Starting gibidify. Format: %s, Source: %s, Destination: %s, Workers: %d",
+		format,
+		sourceDir,
+		destination,
+		concurrency,
+	)
 
 	// Collect files
 	files, err := fileproc.CollectFiles(sourceDir)
