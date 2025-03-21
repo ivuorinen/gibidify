@@ -7,8 +7,6 @@ permissions: read-all
 # yamllint disable-line rule:truthy
 on:
   push:
-    branches:
-      - main
     paths:
       - .github/workflows/sync-labels.yml
       - .github/labels.yml
@@ -24,4 +22,4 @@ jobs:
       issues: write
     runs-on: ubuntu-latest
     steps:
-      - uses: ivuorinen/actions/sync-labels@main
+      - uses: ivuorinen/actions/sync-labels@eb085adfe2779a1c52bfe1b2d0945b6c4241f54e # 25.3.19

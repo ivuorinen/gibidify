@@ -49,11 +49,11 @@ func TestLoadConfigFile(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	// Prepare a minimal config file
-	configContent := []byte(`
+	configContent := []byte(`---
 fileSizeLimit: 123456
 ignoreDirectories:
-	- "testdir1"
-	- "testdir2"
+- "testdir1"
+- "testdir2"
 `)
 
 	configPath := filepath.Join(tmpDir, "config.yaml")

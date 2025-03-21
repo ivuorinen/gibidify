@@ -1,3 +1,10 @@
+// Description: This file contains the writer logic for the file processor.
+//
+// The StartWriter function writes the output in the specified format.
+// The formatMarkdown function formats the output in Markdown format.
+// The detectLanguage function tries to infer the code block language from the file extension.
+// The OutputData struct represents the full output structure.
+// The FileData struct represents a single file's path and content.
 package fileproc
 
 import (
@@ -28,7 +35,7 @@ func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- stru
 
 	// Read from channel until closed
 	for req := range writeCh {
-		files = append(files, FileData{Path: req.Path, Content: req.Content})
+		files = append(files, FileData(req))
 	}
 
 	// Create output struct

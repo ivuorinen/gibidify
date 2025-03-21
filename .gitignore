@@ -8,3 +8,4 @@ output.json
 output.txt
 output.yaml
 coverage.out
+megalinter-reports/*

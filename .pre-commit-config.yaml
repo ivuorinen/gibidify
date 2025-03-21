@@ -5,3 +5,12 @@ repos:
       - id: megalinter-incremental # Faster, less thorough
         stages:
           - pre-commit
+  - repo: https://github.com/tekwizely/pre-commit-golang
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: go-build-mod
+        alias: build
+      - id: go-mod-tidy
+        alias: tidy
+      - id: go-fmt
+        alias: fmt
