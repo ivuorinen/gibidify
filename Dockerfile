@@ -1,5 +1,11 @@
 # Use a minimal base image
-FROM alpine:latest
+FROM alpine:3.21.2
+
+# Add user
+RUN useradd -ms /bin/bash gibidify
+
+# Use the new user
+USER gibidify
 
 # Copy the gibidify binary into the container
 COPY gibidify /usr/local/bin/gibidify

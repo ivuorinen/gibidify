@@ -3,43 +3,117 @@ package fileproc
 import (
 	"encoding/json"
 	"os"
+	"strings"
+	"sync"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
-func TestStartWriter_JSONOutput(t *testing.T) {
-	outFile, err := os.CreateTemp("", "output.json")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(name string) {
-		err := os.Remove(name)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}(outFile.Name())
-
-	writeCh := make(chan WriteRequest)
-	done := make(chan struct{})
-
-	go StartWriter(outFile, writeCh, done, "json", "Prefix", "Suffix")
-
-	writeCh <- WriteRequest{Path: "file1.go", Content: "package main"}
-	writeCh <- WriteRequest{Path: "file2.py", Content: "def hello(): print('Hello')"}
-
-	close(writeCh)
-	<-done
-
-	data, err := os.ReadFile(outFile.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var output OutputData
-	if err := json.Unmarshal(data, &output); err != nil {
-		t.Fatalf("JSON output is invalid: %v", err)
+func TestStartWriter_Formats(t *testing.T) {
+	// Define table-driven test cases
+	tests := []struct {
+		name        string
+		format      string
+		expectError bool
+	}{
+		{
+			name:        "JSON format",
+			format:      "json",
+			expectError: false,
+		},
+		{
+			name:        "YAML format",
+			format:      "yaml",
+			expectError: false,
+		},
+		{
+			name:        "Markdown format",
+			format:      "markdown",
+			expectError: false,
+		},
+		{
+			name:        "Invalid format",
+			format:      "invalid",
+			expectError: true,
+		},
 	}
 
-	if len(output.Files) != 2 {
-		t.Errorf("Expected 2 files, got %d", len(output.Files))
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			outFile, err := os.CreateTemp("", "gibidify_test_output")
+			if err != nil {
+				t.Fatalf("Failed to create temp file: %v", err)
+			}
+			defer func() {
+				outFile.Close()
+				os.Remove(outFile.Name())
+			}()
+
+			// Prepare channels
+			writeCh := make(chan WriteRequest, 2)
+			doneCh := make(chan struct{})
+
+			// Write a couple of sample requests
+			writeCh <- WriteRequest{Path: "sample.go", Content: "package main"}
+			writeCh <- WriteRequest{Path: "example.py", Content: "def foo(): pass"}
+			close(writeCh)
+
+			// Start the writer
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				StartWriter(outFile, writeCh, doneCh, tc.format, "PREFIX", "SUFFIX")
+			}()
+
+			// Wait until writer signals completion
+			wg.Wait()
+			<-doneCh // make sure all writes finished
+
+			// Read output
+			data, err := os.ReadFile(outFile.Name())
+			if err != nil {
+				t.Fatalf("Error reading output file: %v", err)
+			}
+
+			if tc.expectError {
+				// For an invalid format, we expect StartWriter to log an error
+				// and produce no content or minimal content. There's no official
+				// error returned, so check if it's empty or obviously incorrect.
+				if len(data) != 0 {
+					t.Errorf("Expected no output for invalid format, got:\n%s", data)
+				}
+			} else {
+				// Valid format: check basic properties in the output
+				content := string(data)
+				switch tc.format {
+				case "json":
+					// Quick parse check
+					var outStruct OutputData
+					if err := json.Unmarshal(data, &outStruct); err != nil {
+						t.Errorf("JSON unmarshal failed: %v", err)
+					}
+				case "yaml":
+					var outStruct OutputData
+					if err := yaml.Unmarshal(data, &outStruct); err != nil {
+						t.Errorf("YAML unmarshal failed: %v", err)
+					}
+				case "markdown":
+					// Check presence of code fences or "## File: ..."
+					if !strings.Contains(content, "```") {
+						t.Error("Expected markdown code fences not found")
+					}
+				}
+
+				// Prefix and suffix checks (common to JSON, YAML, markdown)
+				if !strings.Contains(string(data), "PREFIX") {
+					t.Errorf("Missing prefix in output: %s", data)
+				}
+				if !strings.Contains(string(data), "SUFFIX") {
+					t.Errorf("Missing suffix in output: %s", data)
+				}
+			}
+		})
 	}
 }

@@ -1,0 +1,68 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Go Tests with Coverage to SARIF
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions: read-all
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      checks: write
+      pull-requests: write
+      security-events: write
+      statuses: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: ivuorinen/gibidify
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Go
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
+        with:
+          go-version-file: "./go.mod"
+
+      - name: Install dependencies
+        shell: bash
+        run: go mod tidy
+
+      - name: Run tests
+        shell: bash
+        run: go test -v ./...
+
+      - name: Generate coverage report
+        shell: bash
+        run: go test -coverprofile=coverage.out ./...
+
+      - name: Check coverage
+        id: coverage
+        shell: bash
+        run: |
+          coverage=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "total_coverage=$coverage" >> "$GITHUB_OUTPUT"
+          echo "Coverage: $coverage%"
+
+      - name: Cleanup
+        shell: bash
+        run: rm coverage.out
+
+      - name: Fail if coverage is below threshold
+        shell: bash
+        run: |
+          if (( $(echo "$total_coverage < 50" | bc -l) )); then
+            echo "Coverage ($total_coverage%) is below the threshold (50%)"
+            exit 1
+          fi

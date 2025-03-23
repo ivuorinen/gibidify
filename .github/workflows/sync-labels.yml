@@ -1,0 +1,25 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Sync labels
+
+permissions: read-all
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    paths:
+      - .github/workflows/sync-labels.yml
+      - .github/labels.yml
+  schedule:
+    - cron: "34 5 * * *"
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  SyncLabels:
+    permissions:
+      contents: read
+      issues: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ivuorinen/actions/sync-labels@eb085adfe2779a1c52bfe1b2d0945b6c4241f54e # 25.3.19

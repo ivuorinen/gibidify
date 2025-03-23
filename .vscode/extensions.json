@@ -1,0 +1,3 @@
+{
+  "recommendations": ["esbenp.prettier-vscode", "AquaSecurityOfficial.trivy-vulnerability-scanner", "Bridgecrew.checkov", "exiasr.hadolint", "ms-vscode.Go", "streetsidesoftware.code-spell-checker"]
+}
