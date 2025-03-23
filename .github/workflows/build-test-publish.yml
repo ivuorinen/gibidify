@@ -61,6 +61,10 @@ jobs:
           name: test-results
           path: test-results.json
 
+      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: '3.13'
+
       - name: Convert test results to SARIF
         run: |
           pip install junit2sarif
