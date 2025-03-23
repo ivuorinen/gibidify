@@ -62,9 +62,10 @@ jobs:
           path: test-results.json
 
       - name: Convert test results to SARIF
-        run: |
-          go install github.com/mattn/go-json2sarif@latest
-          go-json2sarif -in test-results.json -out test-results.sarif
+        uses: advanced-security/test-results-to-sarif@v1
+        with:
+          output: test-results.sarif
+          input: test-results.json
 
       - name: Upload SARIF results
         uses: github/codeql-action/upload-sarif@b8d3b6e8af63cde30bdc382c0bc28114f4346c88 # v2.28.1
