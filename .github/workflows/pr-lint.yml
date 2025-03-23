@@ -23,6 +23,7 @@ jobs:
       contents: write # only for delete-branch option
       issues: write
       pull-requests: write
+      statuses: write
 
     steps:
-      - uses: ivuorinen/actions/pr-lint@main
+      - uses: ivuorinen/actions/pr-lint@eb085adfe2779a1c52bfe1b2d0945b6c4241f54e # 25.3.19
