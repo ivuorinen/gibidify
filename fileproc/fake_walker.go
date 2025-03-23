@@ -8,7 +8,7 @@ type FakeWalker struct {
 }
 
 // Walk returns predetermined file paths or an error, depending on FakeWalker's configuration.
-func (fw FakeWalker) Walk(root string) ([]string, error) {
+func (fw FakeWalker) Walk(_ string) ([]string, error) {
 	if fw.Err != nil {
 		return nil, fw.Err
 	}

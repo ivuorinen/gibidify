@@ -41,13 +41,13 @@ Run the Docker container:
 
 ```bash
 docker run --rm \
-  -v $(pwd):/workspace \
-  -v $HOME/.config/gibidify:/config \
-  ghcr.io/ivuorinen/gibidify:<tag> \
-  -source /workspace/your_source_directory \
-  -destination /workspace/output.txt \
-  --prefix="Your prefix text" \
-  --suffix="Your suffix text"
+	-v $(pwd):/workspace \
+	-v $HOME/.config/gibidify:/config \
+	ghcr.io/ivuorinen/gibidify:<tag> \
+	-source /workspace/your_source_directory \
+	-destination /workspace/output.txt \
+	--prefix="Your prefix text" \
+	--suffix="Your suffix text"
 ```
 
 ## Configuration
