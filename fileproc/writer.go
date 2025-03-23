@@ -1,4 +1,4 @@
-// Description: This file contains the writer logic for the file processor.
+// Package fileproc provides a writer for the output of the file processor.
 //
 // The StartWriter function writes the output in the specified format.
 // The formatMarkdown function formats the output in Markdown format.
