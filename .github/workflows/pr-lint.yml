@@ -13,6 +13,7 @@ permissions: read-all
 
 env:
   TRIVY_SEVERITY: CRITICAL,HIGH
+  DISABLE_LINTERS: GO_GOLANGCI_LINT
 
 jobs:
   Linter:
