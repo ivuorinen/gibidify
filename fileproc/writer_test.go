@@ -46,8 +46,12 @@ func TestStartWriter_Formats(t *testing.T) {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
 			defer func() {
-				outFile.Close()
-				os.Remove(outFile.Name())
+				if err := outFile.Close(); err != nil {
+					t.Errorf("close temp file: %v", err)
+				}
+				if err := os.Remove(outFile.Name()); err != nil {
+					t.Errorf("remove temp file: %v", err)
+				}
 			}()
 
 			// Prepare channels

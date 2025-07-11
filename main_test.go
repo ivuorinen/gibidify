@@ -17,7 +17,11 @@ func TestIntegrationFullCLI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp source directory: %v", err)
 	}
-	defer os.RemoveAll(srcDir)
+	defer func() {
+		if err := os.RemoveAll(srcDir); err != nil {
+			t.Fatalf("cleanup failed: %v", err)
+		}
+	}()
 
 	// Create two test files.
 	file1 := filepath.Join(srcDir, "file1.txt")
@@ -35,8 +39,14 @@ func TestIntegrationFullCLI(t *testing.T) {
 		t.Fatalf("Failed to create temp output file: %v", err)
 	}
 	outFilePath := outFile.Name()
-	outFile.Close()
-	defer os.Remove(outFilePath)
+	if err := outFile.Close(); err != nil {
+		t.Fatalf("close temp file: %v", err)
+	}
+	defer func() {
+		if err := os.Remove(outFilePath); err != nil {
+			t.Fatalf("cleanup output file: %v", err)
+		}
+	}()
 
 	// Set up CLI arguments.
 	os.Args = []string{
@@ -78,7 +88,11 @@ func TestIntegrationCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp source directory: %v", err)
 	}
-	defer os.RemoveAll(srcDir)
+	defer func() {
+		if err := os.RemoveAll(srcDir); err != nil {
+			t.Fatalf("cleanup failed: %v", err)
+		}
+	}()
 
 	// Create a large number of small files.
 	for i := 0; i < 1000; i++ {
@@ -94,8 +108,14 @@ func TestIntegrationCancellation(t *testing.T) {
 		t.Fatalf("Failed to create temp output file: %v", err)
 	}
 	outFilePath := outFile.Name()
-	outFile.Close()
-	defer os.Remove(outFilePath)
+	if err := outFile.Close(); err != nil {
+		t.Fatalf("close temp file: %v", err)
+	}
+	defer func() {
+		if err := os.Remove(outFilePath); err != nil {
+			t.Fatalf("cleanup output file: %v", err)
+		}
+	}()
 
 	// Set up CLI arguments.
 	os.Args = []string{

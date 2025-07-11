@@ -16,7 +16,11 @@ func TestDefaultConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Fatalf("cleanup failed: %v", err)
+		}
+	}()
 
 	// Point Viper to the temp directory with no config file.
 	originalConfigPaths := viper.ConfigFileUsed()
@@ -46,7 +50,11 @@ func TestLoadConfigFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			t.Fatalf("cleanup failed: %v", err)
+		}
+	}()
 
 	// Prepare a minimal config file
 	configContent := []byte(`---

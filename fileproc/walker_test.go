@@ -15,7 +15,11 @@ func TestProdWalkerWithIgnore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp root directory: %v", err)
 	}
-	defer os.RemoveAll(rootDir)
+	defer func() {
+		if err := os.RemoveAll(rootDir); err != nil {
+			t.Fatalf("cleanup failed: %v", err)
+		}
+	}()
 
 	subDir := filepath.Join(rootDir, "vendor")
 	if err := os.Mkdir(subDir, 0755); err != nil {
@@ -69,7 +73,11 @@ func TestProdWalkerBinaryCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp root directory: %v", err)
 	}
-	defer os.RemoveAll(rootDir)
+	defer func() {
+		if err := os.RemoveAll(rootDir); err != nil {
+			t.Fatalf("cleanup failed: %v", err)
+		}
+	}()
 
 	// Create a mock binary file
 	binFile := filepath.Join(rootDir, "somefile.exe")
@@ -108,7 +116,11 @@ func TestProdWalkerSizeLimit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp root directory: %v", err)
 	}
-	defer os.RemoveAll(rootDir)
+	defer func() {
+		if err := os.RemoveAll(rootDir); err != nil {
+			t.Fatalf("cleanup failed: %v", err)
+		}
+	}()
 
 	// Create a file exceeding the size limit
 	largeFilePath := filepath.Join(rootDir, "largefile.txt")
