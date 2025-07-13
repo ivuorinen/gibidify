@@ -1,4 +1,4 @@
-package fileproc
+package fileproc_test
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+	fileproc "github.com/ivuorinen/gibidify/fileproc"
 	"gopkg.in/yaml.v3"
 )
 
@@ -55,12 +56,12 @@ func TestStartWriter_Formats(t *testing.T) {
 			}()
 
 			// Prepare channels
-			writeCh := make(chan WriteRequest, 2)
+			writeCh := make(chan fileproc.WriteRequest, 2)
 			doneCh := make(chan struct{})
 
 			// Write a couple of sample requests
-			writeCh <- WriteRequest{Path: "sample.go", Content: "package main"}
-			writeCh <- WriteRequest{Path: "example.py", Content: "def foo(): pass"}
+			writeCh <- fileproc.WriteRequest{Path: "sample.go", Content: "package main"}
+			writeCh <- fileproc.WriteRequest{Path: "example.py", Content: "def foo(): pass"}
 			close(writeCh)
 
 			// Start the writer
@@ -68,7 +69,7 @@ func TestStartWriter_Formats(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				StartWriter(outFile, writeCh, doneCh, tc.format, "PREFIX", "SUFFIX")
+				fileproc.StartWriter(outFile, writeCh, doneCh, tc.format, "PREFIX", "SUFFIX")
 			}()
 
 			// Wait until writer signals completion
@@ -94,12 +95,12 @@ func TestStartWriter_Formats(t *testing.T) {
 				switch tc.format {
 				case "json":
 					// Quick parse check
-					var outStruct OutputData
+					var outStruct fileproc.OutputData
 					if err := json.Unmarshal(data, &outStruct); err != nil {
 						t.Errorf("JSON unmarshal failed: %v", err)
 					}
 				case "yaml":
-					var outStruct OutputData
+					var outStruct fileproc.OutputData
 					if err := yaml.Unmarshal(data, &outStruct); err != nil {
 						t.Errorf("YAML unmarshal failed: %v", err)
 					}

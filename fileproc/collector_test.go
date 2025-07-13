@@ -1,8 +1,10 @@
-package fileproc
+package fileproc_test
 
 import (
 	"os"
 	"testing"
+
+	fileproc "github.com/ivuorinen/gibidify/fileproc"
 )
 
 func TestCollectFilesWithFakeWalker(t *testing.T) {
@@ -11,7 +13,7 @@ func TestCollectFilesWithFakeWalker(t *testing.T) {
 		"/path/to/file1.txt",
 		"/path/to/file2.go",
 	}
-	fake := FakeWalker{
+	fake := fileproc.FakeWalker{
 		Files: expectedFiles,
 		Err:   nil,
 	}
@@ -35,7 +37,7 @@ func TestCollectFilesWithFakeWalker(t *testing.T) {
 
 func TestCollectFilesError(t *testing.T) {
 	// Fake walker returns an error.
-	fake := FakeWalker{
+	fake := fileproc.FakeWalker{
 		Files: nil,
 		Err:   os.ErrNotExist,
 	}

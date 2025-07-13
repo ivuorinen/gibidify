@@ -1,4 +1,4 @@
-package fileproc
+package fileproc_test
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gibidify/config"
+	fileproc "github.com/ivuorinen/gibidify/fileproc"
 	"github.com/spf13/viper"
 )
 
@@ -53,7 +54,7 @@ func TestProdWalkerWithIgnore(t *testing.T) {
 	viper.Set("ignoreDirectories", []string{"vendor"})
 
 	// Run walker
-	var w Walker = ProdWalker{}
+	var w fileproc.Walker = fileproc.ProdWalker{}
 	found, err := w.Walk(rootDir)
 	if err != nil {
 		t.Fatalf("Walk returned error: %v", err)
@@ -96,7 +97,7 @@ func TestProdWalkerBinaryCheck(t *testing.T) {
 	config.LoadConfig()
 
 	// Run walker
-	var w Walker = ProdWalker{}
+	var w fileproc.Walker = fileproc.ProdWalker{}
 	found, err := w.Walk(rootDir)
 	if err != nil {
 		t.Fatalf("Walk returned error: %v", err)
@@ -139,7 +140,7 @@ func TestProdWalkerSizeLimit(t *testing.T) {
 	viper.Reset()
 	config.LoadConfig()
 
-	var w Walker = ProdWalker{}
+	var w fileproc.Walker = fileproc.ProdWalker{}
 	found, err := w.Walk(rootDir)
 	if err != nil {
 		t.Fatalf("Walk returned error: %v", err)
