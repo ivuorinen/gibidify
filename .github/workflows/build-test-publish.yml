@@ -67,7 +67,7 @@ jobs:
 
       - name: Convert test results to SARIF
         run: |
-          pip install junit2sarif@latest
+          pip install junit2sarif
           junit2sarif --input test-results.json --output test-results.sarif
 
       - name: Upload SARIF results
