@@ -1,10 +1,12 @@
-package fileproc
+package fileproc_test
 
 import (
 	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	fileproc "github.com/ivuorinen/gibidify/fileproc"
 )
 
 func TestProcessFile(t *testing.T) {
@@ -30,12 +32,12 @@ func TestProcessFile(t *testing.T) {
 		return
 	}
 
-	ch := make(chan WriteRequest, 1)
+	ch := make(chan fileproc.WriteRequest, 1)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ProcessFile(tmpFile.Name(), ch, "")
+		fileproc.ProcessFile(tmpFile.Name(), ch, "")
 	}()
 	wg.Wait()
 	close(ch)

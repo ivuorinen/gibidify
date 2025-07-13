@@ -1,10 +1,11 @@
-package config
+package config_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 
+	configpkg "github.com/ivuorinen/gibidify/config"
 	"github.com/spf13/viper"
 )
 
@@ -26,15 +27,15 @@ func TestDefaultConfig(t *testing.T) {
 	originalConfigPaths := viper.ConfigFileUsed()
 	viper.Reset()
 	viper.AddConfigPath(tmpDir)
-	LoadConfig()
+	configpkg.LoadConfig()
 
 	// Check defaults
-	defaultSizeLimit := GetFileSizeLimit()
+	defaultSizeLimit := configpkg.GetFileSizeLimit()
 	if defaultSizeLimit != 5242880 {
 		t.Errorf("Expected default file size limit of 5242880, got %d", defaultSizeLimit)
 	}
 
-	ignoredDirs := GetIgnoredDirectories()
+	ignoredDirs := configpkg.GetIgnoredDirectories()
 	if len(ignoredDirs) == 0 {
 		t.Errorf("Expected some default ignored directories, got none")
 	}
