@@ -26,8 +26,22 @@ go build -o gibidify .
 ## Usage
 
 ```bash
-./gibidify -source <source_directory> -destination <output_file> [--prefix="..."] [--suffix="..."]
+./gibidify \
+  -source <source_directory> \
+  -destination <output_file> \
+  -format markdown|json|yaml \
+  -concurrency <num_workers> \
+  --prefix="..." \
+  --suffix="..."
 ```
+
+Flags:
+
+- `-source`: directory to scan.
+- `-destination`: output file path (optional; defaults to `<source>.<format>`).
+- `-format`: output format (`markdown`, `json`, or `yaml`).
+- `-concurrency`: number of concurrent workers.
+- `--prefix` / `--suffix`: optional text blocks.
 
 ## Docker
 
