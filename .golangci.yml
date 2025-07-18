@@ -1,0 +1,256 @@
+run:
+  timeout: 5m
+  tests: true
+  go: "1.24"
+  build-tags:
+    - test
+
+# golangci-lint configuration version
+version: 2
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  path-prefix: ""
+  sort-results: true
+
+linters:
+  enable-all: true
+  disable:
+    - depguard       # Too strict for general use
+    - exhaustruct    # Too many false positives
+    - ireturn        # Too restrictive on interfaces
+    - varnamelen     # Too opinionated on name length
+    - wrapcheck      # Too many false positives
+    - testpackage    # Tests in same package are fine
+    - paralleltest   # Not always necessary
+    - tparallel      # Not always necessary
+    - nlreturn       # Too opinionated on newlines
+    - wsl            # Too opinionated on whitespace
+    - nonamedreturns # Conflicts with gocritic unnamedResult
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    exclude-functions:
+      - io.Copy
+      - fmt.Print
+      - fmt.Printf
+      - fmt.Println
+
+  govet:
+    enable-all: true
+
+  gocyclo:
+    min-complexity: 15
+
+  gocognit:
+    min-complexity: 20
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  gofmt:
+    simplify: true
+    rewrite-rules:
+      - pattern: 'interface{}'
+        replacement: 'any'
+
+  goimports:
+    local-prefixes: github.com/ivuorinen/gibidify
+
+  golint:
+    min-confidence: 0.8
+
+  lll:
+    line-length: 120
+    tab-width: 2  # EditorConfig: tab_width = 2
+
+  misspell:
+    locale: US
+
+  nakedret:
+    max-func-lines: 30
+
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: true
+
+  revive:
+    enable-all-rules: true
+    rules:
+      - name: package-comments
+        disabled: true
+      - name: file-header
+        disabled: true
+      - name: max-public-structs
+        disabled: true
+      - name: line-length-limit
+        arguments: [120]
+      - name: function-length
+        arguments: [50, 100]
+      - name: cognitive-complexity
+        arguments: [20]
+      - name: cyclomatic
+        arguments: [15]
+      - name: add-constant
+        arguments:
+          - maxLitCount: "3"
+            allowStrs: "\"error\",\"\""
+            allowInts: "0,1,2"
+      - name: argument-limit
+        arguments: [6]
+      - name: banned-characters
+        disabled: true
+      - name: function-result-limit
+        arguments: [3]
+
+  gosec:
+    excludes:
+      - G104  # Handled by errcheck
+    severity: medium
+    confidence: medium
+    exclude-generated: true
+    config:
+      G301: "0750"
+      G302: "0640"
+      G306: "0640"
+
+  dupl:
+    threshold: 150
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - whyNoLint
+      - paramTypeCombine
+
+  gofumpt:
+    extra-rules: true
+
+  # EditorConfig compliance settings
+  # These settings enforce .editorconfig rules:
+  # - end_of_line = lf (enforced by gofumpt)
+  # - insert_final_newline = true (enforced by gofumpt)
+  # - trim_trailing_whitespace = true (enforced by whitespace linter)
+  # - indent_style = tab, tab_width = 2 (enforced by gofumpt and lll)
+  
+  whitespace:
+    multi-if: false     # EditorConfig: trim trailing whitespace
+    multi-func: false   # EditorConfig: trim trailing whitespace
+
+  nolintlint:
+    allow-leading-space: false  # EditorConfig: trim trailing whitespace
+    allow-unused: false
+    require-explanation: false
+    require-specific: true
+
+  godox:
+    keywords:
+      - FIXME
+      - BUG
+      - HACK
+
+  mnd:
+    settings:
+      mnd:
+        checks:
+          - argument
+          - case
+          - condition
+          - operation
+          - return
+          - assign
+        ignored-numbers:
+          - '0'
+          - '1'
+          - '2'
+          - '10'
+          - '100'
+
+  funlen:
+    lines: 80
+    statements: 60
+
+  nestif:
+    min-complexity: 5
+
+  gomodguard:
+    allowed:
+      modules: []
+      domains: []
+    blocked:
+      modules: []
+      versions: []
+
+issues:
+  exclude-use-default: false
+  exclude-case-sensitive: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: true
+  
+  exclude-dirs:
+    - vendor
+    - third_party
+    - testdata
+    - examples
+    - .git
+  
+  exclude-files:
+    - ".*\\.pb\\.go$"
+    - ".*\\.gen\\.go$"
+  
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+        - goconst
+        - funlen
+        - gocognit
+        - gocyclo
+        - errcheck
+        - lll
+        - nestif
+
+    - path: main\.go
+      linters:
+        - gochecknoglobals
+        - gochecknoinits
+
+    - path: fileproc/filetypes\.go
+      linters:
+        - gochecknoglobals  # Allow globals for singleton registry pattern
+
+    - text: "Using the variable on range scope"
+      linters:
+        - scopelint
+
+    - text: "should have comment or be unexported"
+      linters:
+        - golint
+        - revive
+
+    - text: "don't use ALL_CAPS in Go names"
+      linters:
+        - golint
+        - stylecheck
+
+  exclude:
+    - "Error return value of .* is not checked"
+    - "exported (type|method|function) .* should have comment"
+    - "ST1000: at least one file in a package should have a package comment"
+
+severity:
+  default-severity: error
+  case-sensitive: false

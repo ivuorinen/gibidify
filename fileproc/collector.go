@@ -4,6 +4,6 @@ package fileproc
 // CollectFiles scans the given root directory using the default walker (ProdWalker)
 // and returns a slice of file paths.
 func CollectFiles(root string) ([]string, error) {
-	var w Walker = ProdWalker{}
+	w := NewProdWalker()
 	return w.Walk(root)
 }

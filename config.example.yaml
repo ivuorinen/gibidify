@@ -1,0 +1,84 @@
+# gibidify configuration example
+# Place this file in one of these locations:
+# - $XDG_CONFIG_HOME/gibidify/config.yaml
+# - $HOME/.config/gibidify/config.yaml
+# - Current directory (if no gibidify.yaml output file exists)
+
+# File size limit in bytes (default: 5MB)
+fileSizeLimit: 5242880
+
+# Directories to ignore during scanning
+ignoreDirectories:
+  - vendor
+  - node_modules
+  - .git
+  - dist
+  - build
+  - target
+  - bower_components
+  - cache
+  - tmp
+  - .next
+  - .nuxt
+
+# FileType registry configuration
+fileTypes:
+  # Enable/disable file type detection entirely (default: true)
+  enabled: true
+  
+  # Add custom image extensions
+  customImageExtensions:
+    - .webp
+    - .avif
+    - .heic
+    - .jxl
+  
+  # Add custom binary extensions
+  customBinaryExtensions:
+    - .custom
+    - .proprietary
+    - .blob
+  
+  # Add custom language mappings
+  customLanguages:
+    .zig: zig
+    .odin: odin
+    .v: vlang
+    .grain: grain
+    .gleam: gleam
+    .roc: roc
+    .janet: janet
+    .fennel: fennel
+    .wast: wast
+    .wat: wat
+  
+  # Disable specific default image extensions
+  disabledImageExtensions:
+    - .bmp  # Disable bitmap support
+    - .tif  # Disable TIFF support
+  
+  # Disable specific default binary extensions
+  disabledBinaryExtensions:
+    - .exe  # Don't treat executables as binary
+    - .dll  # Don't treat DLL files as binary
+  
+  # Disable specific default language extensions
+  disabledLanguageExtensions:
+    - .bat  # Don't detect batch files
+    - .cmd  # Don't detect command files
+
+# Maximum concurrency (optional)
+maxConcurrency: 16
+
+# Supported output formats (optional validation)
+supportedFormats:
+  - json
+  - yaml
+  - markdown
+
+# File patterns for filtering (optional)
+filePatterns:
+  - "*.go"
+  - "*.py"
+  - "*.js"
+  - "*.ts"

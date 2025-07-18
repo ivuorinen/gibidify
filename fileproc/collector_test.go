@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	fileproc "github.com/ivuorinen/gibidify/fileproc"
+	"github.com/ivuorinen/gibidify/fileproc"
 )
 
 func TestCollectFilesWithFakeWalker(t *testing.T) {

@@ -9,3 +9,6 @@ output.txt
 output.yaml
 coverage.out
 megalinter-reports/*
+coverage.*
+*.out
+gibidify-benchmark

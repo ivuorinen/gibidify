@@ -1,64 +1,42 @@
 package fileproc_test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/ivuorinen/gibidify/config"
-	fileproc "github.com/ivuorinen/gibidify/fileproc"
 	"github.com/spf13/viper"
+
+	"github.com/ivuorinen/gibidify/fileproc"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 func TestProdWalkerWithIgnore(t *testing.T) {
 	// Create a temporary directory structure.
-	rootDir, err := os.MkdirTemp("", "walker_test_root")
-	if err != nil {
-		t.Fatalf("Failed to create temp root directory: %v", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(rootDir); err != nil {
-			t.Fatalf("cleanup failed: %v", err)
-		}
-	}()
+	rootDir := t.TempDir()
 
-	subDir := filepath.Join(rootDir, "vendor")
-	if err := os.Mkdir(subDir, 0755); err != nil {
-		t.Fatalf("Failed to create subDir: %v", err)
-	}
+	subDir := testutil.CreateTestDirectory(t, rootDir, "vendor")
 
 	// Write sample files
-	filePaths := []string{
-		filepath.Join(rootDir, "file1.go"),
-		filepath.Join(rootDir, "file2.txt"),
-		filepath.Join(subDir, "file_in_vendor.txt"), // should be ignored
-	}
-	for _, fp := range filePaths {
-		if err := os.WriteFile(fp, []byte("content"), 0644); err != nil {
-			t.Fatalf("Failed to write file %s: %v", fp, err)
-		}
-	}
+	testutil.CreateTestFiles(t, rootDir, []testutil.FileSpec{
+		{Name: "file1.go", Content: "content"},
+		{Name: "file2.txt", Content: "content"},
+	})
+	testutil.CreateTestFile(t, subDir, "file_in_vendor.txt", []byte("content")) // should be ignored
 
 	// .gitignore that ignores *.txt and itself
 	gitignoreContent := `*.txt
 .gitignore
 `
-	gitignorePath := filepath.Join(rootDir, ".gitignore")
-	if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644); err != nil {
-		t.Fatalf("Failed to write .gitignore: %v", err)
-	}
+	testutil.CreateTestFile(t, rootDir, ".gitignore", []byte(gitignoreContent))
 
 	// Initialize config to ignore "vendor" directory
-	viper.Reset()
-	config.LoadConfig()
+	testutil.ResetViperConfig(t, "")
 	viper.Set("ignoreDirectories", []string{"vendor"})
 
 	// Run walker
-	var w fileproc.Walker = fileproc.ProdWalker{}
+	w := fileproc.NewProdWalker()
 	found, err := w.Walk(rootDir)
-	if err != nil {
-		t.Fatalf("Walk returned error: %v", err)
-	}
+	testutil.MustSucceed(t, err, "walking directory")
 
 	// We expect only file1.go to appear
 	if len(found) != 1 {
@@ -70,38 +48,24 @@ func TestProdWalkerWithIgnore(t *testing.T) {
 }
 
 func TestProdWalkerBinaryCheck(t *testing.T) {
-	rootDir, err := os.MkdirTemp("", "walker_test_bincheck")
-	if err != nil {
-		t.Fatalf("Failed to create temp root directory: %v", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(rootDir); err != nil {
-			t.Fatalf("cleanup failed: %v", err)
-		}
-	}()
+	rootDir := t.TempDir()
 
-	// Create a mock binary file
-	binFile := filepath.Join(rootDir, "somefile.exe")
-	if err := os.WriteFile(binFile, []byte("fake-binary-content"), 0644); err != nil {
-		t.Fatalf("Failed to write file %s: %v", binFile, err)
-	}
-
-	// Create a normal file
-	normalFile := filepath.Join(rootDir, "keep.go")
-	if err := os.WriteFile(normalFile, []byte("package main"), 0644); err != nil {
-		t.Fatalf("Failed to write file %s: %v", normalFile, err)
-	}
+	// Create test files
+	testutil.CreateTestFiles(t, rootDir, []testutil.FileSpec{
+		{Name: "somefile.exe", Content: "fake-binary-content"},
+		{Name: "keep.go", Content: "package main"},
+	})
 
 	// Reset and load default config
-	viper.Reset()
-	config.LoadConfig()
+	testutil.ResetViperConfig(t, "")
+
+	// Reset FileTypeRegistry to ensure clean state
+	fileproc.ResetRegistryForTesting()
 
 	// Run walker
-	var w fileproc.Walker = fileproc.ProdWalker{}
+	w := fileproc.NewProdWalker()
 	found, err := w.Walk(rootDir)
-	if err != nil {
-		t.Fatalf("Walk returned error: %v", err)
-	}
+	testutil.MustSucceed(t, err, "walking directory")
 
 	// Only "keep.go" should be returned
 	if len(found) != 1 {
@@ -113,34 +77,17 @@ func TestProdWalkerBinaryCheck(t *testing.T) {
 }
 
 func TestProdWalkerSizeLimit(t *testing.T) {
-	rootDir, err := os.MkdirTemp("", "walker_test_sizelimit")
-	if err != nil {
-		t.Fatalf("Failed to create temp root directory: %v", err)
-	}
-	defer func() {
-		if err := os.RemoveAll(rootDir); err != nil {
-			t.Fatalf("cleanup failed: %v", err)
-		}
-	}()
+	rootDir := t.TempDir()
 
-	// Create a file exceeding the size limit
-	largeFilePath := filepath.Join(rootDir, "largefile.txt")
+	// Create test files
 	largeFileData := make([]byte, 6*1024*1024) // 6 MB
-	if err := os.WriteFile(largeFilePath, largeFileData, 0644); err != nil {
-		t.Fatalf("Failed to write large file: %v", err)
-	}
-
-	// Create a small file
-	smallFilePath := filepath.Join(rootDir, "smallfile.go")
-	if err := os.WriteFile(smallFilePath, []byte("package main"), 0644); err != nil {
-		t.Fatalf("Failed to write small file: %v", err)
-	}
+	testutil.CreateTestFile(t, rootDir, "largefile.txt", largeFileData)
+	testutil.CreateTestFile(t, rootDir, "smallfile.go", []byte("package main"))
 
 	// Reset and load default config, which sets size limit to 5 MB
-	viper.Reset()
-	config.LoadConfig()
+	testutil.ResetViperConfig(t, "")
 
-	var w fileproc.Walker = fileproc.ProdWalker{}
+	w := fileproc.NewProdWalker()
 	found, err := w.Walk(rootDir)
 	if err != nil {
 		t.Fatalf("Walk returned error: %v", err)

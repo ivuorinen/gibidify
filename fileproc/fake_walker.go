@@ -3,8 +3,8 @@ package fileproc
 
 // FakeWalker implements Walker for testing purposes.
 type FakeWalker struct {
-	Files []string
 	Err   error
+	Files []string
 }
 
 // Walk returns predetermined file paths or an error, depending on FakeWalker's configuration.

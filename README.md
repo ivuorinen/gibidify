@@ -7,11 +7,16 @@ file sections with separators, and a suffix.
 
 ## Features
 
-- Recursive scanning of a source directory.
-- File filtering based on size, glob patterns, and .gitignore rules.
-- Modular, concurrent file processing with progress bar feedback.
-- Configurable logging and configuration via Viper.
-- Cross-platform build with Docker packaging support.
+- **Recursive directory scanning** with smart file filtering
+- **Configurable file type detection** - add/remove extensions and languages
+- **Multiple output formats** - markdown, JSON, YAML
+- **Memory-optimized processing** - streaming for large files, intelligent back-pressure
+- **Concurrent processing** with configurable worker pools
+- **Comprehensive configuration** via YAML with validation
+- **Production-ready** with structured error handling and benchmarking
+- **Modular architecture** - clean, focused codebase with ~63ns registry lookups
+- **Enhanced CLI experience** - progress bars, colored output, helpful error messages
+- **Cross-platform** with Docker support
 
 ## Installation
 
@@ -32,7 +37,10 @@ go build -o gibidify .
   -format markdown|json|yaml \
   -concurrency <num_workers> \
   --prefix="..." \
-  --suffix="..."
+  --suffix="..." \
+  --no-colors \
+  --no-progress \
+  --verbose
 ```
 
 Flags:
@@ -42,6 +50,9 @@ Flags:
 - `-format`: output format (`markdown`, `json`, or `yaml`).
 - `-concurrency`: number of concurrent workers.
 - `--prefix` / `--suffix`: optional text blocks.
+- `--no-colors`: disable colored terminal output.
+- `--no-progress`: disable progress bars.
+- `--verbose`: enable verbose output and detailed logging.
 
 ## Docker
 
@@ -83,10 +94,38 @@ ignoreDirectories:
   - dist
   - build
   - target
-  - bower_components
-  - cache
-  - tmp
+
+# FileType customization
+fileTypes:
+  enabled: true
+  # Add custom file extensions
+  customImageExtensions:
+    - .webp
+    - .avif
+  customBinaryExtensions:
+    - .custom
+  customLanguages:
+    .zig: zig
+    .odin: odin
+    .v: vlang
+  # Disable default extensions
+  disabledImageExtensions:
+    - .bmp
+  disabledBinaryExtensions:
+    - .exe
+  disabledLanguageExtensions:
+    - .bat
+
+# Memory optimization (back-pressure management)
+backpressure:
+  enabled: true
+  maxPendingFiles: 1000      # Max files in file channel buffer
+  maxPendingWrites: 100      # Max writes in write channel buffer
+  maxMemoryUsage: 104857600  # 100MB max memory usage
+  memoryCheckInterval: 1000  # Check memory every 1000 files
 ```
+
+See `config.example.yaml` for a comprehensive configuration example.
 
 ## License
 

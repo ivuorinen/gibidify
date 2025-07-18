@@ -6,12 +6,15 @@ import (
 	"sync"
 	"testing"
 
-	fileproc "github.com/ivuorinen/gibidify/fileproc"
+	"github.com/ivuorinen/gibidify/fileproc"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 func TestProcessFile(t *testing.T) {
+	// Reset and load default config to ensure proper file size limits
+	testutil.ResetViperConfig(t, "")
 	// Create a temporary file with known content.
-	tmpFile, err := os.CreateTemp("", "testfile")
+	tmpFile, err := os.CreateTemp(t.TempDir(), "testfile")
 	if err != nil {
 		t.Fatal(err)
 	}
