@@ -1,0 +1,8 @@
+# checkmake configuration
+# See: https://github.com/mrtazz/checkmake#configuration
+
+[rules.timestampexpansion]
+disabled = true
+
+[rules.maxbodylength]
+disabled = true

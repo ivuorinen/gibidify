@@ -143,7 +143,7 @@ linters-settings:
   # - insert_final_newline = true (enforced by gofumpt)
   # - trim_trailing_whitespace = true (enforced by whitespace linter)
   # - indent_style = tab, tab_width = 2 (enforced by gofumpt and lll)
-  
+
   whitespace:
     multi-if: false     # EditorConfig: trim trailing whitespace
     multi-func: false   # EditorConfig: trim trailing whitespace
@@ -198,18 +198,18 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   uniq-by-line: true
-  
+
   exclude-dirs:
     - vendor
     - third_party
     - testdata
     - examples
     - .git
-  
+
   exclude-files:
     - ".*\\.pb\\.go$"
     - ".*\\.gen\\.go$"
-  
+
   exclude-rules:
     - path: _test\.go
       linters:

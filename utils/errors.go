@@ -93,11 +93,13 @@ func (e *StructuredError) WithLine(line int) *StructuredError {
 }
 
 // NewStructuredError creates a new structured error.
-func NewStructuredError(errorType ErrorType, code, message string) *StructuredError {
+func NewStructuredError(errorType ErrorType, code, message, filePath string, context map[string]interface{}) *StructuredError {
 	return &StructuredError{
-		Type:    errorType,
-		Code:    code,
-		Message: message,
+		Type:     errorType,
+		Code:     code,
+		Message:  message,
+		FilePath: filePath,
+		Context:  context,
 	}
 }
 
@@ -164,33 +166,43 @@ const (
 	CodeValidationFormat   = "FORMAT"
 	CodeValidationFileType = "FILE_TYPE"
 	CodeValidationSize     = "SIZE_LIMIT"
+	CodeValidationRequired = "REQUIRED"
+	CodeValidationPath     = "PATH_TRAVERSAL"
+
+	// Resource Limit Error Codes
+	CodeResourceLimitFiles       = "FILE_COUNT_LIMIT"
+	CodeResourceLimitTotalSize   = "TOTAL_SIZE_LIMIT"
+	CodeResourceLimitTimeout     = "TIMEOUT"
+	CodeResourceLimitMemory      = "MEMORY_LIMIT"
+	CodeResourceLimitConcurrency = "CONCURRENCY_LIMIT"
+	CodeResourceLimitRate        = "RATE_LIMIT"
 )
 
 // Predefined error constructors for common error scenarios
 
 // NewCLIMissingSourceError creates a CLI error for missing source argument.
 func NewCLIMissingSourceError() *StructuredError {
-	return NewStructuredError(ErrorTypeCLI, CodeCLIMissingSource, "usage: gibidify -source <source_directory> [--destination <output_file>] [--format=json|yaml|markdown]")
+	return NewStructuredError(ErrorTypeCLI, CodeCLIMissingSource, "usage: gibidify -source <source_directory> [--destination <output_file>] [--format=json|yaml|markdown]", "", nil)
 }
 
 // NewFileSystemError creates a file system error.
 func NewFileSystemError(code, message string) *StructuredError {
-	return NewStructuredError(ErrorTypeFileSystem, code, message)
+	return NewStructuredError(ErrorTypeFileSystem, code, message, "", nil)
 }
 
 // NewProcessingError creates a processing error.
 func NewProcessingError(code, message string) *StructuredError {
-	return NewStructuredError(ErrorTypeProcessing, code, message)
+	return NewStructuredError(ErrorTypeProcessing, code, message, "", nil)
 }
 
 // NewIOError creates an IO error.
 func NewIOError(code, message string) *StructuredError {
-	return NewStructuredError(ErrorTypeIO, code, message)
+	return NewStructuredError(ErrorTypeIO, code, message, "", nil)
 }
 
 // NewValidationError creates a validation error.
 func NewValidationError(code, message string) *StructuredError {
-	return NewStructuredError(ErrorTypeValidation, code, message)
+	return NewStructuredError(ErrorTypeValidation, code, message, "", nil)
 }
 
 // LogError logs an error with a consistent format if the error is not nil.

@@ -66,6 +66,11 @@ func (f *Flags) validate() error {
 		return NewCLIMissingSourceError()
 	}
 
+	// Validate source path for security
+	if err := utils.ValidateSourcePath(f.SourceDir); err != nil {
+		return err
+	}
+
 	// Validate output format
 	if err := config.ValidateOutputFormat(f.Format); err != nil {
 		return err
@@ -89,5 +94,11 @@ func (f *Flags) setDefaultDestination() error {
 		baseName := utils.GetBaseName(absRoot)
 		f.Destination = baseName + "." + f.Format
 	}
+
+	// Validate destination path for security
+	if err := utils.ValidateDestinationPath(f.Destination); err != nil {
+		return err
+	}
+
 	return nil
 }

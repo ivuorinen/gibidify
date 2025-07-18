@@ -18,11 +18,16 @@ func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- stru
 	case "yaml":
 		startYAMLWriter(outFile, writeCh, done, prefix, suffix)
 	default:
+		context := map[string]interface{}{
+			"format": format,
+		}
 		err := utils.NewStructuredError(
 			utils.ErrorTypeValidation,
 			utils.CodeValidationFormat,
 			fmt.Sprintf("unsupported format: %s", format),
-		).WithContext("format", format)
+			"",
+			context,
+		)
 		utils.LogError("Failed to encode output", err)
 		close(done)
 	}

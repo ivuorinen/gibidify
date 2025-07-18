@@ -20,6 +20,57 @@ const (
 	MinFileSizeLimit = 1024
 	// MaxFileSizeLimit is the maximum allowed file size limit (100MB).
 	MaxFileSizeLimit = 104857600
+
+	// Resource Limit Constants
+
+	// DefaultMaxFiles is the default maximum number of files to process.
+	DefaultMaxFiles = 10000
+	// MinMaxFiles is the minimum allowed file count limit.
+	MinMaxFiles = 1
+	// MaxMaxFiles is the maximum allowed file count limit.
+	MaxMaxFiles = 1000000
+
+	// DefaultMaxTotalSize is the default maximum total size of files (1GB).
+	DefaultMaxTotalSize = 1073741824
+	// MinMaxTotalSize is the minimum allowed total size limit (1MB).
+	MinMaxTotalSize = 1048576
+	// MaxMaxTotalSize is the maximum allowed total size limit (100GB).
+	MaxMaxTotalSize = 107374182400
+
+	// DefaultFileProcessingTimeoutSec is the default timeout for individual file processing (30 seconds).
+	DefaultFileProcessingTimeoutSec = 30
+	// MinFileProcessingTimeoutSec is the minimum allowed file processing timeout (1 second).
+	MinFileProcessingTimeoutSec = 1
+	// MaxFileProcessingTimeoutSec is the maximum allowed file processing timeout (300 seconds).
+	MaxFileProcessingTimeoutSec = 300
+
+	// DefaultOverallTimeoutSec is the default timeout for overall processing (3600 seconds = 1 hour).
+	DefaultOverallTimeoutSec = 3600
+	// MinOverallTimeoutSec is the minimum allowed overall timeout (10 seconds).
+	MinOverallTimeoutSec = 10
+	// MaxOverallTimeoutSec is the maximum allowed overall timeout (86400 seconds = 24 hours).
+	MaxOverallTimeoutSec = 86400
+
+	// DefaultMaxConcurrentReads is the default maximum concurrent file reading operations.
+	DefaultMaxConcurrentReads = 10
+	// MinMaxConcurrentReads is the minimum allowed concurrent reads.
+	MinMaxConcurrentReads = 1
+	// MaxMaxConcurrentReads is the maximum allowed concurrent reads.
+	MaxMaxConcurrentReads = 100
+
+	// DefaultRateLimitFilesPerSec is the default rate limit for file processing (0 = disabled).
+	DefaultRateLimitFilesPerSec = 0
+	// MinRateLimitFilesPerSec is the minimum rate limit.
+	MinRateLimitFilesPerSec = 0
+	// MaxRateLimitFilesPerSec is the maximum rate limit.
+	MaxRateLimitFilesPerSec = 10000
+
+	// DefaultHardMemoryLimitMB is the default hard memory limit (512MB).
+	DefaultHardMemoryLimitMB = 512
+	// MinHardMemoryLimitMB is the minimum hard memory limit (64MB).
+	MinHardMemoryLimitMB = 64
+	// MaxHardMemoryLimitMB is the maximum hard memory limit (8192MB = 8GB).
+	MaxHardMemoryLimitMB = 8192
 )
 
 // LoadConfig reads configuration from a YAML file.
@@ -32,7 +83,13 @@ func LoadConfig() {
 	viper.SetConfigType("yaml")
 
 	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
-		viper.AddConfigPath(filepath.Join(xdgConfig, "gibidify"))
+		// Validate XDG_CONFIG_HOME for path traversal attempts
+		if err := utils.ValidateConfigPath(xdgConfig); err != nil {
+			logrus.Warnf("Invalid XDG_CONFIG_HOME path, using default config: %v", err)
+		} else {
+			configPath := filepath.Join(xdgConfig, "gibidify")
+			viper.AddConfigPath(configPath)
+		}
 	} else if home, err := os.UserHomeDir(); err == nil {
 		viper.AddConfigPath(filepath.Join(home, ".config", "gibidify"))
 	}
@@ -81,6 +138,18 @@ func setDefaultConfig() {
 	viper.SetDefault("backpressure.maxPendingWrites", 100)     // Max writes in write channel buffer
 	viper.SetDefault("backpressure.maxMemoryUsage", 104857600) // 100MB max memory usage
 	viper.SetDefault("backpressure.memoryCheckInterval", 1000) // Check memory every 1000 files
+
+	// Resource limit defaults
+	viper.SetDefault("resourceLimits.enabled", true)
+	viper.SetDefault("resourceLimits.maxFiles", DefaultMaxFiles)
+	viper.SetDefault("resourceLimits.maxTotalSize", DefaultMaxTotalSize)
+	viper.SetDefault("resourceLimits.fileProcessingTimeoutSec", DefaultFileProcessingTimeoutSec)
+	viper.SetDefault("resourceLimits.overallTimeoutSec", DefaultOverallTimeoutSec)
+	viper.SetDefault("resourceLimits.maxConcurrentReads", DefaultMaxConcurrentReads)
+	viper.SetDefault("resourceLimits.rateLimitFilesPerSec", DefaultRateLimitFilesPerSec)
+	viper.SetDefault("resourceLimits.hardMemoryLimitMB", DefaultHardMemoryLimitMB)
+	viper.SetDefault("resourceLimits.enableGracefulDegradation", true)
+	viper.SetDefault("resourceLimits.enableResourceMonitoring", true)
 }
 
 // GetFileSizeLimit returns the file size limit from configuration.
@@ -249,12 +318,85 @@ func ValidateConfig() error {
 		}
 	}
 
+	// Validate resource limits configuration
+	if viper.IsSet("resourceLimits.maxFiles") {
+		maxFiles := viper.GetInt("resourceLimits.maxFiles")
+		if maxFiles < MinMaxFiles {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxFiles (%d) must be at least %d", maxFiles, MinMaxFiles))
+		}
+		if maxFiles > MaxMaxFiles {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxFiles (%d) exceeds maximum (%d)", maxFiles, MaxMaxFiles))
+		}
+	}
+
+	if viper.IsSet("resourceLimits.maxTotalSize") {
+		maxTotalSize := viper.GetInt64("resourceLimits.maxTotalSize")
+		if maxTotalSize < MinMaxTotalSize {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxTotalSize (%d) must be at least %d", maxTotalSize, MinMaxTotalSize))
+		}
+		if maxTotalSize > MaxMaxTotalSize {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxTotalSize (%d) exceeds maximum (%d)", maxTotalSize, MaxMaxTotalSize))
+		}
+	}
+
+	if viper.IsSet("resourceLimits.fileProcessingTimeoutSec") {
+		timeout := viper.GetInt("resourceLimits.fileProcessingTimeoutSec")
+		if timeout < MinFileProcessingTimeoutSec {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.fileProcessingTimeoutSec (%d) must be at least %d", timeout, MinFileProcessingTimeoutSec))
+		}
+		if timeout > MaxFileProcessingTimeoutSec {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.fileProcessingTimeoutSec (%d) exceeds maximum (%d)", timeout, MaxFileProcessingTimeoutSec))
+		}
+	}
+
+	if viper.IsSet("resourceLimits.overallTimeoutSec") {
+		timeout := viper.GetInt("resourceLimits.overallTimeoutSec")
+		if timeout < MinOverallTimeoutSec {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.overallTimeoutSec (%d) must be at least %d", timeout, MinOverallTimeoutSec))
+		}
+		if timeout > MaxOverallTimeoutSec {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.overallTimeoutSec (%d) exceeds maximum (%d)", timeout, MaxOverallTimeoutSec))
+		}
+	}
+
+	if viper.IsSet("resourceLimits.maxConcurrentReads") {
+		maxReads := viper.GetInt("resourceLimits.maxConcurrentReads")
+		if maxReads < MinMaxConcurrentReads {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxConcurrentReads (%d) must be at least %d", maxReads, MinMaxConcurrentReads))
+		}
+		if maxReads > MaxMaxConcurrentReads {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxConcurrentReads (%d) exceeds maximum (%d)", maxReads, MaxMaxConcurrentReads))
+		}
+	}
+
+	if viper.IsSet("resourceLimits.rateLimitFilesPerSec") {
+		rateLimit := viper.GetInt("resourceLimits.rateLimitFilesPerSec")
+		if rateLimit < MinRateLimitFilesPerSec {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.rateLimitFilesPerSec (%d) must be at least %d", rateLimit, MinRateLimitFilesPerSec))
+		}
+		if rateLimit > MaxRateLimitFilesPerSec {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.rateLimitFilesPerSec (%d) exceeds maximum (%d)", rateLimit, MaxRateLimitFilesPerSec))
+		}
+	}
+
+	if viper.IsSet("resourceLimits.hardMemoryLimitMB") {
+		memLimit := viper.GetInt("resourceLimits.hardMemoryLimitMB")
+		if memLimit < MinHardMemoryLimitMB {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.hardMemoryLimitMB (%d) must be at least %d", memLimit, MinHardMemoryLimitMB))
+		}
+		if memLimit > MaxHardMemoryLimitMB {
+			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.hardMemoryLimitMB (%d) exceeds maximum (%d)", memLimit, MaxHardMemoryLimitMB))
+		}
+	}
+
 	if len(validationErrors) > 0 {
 		return utils.NewStructuredError(
 			utils.ErrorTypeConfiguration,
 			utils.CodeConfigValidation,
 			"configuration validation failed: "+strings.Join(validationErrors, "; "),
-		).WithContext("validation_errors", validationErrors)
+			"",
+			map[string]interface{}{"validation_errors": validationErrors},
+		)
 	}
 
 	return nil
@@ -290,7 +432,9 @@ func ValidateFileSize(size int64) error {
 			utils.ErrorTypeValidation,
 			utils.CodeValidationSize,
 			fmt.Sprintf("file size (%d bytes) exceeds limit (%d bytes)", size, limit),
-		).WithContext("file_size", size).WithContext("size_limit", limit)
+			"",
+			map[string]interface{}{"file_size": size, "size_limit": limit},
+		)
 	}
 	return nil
 }
@@ -302,7 +446,9 @@ func ValidateOutputFormat(format string) error {
 			utils.ErrorTypeValidation,
 			utils.CodeValidationFormat,
 			fmt.Sprintf("unsupported output format: %s (supported: json, yaml, markdown)", format),
-		).WithContext("format", format)
+			"",
+			map[string]interface{}{"format": format},
+		)
 	}
 	return nil
 }
@@ -314,7 +460,9 @@ func ValidateConcurrency(concurrency int) error {
 			utils.ErrorTypeValidation,
 			utils.CodeValidationFormat,
 			fmt.Sprintf("concurrency (%d) must be at least 1", concurrency),
-		).WithContext("concurrency", concurrency)
+			"",
+			map[string]interface{}{"concurrency": concurrency},
+		)
 	}
 
 	if viper.IsSet("maxConcurrency") {
@@ -324,7 +472,9 @@ func ValidateConcurrency(concurrency int) error {
 				utils.ErrorTypeValidation,
 				utils.CodeValidationFormat,
 				fmt.Sprintf("concurrency (%d) exceeds maximum (%d)", concurrency, maxConcurrency),
-			).WithContext("concurrency", concurrency).WithContext("max_concurrency", maxConcurrency)
+				"",
+				map[string]interface{}{"concurrency": concurrency, "max_concurrency": maxConcurrency},
+			)
 		}
 	}
 
@@ -391,4 +541,56 @@ func GetMaxMemoryUsage() int64 {
 // GetMemoryCheckInterval returns how often to check memory usage (in number of files processed).
 func GetMemoryCheckInterval() int {
 	return viper.GetInt("backpressure.memoryCheckInterval")
+}
+
+// Resource Limit Configuration Getters
+
+// GetResourceLimitsEnabled returns whether resource limits are enabled.
+func GetResourceLimitsEnabled() bool {
+	return viper.GetBool("resourceLimits.enabled")
+}
+
+// GetMaxFiles returns the maximum number of files that can be processed.
+func GetMaxFiles() int {
+	return viper.GetInt("resourceLimits.maxFiles")
+}
+
+// GetMaxTotalSize returns the maximum total size of files that can be processed.
+func GetMaxTotalSize() int64 {
+	return viper.GetInt64("resourceLimits.maxTotalSize")
+}
+
+// GetFileProcessingTimeoutSec returns the timeout for individual file processing in seconds.
+func GetFileProcessingTimeoutSec() int {
+	return viper.GetInt("resourceLimits.fileProcessingTimeoutSec")
+}
+
+// GetOverallTimeoutSec returns the timeout for overall processing in seconds.
+func GetOverallTimeoutSec() int {
+	return viper.GetInt("resourceLimits.overallTimeoutSec")
+}
+
+// GetMaxConcurrentReads returns the maximum number of concurrent file reading operations.
+func GetMaxConcurrentReads() int {
+	return viper.GetInt("resourceLimits.maxConcurrentReads")
+}
+
+// GetRateLimitFilesPerSec returns the rate limit for file processing (files per second).
+func GetRateLimitFilesPerSec() int {
+	return viper.GetInt("resourceLimits.rateLimitFilesPerSec")
+}
+
+// GetHardMemoryLimitMB returns the hard memory limit in megabytes.
+func GetHardMemoryLimitMB() int {
+	return viper.GetInt("resourceLimits.hardMemoryLimitMB")
+}
+
+// GetEnableGracefulDegradation returns whether graceful degradation is enabled.
+func GetEnableGracefulDegradation() bool {
+	return viper.GetBool("resourceLimits.enableGracefulDegradation")
+}
+
+// GetEnableResourceMonitoring returns whether resource monitoring is enabled.
+func GetEnableResourceMonitoring() bool {
+	return viper.GetBool("resourceLimits.enableResourceMonitoring")
 }

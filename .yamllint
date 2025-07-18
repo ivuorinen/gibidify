@@ -1,0 +1,40 @@
+# yamllint configuration
+# See: https://yamllint.readthedocs.io/en/stable/configuration.html
+
+extends: default
+
+# Ignore generated output files
+ignore: |
+  gibidify.yaml
+  gibidify.yml
+  output.yaml
+  output.yml
+
+rules:
+  # Allow longer lines for URLs and commands in GitHub Actions
+  line-length:
+    max: 120
+    level: warning
+
+  # Allow 2-space indentation to match EditorConfig
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Allow truthy values like 'on' in GitHub Actions
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off']
+    check-keys: false
+
+  # Allow empty values in YAML
+  empty-values:
+    forbid-in-block-mappings: false
+    forbid-in-flow-mappings: false
+
+  # Relax comments formatting
+  comments:
+    min-spaces-from-content: 1
+
+  # Allow document start marker to be optional
+  document-start: disable

@@ -1,4 +1,4 @@
-.PHONY: help install-tools lint lint-fix lint-verbose test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format
+.PHONY: help install-tools lint lint-fix lint-verbose test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check check-all dev-setup
 
 # Default target shows help
 .DEFAULT_GOAL := help
@@ -6,28 +6,9 @@
 # All target runs full workflow
 all: lint test build
 
-# Help target
+# Help target  
 help:
-	@echo "Available targets:"
-	@echo "  install-tools  - Install required linting and development tools"
-	@echo "  lint          - Run all linters"
-	@echo "  lint-fix      - Run linters with auto-fix enabled"
-	@echo "  lint-verbose  - Run linters with verbose output"
-	@echo "  test          - Run tests"
-	@echo "  coverage      - Run tests with coverage"
-	@echo "  build         - Build the application"
-	@echo "  clean         - Clean build artifacts"
-	@echo "  all           - Run lint, test, and build"
-	@echo ""
-	@echo "Benchmark targets:"
-	@echo "  build-benchmark        - Build the benchmark binary"
-	@echo "  benchmark              - Run all benchmarks"
-	@echo "  benchmark-collection   - Run file collection benchmarks"
-	@echo "  benchmark-processing   - Run file processing benchmarks"
-	@echo "  benchmark-concurrency  - Run concurrency benchmarks"
-	@echo "  benchmark-format       - Run format benchmarks"
-	@echo ""
-	@echo "Run 'make <target>' to execute a specific target."
+	@cat scripts/help.txt
 
 # Install required tools
 install-tools:
@@ -43,12 +24,17 @@ install-tools:
 	@go install github.com/securego/gosec/v2/cmd/gosec@latest
 	@echo "Installing gocyclo..."
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+	@echo "Installing checkmake..."
+	@go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+	@echo "Installing shfmt..."
+	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
+	@echo "Installing yamllint (Go-based)..."
+	@go install github.com/excilsploft/yamllint@latest
 	@echo "All tools installed successfully!"
 
 # Run linters
 lint:
-	@echo "Running golangci-lint..."
-	@golangci-lint run ./...
+	@./scripts/lint.sh
 
 # Run linters with auto-fix
 lint-fix:
@@ -60,14 +46,27 @@ lint-fix:
 	@go fmt ./...
 	@echo "Running go mod tidy..."
 	@go mod tidy
+	@echo "Running shfmt formatting..."
+	@shfmt -w -i 2 -ci .
 	@echo "Running golangci-lint with --fix..."
 	@golangci-lint run --fix ./...
 	@echo "Auto-fix completed. Running final lint check..."
 	@golangci-lint run ./...
+	@echo "Running checkmake..."
+	@checkmake --config=.checkmake Makefile
+	@echo "Running yamllint..."
+	@yamllint -c .yamllint .
 
 # Run linters with verbose output
 lint-verbose:
+	@echo "Running golangci-lint (verbose)..."
 	@golangci-lint run -v ./...
+	@echo "Running checkmake (verbose)..."
+	@checkmake --config=.checkmake --format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
+	@echo "Running shfmt check (verbose)..."
+	@shfmt -d .
+	@echo "Running yamllint (verbose)..."
+	@yamllint -c .yamllint -f parsable .
 
 # Run tests
 test:
@@ -130,3 +129,19 @@ benchmark-concurrency: build-benchmark
 benchmark-format: build-benchmark
 	@echo "Running format benchmarks..."
 	@./gibidify-benchmark -type=format
+
+# Security targets
+security:
+	@echo "Running comprehensive security scan..."
+	@./scripts/security-scan.sh
+
+security-full:
+	@echo "Running full security analysis..."
+	@./scripts/security-scan.sh
+	@echo "Running additional security checks..."
+	@golangci-lint run --enable-all --disable=depguard,exhaustruct,ireturn,varnamelen,wrapcheck --timeout=10m
+
+vuln-check:
+	@echo "Checking for dependency vulnerabilities..."
+	@go install golang.org/x/vuln/cmd/govulncheck@latest
+	@govulncheck ./...

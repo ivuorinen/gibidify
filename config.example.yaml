@@ -25,20 +25,20 @@ ignoreDirectories:
 fileTypes:
   # Enable/disable file type detection entirely (default: true)
   enabled: true
-  
+
   # Add custom image extensions
   customImageExtensions:
     - .webp
     - .avif
     - .heic
     - .jxl
-  
+
   # Add custom binary extensions
   customBinaryExtensions:
     - .custom
     - .proprietary
     - .blob
-  
+
   # Add custom language mappings
   customLanguages:
     .zig: zig
@@ -51,17 +51,17 @@ fileTypes:
     .fennel: fennel
     .wast: wast
     .wat: wat
-  
+
   # Disable specific default image extensions
   disabledImageExtensions:
     - .bmp  # Disable bitmap support
     - .tif  # Disable TIFF support
-  
+
   # Disable specific default binary extensions
   disabledBinaryExtensions:
     - .exe  # Don't treat executables as binary
     - .dll  # Don't treat DLL files as binary
-  
+
   # Disable specific default language extensions
   disabledLanguageExtensions:
     - .bat  # Don't detect batch files
