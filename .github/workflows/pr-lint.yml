@@ -16,10 +16,12 @@ jobs:
     name: PR Lint
     runs-on: ubuntu-latest
     permissions:
-      contents: write # only for delete-branch option
+      contents: write
       issues: write
       pull-requests: write
       statuses: write
-
     steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ivuorinen/actions/pr-lint@8476cd4675ea8210eadf4a267bbeb13bddea4e75 # 25.7.21
