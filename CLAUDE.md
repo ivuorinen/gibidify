@@ -1,48 +1,47 @@
 # CLAUDE.md
 
-Go CLI that aggregates code files into LLM-optimized output. Supports markdown/JSON/YAML with concurrent processing.
+Go CLI aggregating code files into LLM-optimized output. Supports markdown/JSON/YAML with concurrent processing.
 
-## Architecture (40 files, 189KB, 6.8K lines)
+## Architecture (42 files, 8.2K lines)
 
-**Core**: `main.go` (37 lines), `cli/` (4 files), `fileproc/` (22 files), `config/` (3 files), `utils/` (4 files), `testutil/` (2 files)
+**Core**: `main.go` (37), `cli/` (4), `fileproc/` (27), `config/` (3), `utils/` (4), `testutil/` (2)
 
-**Key modules**: File collection, processing, writers (markdown/JSON/YAML), registry with caching, back-pressure management
+**Modules**: Collection, processing, writers, registry (~63ns cache), resource limits
 
-**Patterns**: Producer-consumer pools, thread-safe registry (~63ns lookups), streaming with back-pressure, modular files (50-200 lines), progress bars, enhanced errors
+**Patterns**: Producer-consumer, thread-safe registry, streaming, modular (50-200 lines)
 
 ## Commands
 
 ```bash
-make lint-fix && make lint && make test  # Essential workflow
-./gibidify -source <dir> -format markdown --no-colors --no-progress --verbose
+make lint-fix && make lint && make test
+./gibidify -source <dir> -format markdown --verbose
 ```
 
 ## Config
 
-XDG config paths: `~/.config/gibidify/config.yaml`
-
-**Key settings**: File size limit (5MB), ignore dirs, custom file types, back-pressure (100MB memory limit)
+`~/.config/gibidify/config.yaml`
+Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 
 ## Quality
 
-**CRITICAL**: `make lint-fix && make lint` (0 issues), max 120 chars, EditorConfig compliance, 30+ linters
+**CRITICAL**: `make lint-fix && make lint` (0 issues), 120 chars, EditorConfig, 30+ linters
 
 ## Testing
 
-**Coverage**: 84%+ (utils 90.9%, testutil 84.2%, fileproc 83.8%), race detection, benchmarks, testutil helpers
+**Coverage**: 84%+ (utils 90.9%, fileproc 83.8%), race detection, benchmarks
 
 ## Standards
 
-EditorConfig (LF, tabs), semantic commits, testing required, linting must pass
+EditorConfig (LF, tabs), semantic commits, testing required
 
 ## Status
 
-**Health: 10/10** - Production-ready, 84%+ coverage, modular architecture, memory-optimized
+**Health: 10/10** - Production-ready, 84%+ coverage, modular, memory-optimized
 
-**Completed**: Structured errors, benchmarking, config validation, memory optimization, code modularization, CLI enhancements (progress bars, colors, enhanced errors)
+**Done**: Errors, benchmarks, config, optimization, modularization, CLI (progress/colors), security (path validation, resource limits, scanning)
 
-**Next**: Security hardening, documentation, output customization
+**Next**: Documentation, output customization
 
 ## Workflow
 
-1. `make lint-fix` before changes 2. >80% coverage 3. Follow patterns 4. Update docs 5. Security/performance
+1. `make lint-fix` first 2. >80% coverage 3. Follow patterns 4. Update docs

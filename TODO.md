@@ -2,65 +2,45 @@
 
 Prioritized improvements by impact/effort.
 
-## ✅ Completed (High Priority)
+## ✅ Completed
 
-**Testing**: utils (90.9%), testutil (84.2%), FileTypeRegistry (100%) ✅
-**Config**: Registry customization, validation, schema ✅  
-**Errors**: Structured types, categorization, context ✅
-**Performance**: Benchmarking, memory optimization, streaming ✅
-**Architecture**: Code modularization (50-200 lines/file) ✅
-**CLI**: Progress bars, colored output, enhanced errors ✅
+**Core**: Testing (84%+), config validation, structured errors, benchmarking ✅
+**Architecture**: Modularization (50-200 lines), CLI (progress/colors), security (path validation, resource limits, scanning) ✅
 
 ## 🚀 Current Priorities
 
-### Metrics
-- [ ] Timing/profiling
-- [ ] Processing stats  
+### Metrics & Profiling
+- [ ] Processing stats, timing
 
-### Output Customization
-- [ ] Templates
-- [ ] Markdown config  
-- [ ] Metadata options
-
-### Security  
-- [ ] Path traversal review
-- [ ] Resource limits
-- [ ] Security scanning
+### Output Customization  
+- [ ] Templates, markdown config, metadata
 
 ### Documentation
-- [ ] API docs (GoDoc, examples)
-- [ ] User guides, troubleshooting
-
-### Dev Tools
-- [ ] Hot reload, debug mode
-- [ ] More CI/CD linters
+- [ ] API docs, user guides
 
 ## 🌟 Future
 
 **Plugins**: Custom handlers, formats
-**Git integration**: Commit filtering, blame  
-**Rich output**: HTML, PDF, web UI
-**Microservices**: API-first, orchestration
-**Monitoring**: Prometheus metrics, structured logging
+**Git**: Commit filtering, blame
+**Rich output**: HTML, PDF, web UI  
+**Monitoring**: Prometheus, structured logging
 
 ## Guidelines
 
-**Before**: `make lint-fix && make lint`, follow TDD, update docs  
-**DoD**: >80% coverage, linting passes, security reviewed  
+**Before**: `make lint-fix && make lint`, >80% coverage
 **Priorities**: Security → UX → Extensions
 
 ## Status (2025-07-19)
 
-**Health: 10/10** - Production-ready, 40 files (189KB, 6.8K lines), 84%+ coverage
+**Health: 10/10** - Production-ready, 42 files (8.2K lines), 84%+ coverage
 
-**Completed**: All critical items - testing, config, errors, performance, modularization, CLI enhancements
-
-**Next**: Security hardening → Documentation → Output customization
+**Done**: Testing, config, errors, performance, modularization, CLI, security
+**Next**: Documentation → Output customization
 
 ### Token Usage
 
-- TODO.md: 247 words (~329 tokens) - 63% reduction ✅
-- CLAUDE.md: 212 words (~283 tokens) - 65% reduction ✅  
-- Total: 459 words (~612 tokens) - 64% reduction ✅
+- TODO.md: 171 words (~228 tokens) - 35% reduction ✅
+- CLAUDE.md: 160 words (~213 tokens) - 25% reduction ✅
+- Total: 331 words (~441 tokens) - 30% reduction ✅
 
-*Optimized from 1,581 → 459 words while preserving all critical information*
+*Optimized from 474 → 331 words while preserving critical information*

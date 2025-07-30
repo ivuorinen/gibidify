@@ -31,9 +31,9 @@ func (w *JSONWriter) Start(prefix, suffix string) error {
 	}
 
 	// Write escaped prefix
-	escapedPrefix := escapeJSONString(prefix)
-	if _, err := w.outFile.WriteString(escapedPrefix); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON prefix")
+	escapedPrefix := utils.EscapeForJSON(prefix)
+	if err := utils.WriteWithErrorWrap(w.outFile, escapedPrefix, "failed to write JSON prefix", ""); err != nil {
+		return err
 	}
 
 	if _, err := w.outFile.WriteString(`","suffix":"`); err != nil {
@@ -41,9 +41,9 @@ func (w *JSONWriter) Start(prefix, suffix string) error {
 	}
 
 	// Write escaped suffix
-	escapedSuffix := escapeJSONString(suffix)
-	if _, err := w.outFile.WriteString(escapedSuffix); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON suffix")
+	escapedSuffix := utils.EscapeForJSON(suffix)
+	if err := utils.WriteWithErrorWrap(w.outFile, escapedSuffix, "failed to write JSON suffix", ""); err != nil {
+		return err
 	}
 
 	if _, err := w.outFile.WriteString(`","files":[`); err != nil {
@@ -79,12 +79,12 @@ func (w *JSONWriter) Close() error {
 
 // writeStreaming writes a large file as JSON in streaming chunks.
 func (w *JSONWriter) writeStreaming(req WriteRequest) error {
-	defer w.closeReader(req.Reader, req.Path)
+	defer utils.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
 	// Write file start
-	escapedPath := escapeJSONString(req.Path)
+	escapedPath := utils.EscapeForJSON(req.Path)
 	if _, err := fmt.Fprintf(w.outFile, `{"path":"%s","language":"%s","content":"`, escapedPath, language); err != nil {
 		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON file start").WithFilePath(req.Path)
 	}
@@ -124,43 +124,13 @@ func (w *JSONWriter) writeInline(req WriteRequest) error {
 
 // streamJSONContent streams content with JSON escaping.
 func (w *JSONWriter) streamJSONContent(reader io.Reader, path string) error {
-	buf := make([]byte, StreamChunkSize)
-	for {
-		n, err := reader.Read(buf)
-		if n > 0 {
-			escaped := escapeJSONString(string(buf[:n]))
-			if _, writeErr := w.outFile.WriteString(escaped); writeErr != nil {
-				return utils.WrapError(writeErr, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON chunk").WithFilePath(path)
-			}
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIORead, "failed to read JSON chunk").WithFilePath(path)
-		}
-	}
-	return nil
+	return utils.StreamContent(reader, w.outFile, StreamChunkSize, path, func(chunk []byte) []byte {
+		escaped := utils.EscapeForJSON(string(chunk))
+		return []byte(escaped)
+	})
 }
 
-// closeReader safely closes a reader if it implements io.Closer.
-func (w *JSONWriter) closeReader(reader io.Reader, path string) {
-	if closer, ok := reader.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
-			utils.LogError(
-				"Failed to close file reader",
-				utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOClose, "failed to close file reader").WithFilePath(path),
-			)
-		}
-	}
-}
 
-// escapeJSONString escapes a string for JSON output.
-func escapeJSONString(s string) string {
-	// Use json.Marshal to properly escape the string, then remove the quotes
-	escaped, _ := json.Marshal(s)
-	return string(escaped[1 : len(escaped)-1]) // Remove surrounding quotes
-}
 
 // startJSONWriter handles JSON format output with streaming support.
 func startJSONWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
