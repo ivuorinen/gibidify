@@ -9,15 +9,17 @@ on:
     # Run security scan weekly on Sundays at 00:00 UTC
     - cron: '0 0 * * 0'
 
-permissions:
-  security-events: write
-  contents: read
-  actions: read
+permissions: read-all
 
 jobs:
   security:
     name: Security Analysis
     runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
 
     steps:
       - name: Checkout code
@@ -26,7 +28,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version-file: 'go.mod'
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -40,7 +42,7 @@ jobs:
 
       # Security Scanning with gosec
       - name: Run gosec Security Scanner
-        uses: securecodewarrior/github-action-gosec@master
+        uses: securego/gosec@v2
         with:
           args: '-fmt sarif -out gosec-results.sarif ./...'
 
@@ -69,16 +71,15 @@ jobs:
 
       # Additional Security Linting
       - name: Run security-focused golangci-lint
-        run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          golangci-lint run --enable=gosec,gocritic,bodyclose,rowserrcheck,misspell,unconvert,unparam,unused \
-            --timeout=5m
+        uses: golangci/golangci-lint-action@v6.0.1
+        with:
+          args: "--enable=gosec,gocritic,bodyclose,rowserrcheck,misspell,unconvert,unparam,unused --timeout=5m"
 
       # Makefile Linting
       - name: Run checkmake on Makefile
-        run: |
-          go install github.com/mrtazz/checkmake/cmd/checkmake@latest
-          checkmake --config=.checkmake Makefile
+        uses: Uno-Takashi/checkmake-action@v2
+        with:
+          config: .checkmake
 
       # Shell Script Formatting Check
       - name: Check shell script formatting
