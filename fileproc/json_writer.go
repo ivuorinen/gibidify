@@ -130,8 +130,6 @@ func (w *JSONWriter) streamJSONContent(reader io.Reader, path string) error {
 	})
 }
 
-
-
 // startJSONWriter handles JSON format output with streaming support.
 func startJSONWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
 	defer close(done)
