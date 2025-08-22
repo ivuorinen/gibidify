@@ -21,7 +21,9 @@ jobs:
       pull-requests: write
       statuses: write
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ivuorinen/actions/pr-lint@9df3b0bff7353884d1bfb1bdad6236f68ccd670d # 25.10.6
+      - uses: ivuorinen/actions/pr-lint@05e171c506876dce80fc8eb00f6c0e628e2586b5 # 25.8.21
+        env:
+          token: ${{ secrets.GITHUB_TOKEN }}
