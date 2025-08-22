@@ -1,7 +1,6 @@
 package fileproc
 
 import (
-	"sync"
 	"testing"
 )
 
@@ -184,8 +183,7 @@ func TestFileTypeRegistry_Configuration(t *testing.T) {
 // TestConfigureFromSettings tests the global configuration function.
 func TestConfigureFromSettings(t *testing.T) {
 	// Reset registry to ensure clean state
-	registryOnce = sync.Once{}
-	registry = nil
+	ResetRegistryForTesting()
 
 	// Test configuration application
 	customImages := []string{".webp", ".avif"}
@@ -255,4 +253,7 @@ func TestConfigureFromSettings(t *testing.T) {
 	if !IsImage("test.extra") {
 		t.Error("Expected new configuration to be applied")
 	}
+
+	// Reset registry after test to avoid affecting other tests
+	ResetRegistryForTesting()
 }

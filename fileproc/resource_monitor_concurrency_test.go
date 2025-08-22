@@ -43,11 +43,11 @@ func TestResourceMonitor_ConcurrentReadsLimit(t *testing.T) {
 
 	// Release one slot and try again
 	rm.ReleaseReadSlot()
-	
+
 	// Create new context for the next attempt
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel2()
-	
+
 	err = rm.AcquireReadSlot(ctx2)
 	if err != nil {
 		t.Errorf("Expected no error after releasing a slot, got %v", err)
