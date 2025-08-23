@@ -2,9 +2,10 @@ package fileproc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/ivuorinen/gibidify/utils"
 )
 
 // WaitForRateLimit waits for rate limiting if enabled.
@@ -15,11 +16,13 @@ func (rm *ResourceMonitor) WaitForRateLimit(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("context canceled while waiting for rate limit: %w", ctx.Err())
 	case <-rm.rateLimitChan:
 		return nil
 	case <-time.After(time.Second): // Fallback timeout
-		logrus.Warn("Rate limiting timeout exceeded, continuing without rate limit")
+		logger := utils.GetLogger()
+		logger.Warn("Rate limiting timeout exceeded, continuing without rate limit")
+
 		return nil
 	}
 }

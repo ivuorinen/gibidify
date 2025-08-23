@@ -21,6 +21,7 @@ func TestResetViperConfig(t *testing.T) {
 				viper.Set("test.key", "value")
 			},
 			verify: func(t *testing.T) {
+				t.Helper()
 				if viper.IsSet("test.key") {
 					t.Error("Viper config not reset properly")
 				}
@@ -33,6 +34,7 @@ func TestResetViperConfig(t *testing.T) {
 				viper.Set("test.key", "value")
 			},
 			verify: func(t *testing.T) {
+				t.Helper()
 				if viper.IsSet("test.key") {
 					t.Error("Viper config not reset properly")
 				}
@@ -103,30 +105,36 @@ func TestSetupCLIArgs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			SetupCLIArgs(tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency)
-
-			if len(os.Args) != tt.wantLen {
-				t.Errorf("os.Args length = %d, want %d", len(os.Args), tt.wantLen)
-			}
-
-			// Verify specific args
-			if os.Args[0] != "gibidify" {
-				t.Errorf("Program name = %s, want gibidify", os.Args[0])
-			}
-			if os.Args[2] != tt.srcDir {
-				t.Errorf("Source dir = %s, want %s", os.Args[2], tt.srcDir)
-			}
-			if os.Args[4] != tt.outFile {
-				t.Errorf("Output file = %s, want %s", os.Args[4], tt.outFile)
-			}
-			if os.Args[6] != tt.prefix {
-				t.Errorf("Prefix = %s, want %s", os.Args[6], tt.prefix)
-			}
-			if os.Args[8] != tt.suffix {
-				t.Errorf("Suffix = %s, want %s", os.Args[8], tt.suffix)
-			}
-			if os.Args[10] != string(rune(tt.concurrency+'0')) {
-				t.Errorf("Concurrency = %s, want %d", os.Args[10], tt.concurrency)
-			}
+			verifySetupCLIArgs(t, tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency, tt.wantLen)
 		})
+	}
+}
+
+// verifySetupCLIArgs verifies that CLI arguments are set correctly.
+func verifySetupCLIArgs(t *testing.T, srcDir, outFile, prefix, suffix string, concurrency, wantLen int) {
+	t.Helper()
+
+	if len(os.Args) != wantLen {
+		t.Errorf("os.Args length = %d, want %d", len(os.Args), wantLen)
+	}
+
+	// Verify specific args
+	if os.Args[0] != "gibidify" {
+		t.Errorf("Program name = %s, want gibidify", os.Args[0])
+	}
+	if os.Args[2] != srcDir {
+		t.Errorf("Source dir = %s, want %s", os.Args[2], srcDir)
+	}
+	if os.Args[4] != outFile {
+		t.Errorf("Output file = %s, want %s", os.Args[4], outFile)
+	}
+	if os.Args[6] != prefix {
+		t.Errorf("Prefix = %s, want %s", os.Args[6], prefix)
+	}
+	if os.Args[8] != suffix {
+		t.Errorf("Suffix = %s, want %s", os.Args[8], suffix)
+	}
+	if os.Args[10] != string(rune(concurrency+'0')) {
+		t.Errorf("Concurrency = %s, want %d", os.Args[10], concurrency)
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/utils"
@@ -19,10 +18,12 @@ func LoadConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
+	logger := utils.GetLogger()
+
 	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
 		// Validate XDG_CONFIG_HOME for path traversal attempts
 		if err := utils.ValidateConfigPath(xdgConfig); err != nil {
-			logrus.Warnf("Invalid XDG_CONFIG_HOME path, using default config: %v", err)
+			logger.Warnf("Invalid XDG_CONFIG_HOME path, using default config: %v", err)
 		} else {
 			configPath := filepath.Join(xdgConfig, "gibidify")
 			viper.AddConfigPath(configPath)
@@ -37,14 +38,14 @@ func LoadConfig() {
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
-		logrus.Infof("Config file not found, using default values: %v", err)
+		logger.Infof("Config file not found, using default values: %v", err)
 		setDefaultConfig()
 	} else {
-		logrus.Infof("Using config file: %s", viper.ConfigFileUsed())
+		logger.Infof("Using config file: %s", viper.ConfigFileUsed())
 		// Validate configuration after loading
 		if err := ValidateConfig(); err != nil {
-			logrus.Warnf("Configuration validation failed: %v", err)
-			logrus.Info("Falling back to default configuration")
+			logger.Warnf("Configuration validation failed: %v", err)
+			logger.Info("Falling back to default configuration")
 			// Reset viper and set defaults when validation fails
 			viper.Reset()
 			setDefaultConfig()

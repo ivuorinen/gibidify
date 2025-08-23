@@ -24,12 +24,14 @@ func GetLanguage(filename string) string {
 // IsImage checks if the file extension indicates an image file.
 func (r *FileTypeRegistry) IsImage(filename string) bool {
 	result := r.getFileTypeResult(filename)
+
 	return result.IsImage
 }
 
 // IsBinary checks if the file extension indicates a binary file.
 func (r *FileTypeRegistry) IsBinary(filename string) bool {
 	result := r.getFileTypeResult(filename)
+
 	return result.IsBinary
 }
 
@@ -39,6 +41,7 @@ func (r *FileTypeRegistry) GetLanguage(filename string) string {
 		return ""
 	}
 	result := r.getFileTypeResult(filename)
+
 	return result.Language
 }
 

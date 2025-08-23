@@ -2,9 +2,9 @@
 
 Go CLI aggregating code files into LLM-optimized output. Supports markdown/JSON/YAML with concurrent processing.
 
-## Architecture (42 files, 8.2K lines)
+## Architecture (69 files, 9.3K lines)
 
-**Core**: `main.go` (37), `cli/` (4), `fileproc/` (27), `config/` (3), `utils/` (4), `testutil/` (2)
+**Core**: `main.go` (55), `cli/` (8), `fileproc/` (38), `config/` (8), `utils/` (5), `testutil/` (5), `cmd/` (1)
 
 **Modules**: Collection, processing, writers, registry (~63ns cache), resource limits
 
@@ -15,6 +15,7 @@ Go CLI aggregating code files into LLM-optimized output. Supports markdown/JSON/
 ```bash
 make lint-fix && make lint && make test
 ./gibidify -source <dir> -format markdown --verbose
+./gibidify -source <dir> -format json --log-level debug --verbose
 ```
 
 ## Config
@@ -22,25 +23,46 @@ make lint-fix && make lint && make test
 `~/.config/gibidify/config.yaml`
 Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 
-## Quality
+## Linting Standards (MANDATORY)
 
-**CRITICAL**: `make lint-fix && make lint` (0 issues), 120 chars, EditorConfig, 30+ linters
+**30+ Linters**: revive, errcheck, govet, staticcheck, gosec, gocritic, wrapcheck
+**Complexity**: gocognit/gocyclo ≤15, nestif ≤5, dupl ≤150
+**Security**: G101-G404 (credentials, TLS, crypto), bodyclose, misspell
+**Performance**: prealloc, perfsprint, unused vars/params
+**Format**: lll ≤180 chars, EditorConfig (LF, tabs), gofmt/goimports
+**Testing**: thelper, errorlint, 0 tolerance policy
+
+**CRITICAL**: All rules non-negotiable. `make lint-fix && make lint` must show 0 issues.
 
 ## Testing
 
-**Coverage**: 84%+ (utils 90.9%, fileproc 83.8%), race detection, benchmarks
+**Coverage**: 84%+ overall (utils 95%, cli 86%, config 83%, testutil 84%, fileproc 84%+)
+**Patterns**: Table-driven tests, shared testutil helpers, mock objects, error assertions
+**Race detection**, benchmarks, comprehensive integration tests
+
+## Development Patterns
+
+**Logging**: Use `utils.GetLogger()` for all logging (replaces logrus). Default WARN level, set via `--log-level` flag
+**Error Handling**: Use `utils.WrapError` family for structured errors with context
+**Streaming**: Use `utils.StreamContent/StreamLines` for consistent file processing  
+**Context**: Use `utils.CheckContextCancellation` for standardized cancellation
+**Testing**: Use `testutil.*` helpers for directory setup, error assertions
+**Validation**: Centralized in `config/validation.go` with structured error collection
 
 ## Standards
 
-EditorConfig (LF, tabs), semantic commits, testing required
+EditorConfig (LF, tabs), semantic commits, testing required, error wrapping
+
+## .golangci.yml Restrictions
+
+**AGENTS DO NOT HAVE PERMISSION** to modify `.golangci.yml` configuration unless user explicitly requests it.
+The linting configuration is carefully tuned and should not be altered during normal development.
 
 ## Status
 
-**Health: 10/10** - Production-ready, 84%+ coverage, modular, memory-optimized
+**Health: 9/10** - Production-ready with systematic deduplication complete
 
-**Done**: Errors, benchmarks, config, optimization, modularization, CLI (progress/colors), security (path validation, resource limits, scanning)
-
-**Next**: Documentation, output customization
+**Done**: Deduplication, errors, benchmarks, config, optimization, testing (84%+), modularization, linting (0 issues)
 
 ## Workflow
 

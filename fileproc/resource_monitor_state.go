@@ -4,6 +4,7 @@ package fileproc
 func (rm *ResourceMonitor) IsEmergencyStopActive() bool {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
+
 	return rm.emergencyStopRequested
 }
 
@@ -11,6 +12,7 @@ func (rm *ResourceMonitor) IsEmergencyStopActive() bool {
 func (rm *ResourceMonitor) IsDegradationActive() bool {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
+
 	return rm.degradationActive
 }
 

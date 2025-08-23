@@ -4,8 +4,10 @@ import (
 	"context"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/ivuorinen/gibidify/fileproc"
+	"github.com/ivuorinen/gibidify/metrics"
 	"github.com/ivuorinen/gibidify/utils"
 )
 
@@ -29,9 +31,13 @@ func (p *Processor) Process(ctx context.Context) error {
 	p.resourceMonitor.LogResourceInfo()
 	p.backpressure.LogBackpressureInfo()
 
-	// Collect files with progress indication
+	// Collect files with progress indication and timing
 	p.ui.PrintInfo("📁 Collecting files...")
+	collectionStart := time.Now()
 	files, err := p.collectFiles()
+	collectionTime := time.Since(collectionStart)
+	p.metricsCollector.RecordPhaseTime(metrics.PhaseCollection, collectionTime)
+
 	if err != nil {
 		return err
 	}
@@ -44,8 +50,13 @@ func (p *Processor) Process(ctx context.Context) error {
 		return err
 	}
 
-	// Process files with overall timeout
-	return p.processFiles(overallCtx, files)
+	// Process files with overall timeout and timing
+	processingStart := time.Now()
+	err = p.processFiles(overallCtx, files)
+	processingTime := time.Since(processingStart)
+	p.metricsCollector.RecordPhaseTime(metrics.PhaseProcessing, processingTime)
+
+	return err
 }
 
 // processFiles processes the collected files.
@@ -77,15 +88,26 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 	// Send files to workers
 	if err := p.sendFiles(ctx, files, fileCh); err != nil {
 		p.ui.FinishProgress()
+
 		return err
 	}
 
-	// Wait for completion
+	// Wait for completion with timing
+	writingStart := time.Now()
 	p.waitForCompletion(&wg, writeCh, writerDone)
+	writingTime := time.Since(writingStart)
+	p.metricsCollector.RecordPhaseTime(metrics.PhaseWriting, writingTime)
+
 	p.ui.FinishProgress()
 
+	// Final cleanup with timing
+	finalizeStart := time.Now()
 	p.logFinalStats()
+	finalizeTime := time.Since(finalizeStart)
+	p.metricsCollector.RecordPhaseTime(metrics.PhaseFinalize, finalizeTime)
+
 	p.ui.PrintSuccess("Processing completed. Output saved to %s", p.flags.Destination)
+
 	return nil
 }
 
@@ -96,5 +118,6 @@ func (p *Processor) createOutputFile() (*os.File, error) {
 	if err != nil {
 		return nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileCreate, "failed to create output file").WithFilePath(p.flags.Destination)
 	}
+
 	return outFile, nil
 }

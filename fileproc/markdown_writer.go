@@ -2,7 +2,6 @@ package fileproc
 
 import (
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/ivuorinen/gibidify/utils"
@@ -25,6 +24,7 @@ func (w *MarkdownWriter) Start(prefix, suffix string) error {
 			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write prefix")
 		}
 	}
+
 	return nil
 }
 
@@ -33,6 +33,7 @@ func (w *MarkdownWriter) WriteFile(req WriteRequest) error {
 	if req.IsStream {
 		return w.writeStreaming(req)
 	}
+
 	return w.writeInline(req)
 }
 
@@ -43,12 +44,13 @@ func (w *MarkdownWriter) Close(suffix string) error {
 			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write suffix")
 		}
 	}
+
 	return nil
 }
 
 // writeStreaming writes a large file in streaming chunks.
 func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
-	defer w.closeReader(req.Reader, req.Path)
+	defer utils.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
@@ -58,8 +60,8 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 	}
 
 	// Stream file content in chunks
-	if err := w.streamContent(req.Reader, req.Path); err != nil {
-		return err
+	if err := utils.StreamContent(req.Reader, w.outFile, StreamChunkSize, req.Path, nil); err != nil {
+		return fmt.Errorf("streaming content for markdown file: %w", err)
 	}
 
 	// Write file footer
@@ -78,39 +80,8 @@ func (w *MarkdownWriter) writeInline(req WriteRequest) error {
 	if _, err := w.outFile.WriteString(formatted); err != nil {
 		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write inline content").WithFilePath(req.Path)
 	}
-	return nil
-}
 
-// streamContent streams file content in chunks.
-func (w *MarkdownWriter) streamContent(reader io.Reader, path string) error {
-	buf := make([]byte, StreamChunkSize)
-	for {
-		n, err := reader.Read(buf)
-		if n > 0 {
-			if _, writeErr := w.outFile.Write(buf[:n]); writeErr != nil {
-				return utils.WrapError(writeErr, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write chunk").WithFilePath(path)
-			}
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIORead, "failed to read chunk").WithFilePath(path)
-		}
-	}
 	return nil
-}
-
-// closeReader safely closes a reader if it implements io.Closer.
-func (w *MarkdownWriter) closeReader(reader io.Reader, path string) {
-	if closer, ok := reader.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
-			utils.LogError(
-				"Failed to close file reader",
-				utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOClose, "failed to close file reader").WithFilePath(path),
-			)
-		}
-	}
 }
 
 // startMarkdownWriter handles markdown format output with streaming support.
@@ -122,6 +93,7 @@ func startMarkdownWriter(outFile *os.File, writeCh <-chan WriteRequest, done cha
 	// Start writing
 	if err := writer.Start(prefix, suffix); err != nil {
 		utils.LogError("Failed to write markdown prefix", err)
+
 		return
 	}
 

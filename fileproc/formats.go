@@ -24,5 +24,6 @@ type FormatWriter interface {
 // detectLanguage tries to infer the code block language from the file extension.
 func detectLanguage(filePath string) string {
 	registry := GetDefaultRegistry()
+
 	return registry.GetLanguage(filePath)
 }

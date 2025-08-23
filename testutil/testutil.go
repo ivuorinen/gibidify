@@ -1,7 +1,33 @@
 // Package testutil provides common testing utilities and helper functions.
+//
+// Testing Patterns and Conventions:
+//
+//	File Setup:
+//	  - Use CreateTestFile() for individual files
+//	  - Use CreateTestFiles() for multiple files from FileSpec
+//	  - Use CreateTestDirectoryStructure() for complex directory trees
+//	  - Use SetupTempDirWithStructure() for complete test environments
+//
+//	Error Assertions:
+//	  - Use AssertError() for conditional error checking
+//	  - Use AssertNoError() when expecting success
+//	  - Use AssertExpectedError() when expecting failure
+//	  - Use AssertErrorContains() for substring validation
+//
+//	Configuration:
+//	  - Use ResetViperConfig() to reset between tests
+//	  - Remember to call config.LoadConfig() after ResetViperConfig()
+//
+//	Best Practices:
+//	  - Always use t.Helper() in test helper functions
+//	  - Use descriptive operation names in assertions
+//	  - Prefer table-driven tests for multiple scenarios
+//	  - Use testutil.ErrTestError for standard test errors
 package testutil
 
 import (
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -11,6 +37,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/config"
+	"github.com/ivuorinen/gibidify/utils"
 )
 
 const (
@@ -20,6 +47,21 @@ const (
 	DirPermission = 0o755
 )
 
+// SuppressLogs suppresses logger output during testing to keep test output clean.
+// Returns a function that should be called to restore the original log output.
+func SuppressLogs(t *testing.T) func() {
+	t.Helper()
+	logger := utils.GetLogger()
+
+	// Capture original output by temporarily setting it to discard
+	logger.SetOutput(io.Discard)
+
+	// Return function to restore original settings (stderr)
+	return func() {
+		logger.SetOutput(os.Stderr)
+	}
+}
+
 // CreateTestFile creates a test file with the given content and returns its path.
 func CreateTestFile(t *testing.T, dir, filename string, content []byte) string {
 	t.Helper()
@@ -27,6 +69,7 @@ func CreateTestFile(t *testing.T, dir, filename string, content []byte) string {
 	if err := os.WriteFile(filePath, content, FilePermission); err != nil {
 		t.Fatalf("Failed to write file %s: %v", filePath, err)
 	}
+
 	return filePath
 }
 
@@ -38,6 +81,7 @@ func CreateTempOutputFile(t *testing.T, pattern string) (file *os.File, path str
 		t.Fatalf("Failed to create temp output file: %v", err)
 	}
 	path = outFile.Name()
+
 	return outFile, path
 }
 
@@ -48,6 +92,7 @@ func CreateTestDirectory(t *testing.T, parent, name string) string {
 	if err := os.Mkdir(dirPath, DirPermission); err != nil {
 		t.Fatalf("Failed to create directory %s: %v", dirPath, err)
 	}
+
 	return dirPath
 }
 
@@ -65,6 +110,7 @@ func CreateTestFiles(t *testing.T, rootDir string, fileSpecs []FileSpec) []strin
 		filePath := CreateTestFile(t, rootDir, spec.Name, []byte(spec.Content))
 		createdFiles = append(createdFiles, filePath)
 	}
+
 	return createdFiles
 }
 
@@ -115,3 +161,95 @@ func CloseFile(t *testing.T, file *os.File) {
 		t.Errorf("Failed to close file: %v", err)
 	}
 }
+
+// GetBaseName returns the base name of a file path (filename without directory).
+func GetBaseName(path string) string {
+	return filepath.Base(path)
+}
+
+// Advanced directory setup patterns.
+
+// DirSpec represents a directory specification for creating test directory structures.
+type DirSpec struct {
+	Path  string
+	Files []FileSpec
+}
+
+// CreateTestDirectoryStructure creates multiple directories with files.
+func CreateTestDirectoryStructure(t *testing.T, rootDir string, dirSpecs []DirSpec) []string {
+	t.Helper()
+	createdPaths := make([]string, 0)
+
+	for _, dirSpec := range dirSpecs {
+		dirPath := filepath.Join(rootDir, dirSpec.Path)
+		if err := os.MkdirAll(dirPath, DirPermission); err != nil {
+			t.Fatalf("Failed to create directory structure %s: %v", dirPath, err)
+		}
+		createdPaths = append(createdPaths, dirPath)
+
+		// Create files in the directory
+		for _, fileSpec := range dirSpec.Files {
+			filePath := CreateTestFile(t, dirPath, fileSpec.Name, []byte(fileSpec.Content))
+			createdPaths = append(createdPaths, filePath)
+		}
+	}
+
+	return createdPaths
+}
+
+// SetupTempDirWithStructure creates a temp directory with a structured layout.
+func SetupTempDirWithStructure(t *testing.T, dirSpecs []DirSpec) string {
+	t.Helper()
+	rootDir := t.TempDir()
+	CreateTestDirectoryStructure(t, rootDir, dirSpecs)
+
+	return rootDir
+}
+
+// Error assertion helpers - safe to use across packages.
+
+// AssertError checks if an error matches the expected state.
+// If wantErr is true, expects err to be non-nil.
+// If wantErr is false, expects err to be nil and fails if it's not.
+func AssertError(t *testing.T, err error, wantErr bool, operation string) {
+	t.Helper()
+	if (err != nil) != wantErr {
+		if wantErr {
+			t.Errorf("Operation %s expected error but got none", operation)
+		} else {
+			t.Errorf("Operation %s unexpected error: %v", operation, err)
+		}
+	}
+}
+
+// AssertNoError fails the test if err is not nil.
+func AssertNoError(t *testing.T, err error, operation string) {
+	t.Helper()
+	if err != nil {
+		t.Errorf("Operation %s failed: %v", operation, err)
+	}
+}
+
+// AssertExpectedError fails the test if err is nil when an error is expected.
+func AssertExpectedError(t *testing.T, err error, operation string) {
+	t.Helper()
+	if err == nil {
+		t.Errorf("Operation %s expected error but got none", operation)
+	}
+}
+
+// AssertErrorContains checks that error contains the expected substring.
+func AssertErrorContains(t *testing.T, err error, expectedSubstring, operation string) {
+	t.Helper()
+	if err == nil {
+		t.Errorf("Operation %s expected error containing %q but got none", operation, expectedSubstring)
+
+		return
+	}
+	if !strings.Contains(err.Error(), expectedSubstring) {
+		t.Errorf("Operation %s error %q should contain %q", operation, err.Error(), expectedSubstring)
+	}
+}
+
+// ErrTestError is a standard test error for use in tests.
+var ErrTestError = errors.New("test error")

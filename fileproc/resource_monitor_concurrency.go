@@ -2,6 +2,7 @@ package fileproc
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -26,7 +27,7 @@ func (rm *ResourceMonitor) AcquireReadSlot(ctx context.Context) error {
 		// Wait and retry
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("context canceled while waiting for read slot: %w", ctx.Err())
 		case <-time.After(time.Millisecond):
 			// Continue loop
 		}
@@ -47,6 +48,7 @@ func (rm *ResourceMonitor) CreateFileProcessingContext(parent context.Context) (
 	if !rm.enabled || rm.fileProcessingTimeout <= 0 {
 		return parent, func() {}
 	}
+
 	return context.WithTimeout(parent, rm.fileProcessingTimeout)
 }
 
@@ -55,5 +57,6 @@ func (rm *ResourceMonitor) CreateOverallProcessingContext(parent context.Context
 	if !rm.enabled || rm.overallTimeout <= 0 {
 		return parent, func() {}
 	}
+
 	return context.WithTimeout(parent, rm.overallTimeout)
 }

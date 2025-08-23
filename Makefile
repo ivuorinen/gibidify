@@ -6,7 +6,7 @@
 # All target runs full workflow
 all: lint test build
 
-# Help target  
+# Help target
 help:
 	@cat scripts/help.txt
 
@@ -25,7 +25,7 @@ install-tools:
 	@echo "Installing gocyclo..."
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
 	@echo "Installing checkmake..."
-	@go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+	@go install github.com/checkmake/checkmake/cmd/checkmake@latest
 	@echo "Installing shfmt..."
 	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
 	@echo "Installing yamllint (Go-based)..."

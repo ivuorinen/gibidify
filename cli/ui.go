@@ -81,7 +81,7 @@ func (ui *UIManager) FinishProgress() {
 }
 
 // PrintSuccess prints a success message in green.
-func (ui *UIManager) PrintSuccess(format string, args ...interface{}) {
+func (ui *UIManager) PrintSuccess(format string, args ...any) {
 	if ui.enableColors {
 		color.Green("✓ "+format, args...)
 	} else {
@@ -90,7 +90,7 @@ func (ui *UIManager) PrintSuccess(format string, args ...interface{}) {
 }
 
 // PrintError prints an error message in red.
-func (ui *UIManager) PrintError(format string, args ...interface{}) {
+func (ui *UIManager) PrintError(format string, args ...any) {
 	if ui.enableColors {
 		color.Red("✗ "+format, args...)
 	} else {
@@ -99,7 +99,7 @@ func (ui *UIManager) PrintError(format string, args ...interface{}) {
 }
 
 // PrintWarning prints a warning message in yellow.
-func (ui *UIManager) PrintWarning(format string, args ...interface{}) {
+func (ui *UIManager) PrintWarning(format string, args ...any) {
 	if ui.enableColors {
 		color.Yellow("⚠ "+format, args...)
 	} else {
@@ -108,7 +108,7 @@ func (ui *UIManager) PrintWarning(format string, args ...interface{}) {
 }
 
 // PrintInfo prints an info message in blue.
-func (ui *UIManager) PrintInfo(format string, args ...interface{}) {
+func (ui *UIManager) PrintInfo(format string, args ...any) {
 	if ui.enableColors {
 		color.Blue("ℹ "+format, args...)
 	} else {
@@ -117,7 +117,7 @@ func (ui *UIManager) PrintInfo(format string, args ...interface{}) {
 }
 
 // PrintHeader prints a header message in bold.
-func (ui *UIManager) PrintHeader(format string, args ...interface{}) {
+func (ui *UIManager) PrintHeader(format string, args ...any) {
 	if ui.enableColors {
 		_, _ = color.New(color.Bold).Fprintf(ui.output, format+"\n", args...)
 	} else {
@@ -164,10 +164,11 @@ func isInteractiveTerminal() bool {
 	if err != nil {
 		return false
 	}
+
 	return (fileInfo.Mode() & os.ModeCharDevice) != 0
 }
 
 // printf is a helper that ignores printf errors (for UI output).
-func (ui *UIManager) printf(format string, args ...interface{}) {
+func (ui *UIManager) printf(format string, args ...any) {
 	_, _ = fmt.Fprintf(ui.output, format, args...)
 }

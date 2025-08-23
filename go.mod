@@ -1,6 +1,6 @@
 module github.com/ivuorinen/gibidify
 
-go 1.24.1
+go 1.25.0
 
 require (
 	github.com/fatih/color v1.18.0
@@ -8,6 +8,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.20.0
+	golang.org/x/text v0.23.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -28,5 +29,4 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/term v0.28.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
 )

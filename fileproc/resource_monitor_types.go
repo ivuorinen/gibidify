@@ -57,12 +57,12 @@ type ResourceMetrics struct {
 
 // ResourceViolation represents a detected resource limit violation.
 type ResourceViolation struct {
-	Type      string                 `json:"type"`
-	Message   string                 `json:"message"`
-	Current   interface{}            `json:"current"`
-	Limit     interface{}            `json:"limit"`
-	Timestamp time.Time              `json:"timestamp"`
-	Context   map[string]interface{} `json:"context"`
+	Type      string         `json:"type"`
+	Message   string         `json:"message"`
+	Current   any            `json:"current"`
+	Limit     any            `json:"limit"`
+	Timestamp time.Time      `json:"timestamp"`
+	Context   map[string]any `json:"context"`
 }
 
 // NewResourceMonitor creates a new resource monitor with configuration.
