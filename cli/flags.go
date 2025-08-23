@@ -75,7 +75,7 @@ func ParseFlags() (*Flags, error) {
 // validate validates the CLI flags.
 func (f *Flags) validate() error {
 	if f.SourceDir == "" {
-		return NewCLIMissingSourceError()
+		return NewMissingSourceError()
 	}
 
 	// Validate source path for security

@@ -23,13 +23,12 @@ func main() {
 		if cli.IsUserError(err) {
 			errorFormatter.FormatError(err)
 			os.Exit(1)
-		} else {
-			// System errors still go to logger for debugging
-			logger := utils.GetLogger()
-			logger.Errorf("System error: %v", err)
-			ui.PrintError("An unexpected error occurred. Please check the logs.")
-			os.Exit(2)
 		}
+		// System errors still go to logger for debugging
+		logger := utils.GetLogger()
+		logger.Errorf("System error: %v", err)
+		ui.PrintError("An unexpected error occurred. Please check the logs.")
+		os.Exit(2)
 	}
 }
 

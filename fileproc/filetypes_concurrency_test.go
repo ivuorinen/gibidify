@@ -12,7 +12,7 @@ const (
 )
 
 // TestFileTypeRegistry_ConcurrentReads tests concurrent read operations.
-func TestFileTypeRegistry_ConcurrentReads(t *testing.T) {
+func TestFileTypeRegistry_ConcurrentReads(_ *testing.T) {
 	var wg sync.WaitGroup
 
 	for i := 0; i < numGoroutines; i++ {

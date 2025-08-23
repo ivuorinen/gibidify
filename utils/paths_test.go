@@ -305,7 +305,7 @@ func verifySpecialCaseAbsolutePath(t *testing.T, setup func(*testing.T) (string,
 	}
 }
 
-func TestGetAbsolutePathConcurrency(t *testing.T) {
+func TestGetAbsolutePathConcurrency(_ *testing.T) {
 	// Test that GetAbsolutePath is safe for concurrent use
 	paths := []string{".", "..", "test.go", "subdir/file.txt", "/tmp/test"}
 	done := make(chan bool)

@@ -215,17 +215,6 @@ linters:
               desc: "Use standard errors package with fmt.Errorf for error wrapping"
             - pkg: "github.com/golang/protobuf"
               desc: "Use google.golang.org/protobuf instead"
-    revive:
-      rules:
-        - name: var-naming
-          severity: warning
-          disabled: false
-          arguments:
-            - ["ID"] # AllowList
-            - ["VM"] # DenyList
-            - - skip-initialism-name-checks: true
-                upper-case-const: true
-                skip-package-name-checks: true
 
     errorlint:
       errorf: true
@@ -237,6 +226,10 @@ linters:
 
   exclusions:
     rules:
+      # Exclude var-naming rule
+      - path: \.go
+        text: "var-naming: avoid meaningless package names"
+
       # Exclude main function from some checks
       - path: main\.go
         linters:

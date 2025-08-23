@@ -60,6 +60,13 @@ func (bp *BackpressureManager) CreateChannels() (chan string, chan WriteRequest)
 
 // ShouldApplyBackpressure checks if back-pressure should be applied.
 func (bp *BackpressureManager) ShouldApplyBackpressure(ctx context.Context) bool {
+	// Check for context cancellation first
+	select {
+	case <-ctx.Done():
+		return false // No need for backpressure if canceled
+	default:
+	}
+
 	if !bp.enabled {
 		return false
 	}

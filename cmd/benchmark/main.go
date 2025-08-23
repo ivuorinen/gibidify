@@ -64,7 +64,7 @@ func runCollectionBenchmark() error {
 	if err != nil {
 		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file collection benchmark failed")
 	}
-	benchmark.PrintBenchmarkResult(result)
+	benchmark.PrintResult(result)
 
 	return nil
 }
@@ -75,7 +75,7 @@ func runProcessingBenchmark() error {
 	if err != nil {
 		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file processing benchmark failed")
 	}
-	benchmark.PrintBenchmarkResult(result)
+	benchmark.PrintResult(result)
 
 	return nil
 }
@@ -91,7 +91,7 @@ func runConcurrencyBenchmark() error {
 	if err != nil {
 		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "concurrency benchmark failed")
 	}
-	benchmark.PrintBenchmarkSuite(suite)
+	benchmark.PrintSuite(suite)
 
 	return nil
 }
@@ -103,7 +103,7 @@ func runFormatBenchmark() error {
 	if err != nil {
 		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "format benchmark failed")
 	}
-	benchmark.PrintBenchmarkSuite(suite)
+	benchmark.PrintSuite(suite)
 
 	return nil
 }

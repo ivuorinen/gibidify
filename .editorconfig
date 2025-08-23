@@ -24,9 +24,12 @@ indent_size = 0
 indent_style = space
 trim_trailing_whitespace = true
 
-[*.sh]
+[*.{sh,md}]
 indent_style = space
 indent_size = 2
+
+[.yamllint]
+indent_style = space
 
 [Makefile]
 indent_style = tab
