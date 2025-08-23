@@ -116,5 +116,6 @@ func containsString(slice []string, item string) bool {
 			return true
 		}
 	}
+
 	return false
 }

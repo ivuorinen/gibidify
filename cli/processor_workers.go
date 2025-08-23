@@ -2,11 +2,14 @@ package cli
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/ivuorinen/gibidify/fileproc"
+	"github.com/ivuorinen/gibidify/metrics"
 	"github.com/ivuorinen/gibidify/utils"
 )
 
@@ -34,25 +37,47 @@ func (p *Processor) worker(ctx context.Context, wg *sync.WaitGroup, fileCh chan 
 	}
 }
 
-// processFile processes a single file with resource monitoring.
+// processFile processes a single file with resource monitoring and metrics collection.
 func (p *Processor) processFile(ctx context.Context, filePath string, writeCh chan fileproc.WriteRequest) {
+	// Track concurrency
+	p.metricsCollector.IncrementConcurrency()
+	defer p.metricsCollector.DecrementConcurrency()
+
 	// Check for emergency stop
 	if p.resourceMonitor.IsEmergencyStopActive() {
-		logrus.Warnf("Emergency stop active, skipping file: %s", filePath)
+		logger := utils.GetLogger()
+		logger.Warnf("Emergency stop active, skipping file: %s", filePath)
+
+		// Record skipped file
+		p.recordFileResult(filePath, 0, "", false, true, "emergency stop active", nil)
+
 		return
 	}
 
 	absRoot, err := utils.GetAbsolutePath(p.flags.SourceDir)
 	if err != nil {
 		utils.LogError("Failed to get absolute path", err)
+
+		// Record error
+		p.recordFileResult(filePath, 0, "", false, false, "", err)
+
 		return
 	}
 
-	// Use the resource monitor-aware processing
-	fileproc.ProcessFileWithMonitor(ctx, filePath, writeCh, absRoot, p.resourceMonitor)
+	// Use the resource monitor-aware processing with metrics tracking
+	fileSize, format, success, processErr := p.processFileWithMetrics(ctx, filePath, writeCh, absRoot)
 
-	// Update progress bar
+	// Record the processing result (skipped=false, skipReason="" since processFileWithMetrics never skips)
+	p.recordFileResult(filePath, fileSize, format, success, false, "", processErr)
+
+	// Update progress bar with metrics
 	p.ui.UpdateProgress(1)
+
+	// Show real-time stats in verbose mode
+	if p.flags.Verbose && p.metricsCollector.GetCurrentMetrics().ProcessedFiles%10 == 0 {
+		logger := utils.GetLogger()
+		logger.Info(p.metricsReporter.ReportProgress())
+	}
 }
 
 // sendFiles sends files to the worker channels with back-pressure handling.
@@ -68,13 +93,71 @@ func (p *Processor) sendFiles(ctx context.Context, files []string, fileCh chan s
 		// Wait for channel space if needed
 		p.backpressure.WaitForChannelSpace(ctx, fileCh, nil)
 
+		if err := utils.CheckContextCancellation(ctx, "file processing worker"); err != nil {
+			return fmt.Errorf("context check failed: %w", err)
+		}
+
 		select {
-		case <-ctx.Done():
-			return ctx.Err()
 		case fileCh <- fp:
+		case <-ctx.Done():
+			if err := utils.CheckContextCancellation(ctx, "file processing worker"); err != nil {
+				return fmt.Errorf("context cancellation during channel send: %w", err)
+			}
+
+			return errors.New("context canceled during channel send")
 		}
 	}
+
 	return nil
+}
+
+// processFileWithMetrics wraps the file processing with detailed metrics collection.
+func (p *Processor) processFileWithMetrics(
+	ctx context.Context,
+	filePath string,
+	writeCh chan fileproc.WriteRequest,
+	absRoot string,
+) (fileSize int64, format string, success bool, err error) {
+	// Get file info
+	fileInfo, statErr := os.Stat(filePath)
+	if statErr != nil {
+		return 0, "", false, fmt.Errorf("getting file info for %s: %w", filePath, statErr)
+	}
+
+	fileSize = fileInfo.Size()
+
+	// Detect format from file extension
+	format = filepath.Ext(filePath)
+	if format != "" && format[0] == '.' {
+		format = format[1:] // Remove the dot
+	}
+
+	// Use the existing resource monitor-aware processing
+	fileproc.ProcessFileWithMonitor(ctx, filePath, writeCh, absRoot, p.resourceMonitor)
+
+	// Check if processing was successful
+	// For now, we assume success if no panic occurred and context wasn't canceled
+	select {
+	case <-ctx.Done():
+		return fileSize, format, false, fmt.Errorf("file processing worker canceled: %w", ctx.Err())
+	default:
+		return fileSize, format, true, nil
+	}
+}
+
+// recordFileResult records the result of file processing in metrics.
+func (p *Processor) recordFileResult(filePath string, fileSize int64, format string, success bool, skipped bool, skipReason string, err error) {
+	result := metrics.FileProcessingResult{
+		FilePath:   filePath,
+		FileSize:   fileSize,
+		Format:     format,
+		Success:    success,
+		Error:      err,
+		Skipped:    skipped,
+		SkipReason: skipReason,
+	}
+
+	p.metricsCollector.RecordFileProcessed(result)
 }
 
 // waitForCompletion waits for all workers to complete.

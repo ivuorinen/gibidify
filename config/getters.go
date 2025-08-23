@@ -39,6 +39,7 @@ func IsValidFormat(format string) bool {
 		"yaml":     true,
 		"markdown": true,
 	}
+
 	return supportedFormats[format]
 }
 
@@ -154,4 +155,126 @@ func GetEnableGracefulDegradation() bool {
 // GetEnableResourceMonitoring returns whether resource monitoring is enabled.
 func GetEnableResourceMonitoring() bool {
 	return viper.GetBool("resourceLimits.enableResourceMonitoring")
+}
+
+// Template system getters
+
+// GetOutputTemplate returns the selected output template name.
+func GetOutputTemplate() string {
+	return viper.GetString("output.template")
+}
+
+// GetTemplateMetadataIncludeStats returns whether to include stats in metadata.
+func GetTemplateMetadataIncludeStats() bool {
+	return viper.GetBool("output.metadata.includeStats")
+}
+
+// GetTemplateMetadataIncludeTimestamp returns whether to include timestamp in metadata.
+func GetTemplateMetadataIncludeTimestamp() bool {
+	return viper.GetBool("output.metadata.includeTimestamp")
+}
+
+// GetTemplateMetadataIncludeFileCount returns whether to include file count in metadata.
+func GetTemplateMetadataIncludeFileCount() bool {
+	return viper.GetBool("output.metadata.includeFileCount")
+}
+
+// GetTemplateMetadataIncludeSourcePath returns whether to include source path in metadata.
+func GetTemplateMetadataIncludeSourcePath() bool {
+	return viper.GetBool("output.metadata.includeSourcePath")
+}
+
+// GetTemplateMetadataIncludeFileTypes returns whether to include file types in metadata.
+func GetTemplateMetadataIncludeFileTypes() bool {
+	return viper.GetBool("output.metadata.includeFileTypes")
+}
+
+// GetTemplateMetadataIncludeProcessingTime returns whether to include processing time in metadata.
+func GetTemplateMetadataIncludeProcessingTime() bool {
+	return viper.GetBool("output.metadata.includeProcessingTime")
+}
+
+// GetTemplateMetadataIncludeTotalSize returns whether to include total size in metadata.
+func GetTemplateMetadataIncludeTotalSize() bool {
+	return viper.GetBool("output.metadata.includeTotalSize")
+}
+
+// GetTemplateMetadataIncludeMetrics returns whether to include metrics in metadata.
+func GetTemplateMetadataIncludeMetrics() bool {
+	return viper.GetBool("output.metadata.includeMetrics")
+}
+
+// GetTemplateMarkdownUseCodeBlocks returns whether to use code blocks in markdown.
+func GetTemplateMarkdownUseCodeBlocks() bool {
+	return viper.GetBool("output.markdown.useCodeBlocks")
+}
+
+// GetTemplateMarkdownIncludeLanguage returns whether to include language in code blocks.
+func GetTemplateMarkdownIncludeLanguage() bool {
+	return viper.GetBool("output.markdown.includeLanguage")
+}
+
+// GetTemplateMarkdownHeaderLevel returns the header level for file sections.
+func GetTemplateMarkdownHeaderLevel() int {
+	return viper.GetInt("output.markdown.headerLevel")
+}
+
+// GetTemplateMarkdownTableOfContents returns whether to include table of contents.
+func GetTemplateMarkdownTableOfContents() bool {
+	return viper.GetBool("output.markdown.tableOfContents")
+}
+
+// GetTemplateMarkdownUseCollapsible returns whether to use collapsible sections.
+func GetTemplateMarkdownUseCollapsible() bool {
+	return viper.GetBool("output.markdown.useCollapsible")
+}
+
+// GetTemplateMarkdownSyntaxHighlighting returns whether to enable syntax highlighting.
+func GetTemplateMarkdownSyntaxHighlighting() bool {
+	return viper.GetBool("output.markdown.syntaxHighlighting")
+}
+
+// GetTemplateMarkdownLineNumbers returns whether to include line numbers.
+func GetTemplateMarkdownLineNumbers() bool {
+	return viper.GetBool("output.markdown.lineNumbers")
+}
+
+// GetTemplateMarkdownFoldLongFiles returns whether to fold long files.
+func GetTemplateMarkdownFoldLongFiles() bool {
+	return viper.GetBool("output.markdown.foldLongFiles")
+}
+
+// GetTemplateMarkdownMaxLineLength returns the maximum line length.
+func GetTemplateMarkdownMaxLineLength() int {
+	return viper.GetInt("output.markdown.maxLineLength")
+}
+
+// GetTemplateCustomCSS returns custom CSS for markdown output.
+func GetTemplateCustomCSS() string {
+	return viper.GetString("output.markdown.customCSS")
+}
+
+// GetTemplateCustomHeader returns custom header template.
+func GetTemplateCustomHeader() string {
+	return viper.GetString("output.custom.header")
+}
+
+// GetTemplateCustomFooter returns custom footer template.
+func GetTemplateCustomFooter() string {
+	return viper.GetString("output.custom.footer")
+}
+
+// GetTemplateCustomFileHeader returns custom file header template.
+func GetTemplateCustomFileHeader() string {
+	return viper.GetString("output.custom.fileHeader")
+}
+
+// GetTemplateCustomFileFooter returns custom file footer template.
+func GetTemplateCustomFileFooter() string {
+	return viper.GetString("output.custom.fileFooter")
+}
+
+// GetTemplateVariables returns custom template variables.
+func GetTemplateVariables() map[string]string {
+	return viper.GetStringMapString("output.variables")
 }

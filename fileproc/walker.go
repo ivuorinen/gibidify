@@ -34,6 +34,7 @@ func (w *ProdWalker) Walk(root string) ([]string, error) {
 	if err != nil {
 		return nil, utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSPathResolution, "failed to resolve root path").WithFilePath(root)
 	}
+
 	return w.walkDir(absRoot, []ignoreRule{})
 }
 

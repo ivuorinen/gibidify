@@ -40,7 +40,11 @@ func runBenchmarks() error {
 
 	switch *benchmarkType {
 	case "all":
-		return benchmark.RunAllBenchmarks(*sourceDir)
+		if err := benchmark.RunAllBenchmarks(*sourceDir); err != nil {
+			return fmt.Errorf("benchmark failed: %w", err)
+		}
+
+		return nil
 	case "collection":
 		return runCollectionBenchmark()
 	case "processing":
@@ -61,6 +65,7 @@ func runCollectionBenchmark() error {
 		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file collection benchmark failed")
 	}
 	benchmark.PrintBenchmarkResult(result)
+
 	return nil
 }
 
@@ -71,6 +76,7 @@ func runProcessingBenchmark() error {
 		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file processing benchmark failed")
 	}
 	benchmark.PrintBenchmarkResult(result)
+
 	return nil
 }
 
@@ -86,6 +92,7 @@ func runConcurrencyBenchmark() error {
 		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "concurrency benchmark failed")
 	}
 	benchmark.PrintBenchmarkSuite(suite)
+
 	return nil
 }
 
@@ -97,6 +104,7 @@ func runFormatBenchmark() error {
 		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "format benchmark failed")
 	}
 	benchmark.PrintBenchmarkSuite(suite)
+
 	return nil
 }
 
@@ -104,6 +112,7 @@ func getSourceDescription() string {
 	if *sourceDir == "" {
 		return fmt.Sprintf("temporary files (%d files)", *numFiles)
 	}
+
 	return *sourceDir
 }
 

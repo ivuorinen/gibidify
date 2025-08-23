@@ -40,6 +40,7 @@ func (f *FileFilter) shouldSkipDirectory(entry os.DirEntry) bool {
 			return true
 		}
 	}
+
 	return false
 }
 

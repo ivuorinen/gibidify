@@ -5,8 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/ivuorinen/gibidify/utils"
 )
 
@@ -26,7 +24,7 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 			utils.CodeResourceLimitMemory,
 			"processing stopped due to emergency memory condition",
 			filePath,
-			map[string]interface{}{
+			map[string]any{
 				"emergency_stop_active": true,
 			},
 		)
@@ -40,7 +38,7 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 			utils.CodeResourceLimitFiles,
 			"maximum file count limit exceeded",
 			filePath,
-			map[string]interface{}{
+			map[string]any{
 				"current_files": currentFiles,
 				"max_files":     rm.maxFiles,
 			},
@@ -55,7 +53,7 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 			utils.CodeResourceLimitTotalSize,
 			"maximum total size limit would be exceeded",
 			filePath,
-			map[string]interface{}{
+			map[string]any{
 				"current_total_size": currentTotalSize,
 				"file_size":          fileSize,
 				"max_total_size":     rm.maxTotalSize,
@@ -70,7 +68,7 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 			utils.CodeResourceLimitTimeout,
 			"overall processing timeout exceeded",
 			filePath,
-			map[string]interface{}{
+			map[string]any{
 				"processing_duration": time.Since(rm.startTime),
 				"overall_timeout":     rm.overallTimeout,
 			},
@@ -90,59 +88,85 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 	runtime.ReadMemStats(&m)
 	currentMemory := int64(m.Alloc)
 
-	if currentMemory > rm.hardMemoryLimitBytes {
-		rm.mu.Lock()
-		defer rm.mu.Unlock()
-
-		// Log violation if not already logged
-		violationKey := "hard_memory_limit"
-		if !rm.violationLogged[violationKey] {
-			logrus.Errorf("Hard memory limit exceeded: %dMB > %dMB",
-				currentMemory/1024/1024, rm.hardMemoryLimitMB)
-			rm.violationLogged[violationKey] = true
-		}
-
-		if rm.enableGracefulDegr {
-			// Force garbage collection
-			runtime.GC()
-
-			// Check again after GC
-			runtime.ReadMemStats(&m)
-			currentMemory = int64(m.Alloc)
-
-			if currentMemory > rm.hardMemoryLimitBytes {
-				// Still over limit, activate emergency stop
-				rm.emergencyStopRequested = true
-				return utils.NewStructuredError(
-					utils.ErrorTypeValidation,
-					utils.CodeResourceLimitMemory,
-					"hard memory limit exceeded, emergency stop activated",
-					"",
-					map[string]interface{}{
-						"current_memory_mb": currentMemory / 1024 / 1024,
-						"limit_mb":          rm.hardMemoryLimitMB,
-						"emergency_stop":    true,
-					},
-				)
-			} else {
-				// Memory freed by GC, continue with degradation
-				rm.degradationActive = true
-				logrus.Info("Memory freed by garbage collection, continuing with degradation mode")
-			}
-		} else {
-			// No graceful degradation, hard stop
-			return utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitMemory,
-				"hard memory limit exceeded",
-				"",
-				map[string]interface{}{
-					"current_memory_mb": currentMemory / 1024 / 1024,
-					"limit_mb":          rm.hardMemoryLimitMB,
-				},
-			)
-		}
+	if currentMemory <= rm.hardMemoryLimitBytes {
+		return nil
 	}
 
+	return rm.handleMemoryLimitExceeded(currentMemory)
+}
+
+// handleMemoryLimitExceeded handles the case when hard memory limit is exceeded.
+func (rm *ResourceMonitor) handleMemoryLimitExceeded(currentMemory int64) error {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+
+	rm.logMemoryViolation(currentMemory)
+
+	if !rm.enableGracefulDegr {
+		return rm.createHardMemoryLimitError(currentMemory, false)
+	}
+
+	return rm.tryGracefulRecovery(currentMemory)
+}
+
+// logMemoryViolation logs memory limit violation if not already logged.
+func (rm *ResourceMonitor) logMemoryViolation(currentMemory int64) {
+	violationKey := "hard_memory_limit"
+	if rm.violationLogged[violationKey] {
+		return
+	}
+
+	logger := utils.GetLogger()
+	logger.Errorf("Hard memory limit exceeded: %dMB > %dMB",
+		currentMemory/1024/1024, rm.hardMemoryLimitMB)
+	rm.violationLogged[violationKey] = true
+}
+
+// tryGracefulRecovery attempts graceful recovery by forcing GC.
+func (rm *ResourceMonitor) tryGracefulRecovery(_ int64) error {
+	// Force garbage collection
+	runtime.GC()
+
+	// Check again after GC
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	newMemory := int64(m.Alloc)
+
+	if newMemory > rm.hardMemoryLimitBytes {
+		// Still over limit, activate emergency stop
+		rm.emergencyStopRequested = true
+
+		return rm.createHardMemoryLimitError(newMemory, true)
+	}
+
+	// Memory freed by GC, continue with degradation
+	rm.degradationActive = true
+	logger := utils.GetLogger()
+	logger.Info("Memory freed by garbage collection, continuing with degradation mode")
+
 	return nil
+}
+
+// createHardMemoryLimitError creates a structured error for memory limit exceeded.
+func (rm *ResourceMonitor) createHardMemoryLimitError(currentMemory int64, emergencyStop bool) error {
+	message := "hard memory limit exceeded"
+	if emergencyStop {
+		message = "hard memory limit exceeded, emergency stop activated"
+	}
+
+	context := map[string]any{
+		"current_memory_mb": currentMemory / 1024 / 1024,
+		"limit_mb":          rm.hardMemoryLimitMB,
+	}
+	if emergencyStop {
+		context["emergency_stop"] = true
+	}
+
+	return utils.NewStructuredError(
+		utils.ErrorTypeValidation,
+		utils.CodeResourceLimitMemory,
+		message,
+		"",
+		context,
+	)
 }

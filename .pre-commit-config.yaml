@@ -1,3 +1,4 @@
+---
 repos:
   - repo: https://github.com/golangci/golangci-lint
     rev: v2.4.0
@@ -5,7 +6,7 @@ repos:
       - id: golangci-lint
         args: ["--timeout=5m"]
   - repo: https://github.com/tekwizely/pre-commit-golang
-    rev: v1.0.0-rc.1
+    rev: v1.0.0-rc.2
     hooks:
       - id: go-build-mod
         alias: build

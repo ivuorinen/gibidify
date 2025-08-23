@@ -274,6 +274,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 			subdir := filepath.Join(tempDir, fmt.Sprintf("subdir_%d", i/10))
 			if err := os.MkdirAll(subdir, 0o755); err != nil {
 				cleanup()
+
 				return "", nil, utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSAccess, "failed to create subdirectory")
 			}
 			filename = filepath.Join(subdir, filename)
@@ -289,6 +290,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 
 		if err := os.WriteFile(filename, []byte(content), 0o644); err != nil {
 			cleanup()
+
 			return "", nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileWrite, "failed to write benchmark file")
 		}
 	}
@@ -331,7 +333,8 @@ func runProcessingPipeline(ctx context.Context, files []string, outputFile *os.F
 			workersDone.Wait() // Wait for workers to finish
 			close(writeCh)
 			<-writerDone
-			return ctx.Err()
+
+			return fmt.Errorf("context canceled: %w", ctx.Err())
 		case fileCh <- file:
 		}
 	}

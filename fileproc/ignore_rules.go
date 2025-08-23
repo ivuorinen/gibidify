@@ -41,6 +41,7 @@ func tryLoadIgnoreFile(dir, fileName string) *ignoreRule {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -51,6 +52,7 @@ func matchesIgnoreRules(fullPath string, rules []ignoreRule) bool {
 			return true
 		}
 	}
+
 	return false
 }
 

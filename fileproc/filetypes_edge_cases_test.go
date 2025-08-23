@@ -4,6 +4,10 @@ import (
 	"testing"
 )
 
+const (
+	testGoFile = "test.go"
+)
+
 // TestFileTypeRegistry_EdgeCases tests edge cases and boundary conditions.
 func TestFileTypeRegistry_EdgeCases(t *testing.T) {
 	registry := GetDefaultRegistry()
@@ -73,7 +77,7 @@ func TestFileTypeRegistry_MinimumExtensionLength(t *testing.T) {
 	}
 }
 
-// Benchmark tests for performance validation
+// Benchmark tests for performance validation.
 func BenchmarkFileTypeRegistry_IsImage(b *testing.B) {
 	registry := GetDefaultRegistry()
 	filename := "test.png"
@@ -96,7 +100,7 @@ func BenchmarkFileTypeRegistry_IsBinary(b *testing.B) {
 
 func BenchmarkFileTypeRegistry_GetLanguage(b *testing.B) {
 	registry := GetDefaultRegistry()
-	filename := "test.go"
+	filename := testGoFile
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -105,7 +109,7 @@ func BenchmarkFileTypeRegistry_GetLanguage(b *testing.B) {
 }
 
 func BenchmarkFileTypeRegistry_GlobalFunctions(b *testing.B) {
-	filename := "test.go"
+	filename := testGoFile
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -116,7 +120,7 @@ func BenchmarkFileTypeRegistry_GlobalFunctions(b *testing.B) {
 }
 
 func BenchmarkFileTypeRegistry_ConcurrentAccess(b *testing.B) {
-	filename := "test.go"
+	filename := testGoFile
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
