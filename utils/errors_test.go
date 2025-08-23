@@ -178,7 +178,7 @@ func TestLogErrorf(t *testing.T) {
 	}
 }
 
-func TestLogErrorConcurrency(t *testing.T) {
+func TestLogErrorConcurrency(_ *testing.T) {
 	// Test that LogError is safe for concurrent use
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
@@ -194,7 +194,7 @@ func TestLogErrorConcurrency(t *testing.T) {
 	}
 }
 
-func TestLogErrorfConcurrency(t *testing.T) {
+func TestLogErrorfConcurrency(_ *testing.T) {
 	// Test that LogErrorf is safe for concurrent use
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
@@ -753,7 +753,7 @@ func TestPredefinedErrorConstructors(t *testing.T) {
 	}{
 		{
 			name:         "NewCLIMissingSourceError",
-			constructor:  func(code, message string) *StructuredError { return NewCLIMissingSourceError() },
+			constructor:  func(_, _ string) *StructuredError { return NewCLIMissingSourceError() },
 			expectedType: ErrorTypeCLI,
 		},
 		{

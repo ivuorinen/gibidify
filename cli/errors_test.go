@@ -360,24 +360,24 @@ func TestErrorFormatter_provideSuggestions(t *testing.T) {
 	}
 }
 
-func TestCLIMissingSourceError(t *testing.T) {
-	err := NewCLIMissingSourceError()
+func TestMissingSourceError(t *testing.T) {
+	err := NewMissingSourceError()
 
 	if err == nil {
-		t.Error("NewCLIMissingSourceError() returned nil")
+		t.Error("NewMissingSourceError() returned nil")
 
 		return
 	}
 
 	expectedMsg := "source directory is required"
 	if err.Error() != expectedMsg {
-		t.Errorf("CLIMissingSourceError.Error() = %v, want %v", err.Error(), expectedMsg)
+		t.Errorf("MissingSourceError.Error() = %v, want %v", err.Error(), expectedMsg)
 	}
 
 	// Test type assertion
-	var cliErr *CLIMissingSourceError
+	var cliErr *MissingSourceError
 	if !errors.As(err, &cliErr) {
-		t.Error("NewCLIMissingSourceError() did not return *CLIMissingSourceError type")
+		t.Error("NewMissingSourceError() did not return *MissingSourceError type")
 	}
 }
 
@@ -394,7 +394,7 @@ func TestIsUserError(t *testing.T) {
 		},
 		{
 			name:     "CLI missing source error",
-			err:      NewCLIMissingSourceError(),
+			err:      NewMissingSourceError(),
 			expected: true,
 		},
 		{

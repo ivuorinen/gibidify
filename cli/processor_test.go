@@ -194,7 +194,7 @@ func TestProcessor_collectFiles(t *testing.T) {
 		},
 		{
 			name: "collect from empty directory",
-			setupFiles: func(dir string) []string {
+			setupFiles: func(_ string) []string {
 				return []string{}
 			},
 			wantCount: 0,
@@ -202,7 +202,7 @@ func TestProcessor_collectFiles(t *testing.T) {
 		},
 		{
 			name: "collect from non-existent directory",
-			setupFiles: func(dir string) []string {
+			setupFiles: func(_ string) []string {
 				return []string{}
 			},
 			wantCount:   0,
@@ -501,7 +501,7 @@ func TestProcessor_Process_Integration(t *testing.T) {
 		},
 		{
 			name: "processing with no files",
-			setupFiles: func(dir string) []string {
+			setupFiles: func(_ string) []string {
 				return []string{}
 			},
 			format:      "yaml",

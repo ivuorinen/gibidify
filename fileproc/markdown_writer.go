@@ -10,6 +10,7 @@ import (
 // MarkdownWriter handles markdown format output with streaming support.
 type MarkdownWriter struct {
 	outFile *os.File
+	suffix  string
 }
 
 // NewMarkdownWriter creates a new markdown writer.
@@ -17,8 +18,11 @@ func NewMarkdownWriter(outFile *os.File) *MarkdownWriter {
 	return &MarkdownWriter{outFile: outFile}
 }
 
-// Start writes the markdown header.
+// Start writes the markdown header and stores the suffix for later use.
 func (w *MarkdownWriter) Start(prefix, suffix string) error {
+	// Store suffix for use in Close method
+	w.suffix = suffix
+
 	if prefix != "" {
 		if _, err := fmt.Fprintf(w.outFile, "# %s\n\n", prefix); err != nil {
 			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write prefix")
@@ -37,10 +41,10 @@ func (w *MarkdownWriter) WriteFile(req WriteRequest) error {
 	return w.writeInline(req)
 }
 
-// Close writes the markdown footer.
-func (w *MarkdownWriter) Close(suffix string) error {
-	if suffix != "" {
-		if _, err := fmt.Fprintf(w.outFile, "\n# %s\n", suffix); err != nil {
+// Close writes the markdown footer using the suffix stored in Start.
+func (w *MarkdownWriter) Close() error {
+	if w.suffix != "" {
+		if _, err := fmt.Fprintf(w.outFile, "\n# %s\n", w.suffix); err != nil {
 			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write suffix")
 		}
 	}
@@ -105,7 +109,7 @@ func startMarkdownWriter(outFile *os.File, writeCh <-chan WriteRequest, done cha
 	}
 
 	// Close writer
-	if err := writer.Close(suffix); err != nil {
+	if err := writer.Close(); err != nil {
 		utils.LogError("Failed to write markdown suffix", err)
 	}
 }

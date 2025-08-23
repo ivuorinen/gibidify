@@ -177,7 +177,7 @@ func testPrintMethod(t *testing.T, methodName string, printFunc func(*UIManager,
 	}
 
 	// Test color method separately (doesn't capture output but shouldn't panic)
-	t.Run(methodName+" with colors should not panic", func(t *testing.T) {
+	t.Run(methodName+" with colors should not panic", func(_ *testing.T) {
 		ui, _ := createTestUI()
 		ui.SetColorOutput(true)
 		// Should not panic
