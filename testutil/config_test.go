@@ -49,11 +49,13 @@ func TestResetViperConfig(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.preSetup()
-			ResetViperConfig(t, tt.configPath)
-			tt.verify(t)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				tt.preSetup()
+				ResetViperConfig(t, tt.configPath)
+				tt.verify(t)
+			},
+		)
 	}
 }
 
@@ -103,10 +105,12 @@ func TestSetupCLIArgs(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			SetupCLIArgs(tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency)
-			verifySetupCLIArgs(t, tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency, tt.wantLen)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				SetupCLIArgs(tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency)
+				verifySetupCLIArgs(t, tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency, tt.wantLen)
+			},
+		)
 	}
 }
 

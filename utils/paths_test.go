@@ -52,23 +52,30 @@ func validateExpectedError(t *testing.T, err error, validatorName string, testCa
 }
 
 // testPathValidation is a helper function to test path validation functions without duplication.
-func testPathValidation(t *testing.T, validatorName string, validatorFunc func(string) error, tests []validatePathTestCase) {
+func testPathValidation(
+	t *testing.T,
+	validatorName string,
+	validatorFunc func(string) error,
+	tests []validatePathTestCase,
+) {
 	t.Helper()
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validatorFunc(tt.path)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				err := validatorFunc(tt.path)
 
-			if tt.wantErr {
-				validateExpectedError(t, err, validatorName, tt)
+				if tt.wantErr {
+					validateExpectedError(t, err, validatorName, tt)
 
-				return
-			}
+					return
+				}
 
-			if err != nil {
-				t.Errorf("%s() unexpected error: %v", validatorName, err)
-			}
-		})
+				if err != nil {
+					t.Errorf("%s() unexpected error: %v", validatorName, err)
+				}
+			},
+		)
 	}
 }
 
@@ -82,9 +89,11 @@ func TestGetAbsolutePath(t *testing.T) {
 	tests := createAbsolutePathTestCases(cwd)
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			verifyAbsolutePathResult(t, tt.path, tt.wantPrefix, tt.wantErr, tt.wantErrMsg, tt.skipWindows)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				verifyAbsolutePathResult(t, tt.path, tt.wantPrefix, tt.wantErr, tt.wantErrMsg, tt.skipWindows)
+			},
+		)
 	}
 }
 
@@ -164,7 +173,13 @@ func createAbsolutePathTestCases(cwd string) []struct {
 }
 
 // verifyAbsolutePathResult verifies the result of GetAbsolutePath.
-func verifyAbsolutePathResult(t *testing.T, path, wantPrefix string, wantErr bool, wantErrMsg string, skipWindows bool) {
+func verifyAbsolutePathResult(
+	t *testing.T,
+	path, wantPrefix string,
+	wantErr bool,
+	wantErrMsg string,
+	skipWindows bool,
+) {
 	t.Helper()
 
 	if skipWindows && runtime.GOOS == windowsOS {
@@ -247,9 +262,11 @@ func TestGetAbsolutePathSpecialCases(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			verifySpecialCaseAbsolutePath(t, tt.setup, tt.path, tt.wantErr)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				verifySpecialCaseAbsolutePath(t, tt.setup, tt.path, tt.wantErr)
+			},
+		)
 	}
 }
 
@@ -260,7 +277,7 @@ func setupSymlinkToDirectory(t *testing.T) (string, func()) {
 	target := filepath.Join(tmpDir, "target")
 	link := filepath.Join(tmpDir, "link")
 
-	if err := os.Mkdir(target, 0o755); err != nil {
+	if err := os.Mkdir(target, 0o750); err != nil {
 		t.Fatalf("Failed to create target directory: %v", err)
 	}
 	if err := os.Symlink(target, link); err != nil {
@@ -382,10 +399,10 @@ func TestValidateSourcePath(t *testing.T) {
 	validFile := filepath.Join(tmpDir, "validfile.txt")
 
 	// Create test directory and file
-	if err := os.Mkdir(validDir, 0o755); err != nil {
+	if err := os.Mkdir(validDir, 0o750); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
-	if err := os.WriteFile(validFile, []byte("test"), 0o644); err != nil {
+	if err := os.WriteFile(validFile, []byte("test"), 0o600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -470,10 +487,10 @@ func TestValidateDestinationPath(t *testing.T) {
 	validDest := filepath.Join(tmpDir, "output.txt")
 
 	// Create test directory and file
-	if err := os.Mkdir(existingDir, 0o755); err != nil {
+	if err := os.Mkdir(existingDir, 0o750); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
-	if err := os.WriteFile(existingFile, []byte("test"), 0o644); err != nil {
+	if err := os.WriteFile(existingFile, []byte("test"), 0o600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -627,12 +644,14 @@ func TestGetBaseName(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GetBaseName(tt.path)
-			if result != tt.expected {
-				t.Errorf("GetBaseName(%q) = %q, want %q", tt.path, result, tt.expected)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := GetBaseName(tt.path)
+				if result != tt.expected {
+					t.Errorf("GetBaseName(%q) = %q, want %q", tt.path, result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -643,7 +662,7 @@ func TestPathValidationIntegration(t *testing.T) {
 	validDestFile := filepath.Join(tmpDir, "output.txt")
 
 	// Create source directory
-	if err := os.Mkdir(validSourceDir, 0o755); err != nil {
+	if err := os.Mkdir(validSourceDir, 0o750); err != nil {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
@@ -705,25 +724,27 @@ func TestPathValidationIntegration(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Test source validation
-			sourceErr := ValidateSourcePath(tt.sourcePath)
-			if (sourceErr != nil) != tt.expectSourceErr {
-				t.Errorf("Source validation: expected error %v, got %v", tt.expectSourceErr, sourceErr)
-			}
+		t.Run(
+			tt.name, func(t *testing.T) {
+				// Test source validation
+				sourceErr := ValidateSourcePath(tt.sourcePath)
+				if (sourceErr != nil) != tt.expectSourceErr {
+					t.Errorf("Source validation: expected error %v, got %v", tt.expectSourceErr, sourceErr)
+				}
 
-			// Test destination validation
-			destErr := ValidateDestinationPath(tt.destPath)
-			if (destErr != nil) != tt.expectDestErr {
-				t.Errorf("Destination validation: expected error %v, got %v", tt.expectDestErr, destErr)
-			}
+				// Test destination validation
+				destErr := ValidateDestinationPath(tt.destPath)
+				if (destErr != nil) != tt.expectDestErr {
+					t.Errorf("Destination validation: expected error %v, got %v", tt.expectDestErr, destErr)
+				}
 
-			// Test config validation
-			configErr := ValidateConfigPath(tt.configPath)
-			if (configErr != nil) != tt.expectConfigErr {
-				t.Errorf("Config validation: expected error %v, got %v", tt.expectConfigErr, configErr)
-			}
-		})
+				// Test config validation
+				configErr := ValidateConfigPath(tt.configPath)
+				if (configErr != nil) != tt.expectConfigErr {
+					t.Errorf("Config validation: expected error %v, got %v", tt.expectConfigErr, configErr)
+				}
+			},
+		)
 	}
 }
 
@@ -731,7 +752,7 @@ func TestPathValidationIntegration(t *testing.T) {
 func BenchmarkValidateSourcePath(b *testing.B) {
 	tmpDir := b.TempDir()
 	validDir := filepath.Join(tmpDir, "testdir")
-	if err := os.Mkdir(validDir, 0o755); err != nil {
+	if err := os.Mkdir(validDir, 0o750); err != nil {
 		b.Fatalf("Failed to create test directory: %v", err)
 	}
 

@@ -83,32 +83,56 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 	b.WriteString("=== Processing Statistics ===\n")
 
 	// File counts
-	b.WriteString(fmt.Sprintf("Files - Total: %d, Processed: %d, Skipped: %d, Errors: %d\n",
-		metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles))
+	b.WriteString(
+		fmt.Sprintf(
+			"Files - Total: %d, Processed: %d, Skipped: %d, Errors: %d\n",
+			metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles,
+		),
+	)
 
 	// Size information
-	b.WriteString(fmt.Sprintf("Size - Processed: %s, Average: %s\n",
-		r.formatBytes(metrics.ProcessedSize),
-		r.formatBytes(int64(metrics.AverageFileSize))))
+	b.WriteString(
+		fmt.Sprintf(
+			"Size - Processed: %s, Average: %s\n",
+			r.formatBytes(metrics.ProcessedSize),
+			r.formatBytes(int64(metrics.AverageFileSize)),
+		),
+	)
 
 	if metrics.LargestFile > 0 {
-		b.WriteString(fmt.Sprintf("File Size Range: %s - %s\n",
-			r.formatBytes(metrics.SmallestFile),
-			r.formatBytes(metrics.LargestFile)))
+		b.WriteString(
+			fmt.Sprintf(
+				"File Size Range: %s - %s\n",
+				r.formatBytes(metrics.SmallestFile),
+				r.formatBytes(metrics.LargestFile),
+			),
+		)
 	}
 
 	// Performance
-	b.WriteString(fmt.Sprintf("Performance - Files/sec: %.1f, MB/sec: %.1f\n",
-		metrics.FilesPerSecond,
-		metrics.BytesPerSecond/1024/1024))
+	b.WriteString(
+		fmt.Sprintf(
+			"Performance - Files/sec: %.1f, MB/sec: %.1f\n",
+			metrics.FilesPerSecond,
+			metrics.BytesPerSecond/1024/1024,
+		),
+	)
 
 	// Memory usage
-	b.WriteString(fmt.Sprintf("Memory - Current: %dMB, Peak: %dMB, Goroutines: %d\n",
-		metrics.CurrentMemoryMB, metrics.PeakMemoryMB, metrics.GoroutineCount))
+	b.WriteString(
+		fmt.Sprintf(
+			"Memory - Current: %dMB, Peak: %dMB, Goroutines: %d\n",
+			metrics.CurrentMemoryMB, metrics.PeakMemoryMB, metrics.GoroutineCount,
+		),
+	)
 
 	// Concurrency
-	b.WriteString(fmt.Sprintf("Concurrency - Current: %d, Max: %d\n",
-		metrics.CurrentConcurrency, metrics.MaxConcurrency))
+	b.WriteString(
+		fmt.Sprintf(
+			"Concurrency - Current: %d, Max: %d\n",
+			metrics.CurrentConcurrency, metrics.MaxConcurrency,
+		),
+	)
 
 	// Format breakdown (if available)
 	if len(metrics.FormatCounts) > 0 {
@@ -131,11 +155,19 @@ func (r *Reporter) formatBasicReport(metrics ProcessingMetrics) string {
 	var b strings.Builder
 
 	b.WriteString("=== Processing Complete ===\n")
-	b.WriteString(fmt.Sprintf("Total Files: %d (Processed: %d, Skipped: %d, Errors: %d)\n",
-		metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles))
+	b.WriteString(
+		fmt.Sprintf(
+			"Total Files: %d (Processed: %d, Skipped: %d, Errors: %d)\n",
+			metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles,
+		),
+	)
 
-	b.WriteString(fmt.Sprintf("Total Size: %s, Average Rate: %.1f files/sec\n",
-		r.formatBytes(metrics.ProcessedSize), metrics.FilesPerSecond))
+	b.WriteString(
+		fmt.Sprintf(
+			"Total Size: %s, Average Rate: %.1f files/sec\n",
+			r.formatBytes(metrics.ProcessedSize), metrics.FilesPerSecond,
+		),
+	)
 
 	b.WriteString(fmt.Sprintf("Processing Time: %v\n", metrics.ProcessingTime.Truncate(time.Millisecond)))
 
@@ -160,17 +192,25 @@ func (r *Reporter) formatVerboseReport(report ProfileReport) string {
 }
 
 // writeSummarySection writes the summary section of the verbose report.
+//
+//goland:noinspection ALL
 func (r *Reporter) writeSummarySection(b *strings.Builder, report ProfileReport) {
 	metrics := report.Summary
 
 	b.WriteString("SUMMARY:\n")
-	fmt.Fprintf(b, "  Files: %d total (%d processed, %d skipped, %d errors)\n",
-		metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles)
-	fmt.Fprintf(b, "  Size: %s processed (avg: %s per file)\n",
-		r.formatBytes(metrics.ProcessedSize), r.formatBytes(int64(metrics.AverageFileSize)))
-	fmt.Fprintf(b, "  Time: %v (%.1f files/sec, %.1f MB/sec)\n",
+	fmt.Fprintf(
+		b, "  Files: %d total (%d processed, %d skipped, %d errors)\n",
+		metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles,
+	)
+	fmt.Fprintf(
+		b, "  Size: %s processed (avg: %s per file)\n",
+		r.formatBytes(metrics.ProcessedSize), r.formatBytes(int64(metrics.AverageFileSize)),
+	)
+	fmt.Fprintf(
+		b, "  Time: %v (%.1f files/sec, %.1f MB/sec)\n",
 		metrics.ProcessingTime.Truncate(time.Millisecond),
-		metrics.FilesPerSecond, metrics.BytesPerSecond/1024/1024)
+		metrics.FilesPerSecond, metrics.BytesPerSecond/1024/1024,
+	)
 	fmt.Fprintf(b, "  Performance Index: %.1f\n", report.PerformanceIndex)
 }
 
@@ -203,10 +243,12 @@ func (r *Reporter) writePhaseBreakdown(b *strings.Builder, report ProfileReport)
 	phases := []string{PhaseCollection, PhaseProcessing, PhaseWriting, PhaseFinalize}
 	for _, phase := range phases {
 		if phaseMetrics, exists := report.PhaseBreakdown[phase]; exists {
-			fmt.Fprintf(b, "  %s: %v (%.1f%%)\n",
+			fmt.Fprintf(
+				b, "  %s: %v (%.1f%%)\n",
 				cases.Title(language.English).String(phase),
 				phaseMetrics.TotalTime.Truncate(time.Millisecond),
-				phaseMetrics.Percentage)
+				phaseMetrics.Percentage,
+			)
 		}
 	}
 }
@@ -229,10 +271,14 @@ func (r *Reporter) writeErrorBreakdown(b *strings.Builder, report ProfileReport)
 func (r *Reporter) writeResourceUsage(b *strings.Builder, report ProfileReport) {
 	metrics := report.Summary
 	b.WriteString("\nRESOURCE USAGE:\n")
-	fmt.Fprintf(b, "  Memory: %dMB current, %dMB peak\n",
-		metrics.CurrentMemoryMB, metrics.PeakMemoryMB)
-	fmt.Fprintf(b, "  Concurrency: %d current, %d max, %d goroutines\n",
-		metrics.CurrentConcurrency, metrics.MaxConcurrency, metrics.GoroutineCount)
+	fmt.Fprintf(
+		b, "  Memory: %dMB current, %dMB peak\n",
+		metrics.CurrentMemoryMB, metrics.PeakMemoryMB,
+	)
+	fmt.Fprintf(
+		b, "  Concurrency: %d current, %d max, %d goroutines\n",
+		metrics.CurrentConcurrency, metrics.MaxConcurrency, metrics.GoroutineCount,
+	)
 }
 
 // writeFileSizeStats writes the file size statistics section.
@@ -243,8 +289,10 @@ func (r *Reporter) writeFileSizeStats(b *strings.Builder, report ProfileReport) 
 	}
 
 	b.WriteString("\nFILE SIZE STATISTICS:\n")
-	fmt.Fprintf(b, "  Range: %s - %s\n",
-		r.formatBytes(metrics.SmallestFile), r.formatBytes(metrics.LargestFile))
+	fmt.Fprintf(
+		b, "  Range: %s - %s\n",
+		r.formatBytes(metrics.SmallestFile), r.formatBytes(metrics.LargestFile),
+	)
 	fmt.Fprintf(b, "  Average: %s\n", r.formatBytes(int64(metrics.AverageFileSize)))
 }
 

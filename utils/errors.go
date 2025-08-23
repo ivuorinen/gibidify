@@ -137,27 +137,27 @@ func WrapErrorf(err error, errorType ErrorType, code, format string, args ...any
 
 // Common error codes for each type.
 const (
-	// CLI Error Codes.
+	// CodeCLIMissingSource CLI Error Codes.
 	CodeCLIMissingSource = "MISSING_SOURCE"
 	CodeCLIInvalidArgs   = "INVALID_ARGS"
 
-	// FileSystem Error Codes.
+	// CodeFSPathResolution FileSystem Error Codes.
 	CodeFSPathResolution = "PATH_RESOLUTION"
 	CodeFSPermission     = "PERMISSION_DENIED"
 	CodeFSNotFound       = "NOT_FOUND"
 	CodeFSAccess         = "ACCESS_DENIED"
 
-	// Processing Error Codes.
+	// CodeProcessingFileRead Processing Error Codes.
 	CodeProcessingFileRead   = "FILE_READ"
 	CodeProcessingCollection = "COLLECTION"
 	CodeProcessingTraversal  = "TRAVERSAL"
 	CodeProcessingEncode     = "ENCODE"
 
-	// Configuration Error Codes.
+	// CodeConfigValidation Configuration Error Codes.
 	CodeConfigValidation = "VALIDATION"
 	CodeConfigMissing    = "MISSING"
 
-	// IO Error Codes.
+	// CodeIOFileCreate IO Error Codes.
 	CodeIOFileCreate = "FILE_CREATE"
 	CodeIOFileWrite  = "FILE_WRITE"
 	CodeIOEncoding   = "ENCODING"
@@ -185,7 +185,13 @@ const (
 
 // NewCLIMissingSourceError creates a CLI error for missing source argument.
 func NewCLIMissingSourceError() *StructuredError {
-	return NewStructuredError(ErrorTypeCLI, CodeCLIMissingSource, "usage: gibidify -source <source_directory> [--destination <output_file>] [--format=json|yaml|markdown]", "", nil)
+	return NewStructuredError(
+		ErrorTypeCLI,
+		CodeCLIMissingSource,
+		"usage: gibidify -source <source_directory> [--destination <output_file>] [--format=json|yaml|markdown]",
+		"",
+		nil,
+	)
 }
 
 // NewFileSystemError creates a file system error.

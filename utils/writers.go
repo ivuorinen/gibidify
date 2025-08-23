@@ -38,7 +38,13 @@ func WriteWithErrorWrap(writer io.Writer, content, errorMsg, filePath string) er
 
 // StreamContent provides a common streaming implementation with chunk processing.
 // This eliminates the similar streaming patterns across JSON and Markdown writers.
-func StreamContent(reader io.Reader, writer io.Writer, chunkSize int, filePath string, processChunk func([]byte) []byte) error {
+func StreamContent(
+	reader io.Reader,
+	writer io.Writer,
+	chunkSize int,
+	filePath string,
+	processChunk func([]byte) []byte,
+) error {
 	buf := make([]byte, chunkSize)
 	for {
 		n, err := reader.Read(buf)

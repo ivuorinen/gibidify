@@ -62,7 +62,7 @@ func TestCollectFiles(t *testing.T) {
 
 	for name, content := range testFiles {
 		filePath := tmpDir + "/" + name
-		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
 			t.Fatalf("Failed to create test file %s: %v", name, err)
 		}
 	}

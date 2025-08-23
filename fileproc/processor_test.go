@@ -141,7 +141,7 @@ func TestProcess(t *testing.T) {
 	// Create test file with .go extension
 	testFile := tmpDir + "/test.go"
 	content := testContent
-	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(testFile, []byte(content), 0o600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -304,7 +304,7 @@ func TestProcessor_ContextCancellation(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		testFile := tmpDir + "/" + "test" + string(rune('0'+i)) + ".go"
 		content := testContent
-		if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(testFile, []byte(content), 0o600); err != nil {
 			t.Fatalf("Failed to create test file: %v", err)
 		}
 	}
@@ -371,7 +371,7 @@ max_file_size_mb: 0.001  # 1KB limit for testing
 	// Test case 2: File that exceeds size limit
 	largeFile := tmpDir + "/large.go"
 	largeContent := strings.Repeat("// Large file content\n", 100) // > 1KB
-	if err := os.WriteFile(largeFile, []byte(largeContent), 0o644); err != nil {
+	if err := os.WriteFile(largeFile, []byte(largeContent), 0o600); err != nil {
 		t.Fatalf("Failed to create large file: %v", err)
 	}
 
@@ -400,7 +400,7 @@ func TestProcessor_ContextCancellationDuringValidation(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := tmpDir + "/test.go"
 	content := testContent
-	if err := os.WriteFile(testFile, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(testFile, []byte(content), 0o600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
@@ -440,7 +440,7 @@ func TestProcessor_InMemoryProcessingEdgeCases(t *testing.T) {
 
 	// Test with empty file
 	emptyFile := tmpDir + "/empty.go"
-	if err := os.WriteFile(emptyFile, []byte(""), 0o644); err != nil {
+	if err := os.WriteFile(emptyFile, []byte(""), 0o600); err != nil {
 		t.Fatalf("Failed to create empty file: %v", err)
 	}
 
@@ -483,7 +483,7 @@ func TestProcessor_StreamingEdgeCases(t *testing.T) {
 	// Create a file larger than streaming threshold but test error conditions
 	largeFile := tmpDir + "/large_stream.go"
 	largeContent := strings.Repeat("// Large streaming file content line\n", 50000) // > 1MB
-	if err := os.WriteFile(largeFile, []byte(largeContent), 0o644); err != nil {
+	if err := os.WriteFile(largeFile, []byte(largeContent), 0o600); err != nil {
 		t.Fatalf("Failed to create large file: %v", err)
 	}
 

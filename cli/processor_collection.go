@@ -13,7 +13,12 @@ import (
 func (p *Processor) collectFiles() ([]string, error) {
 	files, err := fileproc.CollectFiles(p.flags.SourceDir)
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "error collecting files")
+		return nil, utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"error collecting files",
+		)
 	}
 
 	logger := utils.GetLogger()

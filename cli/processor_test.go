@@ -59,12 +59,14 @@ func TestNewProcessor(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			processor := NewProcessor(tt.flags)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				processor := NewProcessor(tt.flags)
 
-			validateProcessor(t, processor, tt.want)
-			validateProcessorFlags(t, processor, tt.flags)
-		})
+				validateProcessor(t, processor, tt.want)
+				validateProcessorFlags(t, processor, tt.flags)
+			},
+		)
 	}
 }
 
@@ -98,28 +100,30 @@ func TestProcessor_configureFileTypes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Reset config state
-			testutil.ResetViperConfig(t, "")
-			tt.setupConfig()
+		t.Run(
+			tt.name, func(t *testing.T) {
+				// Reset config state
+				testutil.ResetViperConfig(t, "")
+				tt.setupConfig()
 
-			flags := &Flags{
-				SourceDir:   "/test/source",
-				Format:      "markdown",
-				Concurrency: 1,
-				Destination: "/test/output.md",
-			}
+				flags := &Flags{
+					SourceDir:   "/test/source",
+					Format:      "markdown",
+					Concurrency: 1,
+					Destination: "/test/output.md",
+				}
 
-			processor := NewProcessor(flags)
+				processor := NewProcessor(flags)
 
-			// Mock the file types enabled state
-			// This would normally be done through config, but we'll test the function directly
-			// since the actual configuration is complex and tested elsewhere
-			// No additional setup needed for this test case regardless of fileTypesEnabled value
+				// Mock the file types enabled state
+				// This would normally be done through config, but we'll test the function directly
+				// since the actual configuration is complex and tested elsewhere
+				// No additional setup needed for this test case regardless of fileTypesEnabled value
 
-			// Test that configureFileTypes doesn't panic
-			processor.configureFileTypes()
-		})
+				// Test that configureFileTypes doesn't panic
+				processor.configureFileTypes()
+			},
+		)
 	}
 }
 
@@ -212,21 +216,23 @@ func TestProcessor_collectFiles(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testutil.ResetViperConfig(t, "")
-			testDir := setupCollectFilesTest(t, tt.name, tt.setupFiles)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				testutil.ResetViperConfig(t, "")
+				testDir := setupCollectFilesTest(t, tt.name, tt.setupFiles)
 
-			flags := &Flags{
-				SourceDir:   testDir,
-				Format:      "markdown",
-				Concurrency: 1,
-				Destination: filepath.Join(t.TempDir(), "output.md"),
-			}
+				flags := &Flags{
+					SourceDir:   testDir,
+					Format:      "markdown",
+					Concurrency: 1,
+					Destination: filepath.Join(t.TempDir(), "output.md"),
+				}
 
-			processor := NewProcessor(flags)
-			files, err := processor.collectFiles()
-			validateCollectFiles(t, files, err, tt.wantCount, tt.wantErr, tt.errContains)
-		})
+				processor := NewProcessor(flags)
+				files, err := processor.collectFiles()
+				validateCollectFiles(t, files, err, tt.wantCount, tt.wantErr, tt.errContains)
+			},
+		)
 	}
 }
 
@@ -238,8 +244,10 @@ func setupValidationTestFiles(t *testing.T, tempDir string, files []string) []st
 	for i, fileName := range files {
 		if fileName != "" {
 			content := fmt.Sprintf("test content %d", i)
-			filePath := testutil.CreateTestFile(t, tempDir,
-				fmt.Sprintf("test_%d.txt", i), []byte(content))
+			filePath := testutil.CreateTestFile(
+				t, tempDir,
+				fmt.Sprintf("test_%d.txt", i), []byte(content),
+			)
 			testFiles = append(testFiles, filePath)
 		} else {
 			testFiles = append(testFiles, fileName)
@@ -306,24 +314,26 @@ func TestProcessor_validateFileCollection(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testutil.ResetViperConfig(t, "")
-			tt.setupConfig()
+		t.Run(
+			tt.name, func(t *testing.T) {
+				testutil.ResetViperConfig(t, "")
+				tt.setupConfig()
 
-			tempDir := t.TempDir()
-			testFiles := setupValidationTestFiles(t, tempDir, tt.files)
+				tempDir := t.TempDir()
+				testFiles := setupValidationTestFiles(t, tempDir, tt.files)
 
-			flags := &Flags{
-				SourceDir:   tempDir,
-				Format:      "markdown",
-				Concurrency: 1,
-				Destination: filepath.Join(t.TempDir(), "output.md"),
-			}
+				flags := &Flags{
+					SourceDir:   tempDir,
+					Format:      "markdown",
+					Concurrency: 1,
+					Destination: filepath.Join(t.TempDir(), "output.md"),
+				}
 
-			processor := NewProcessor(flags)
-			err := processor.validateFileCollection(testFiles)
-			validateFileCollectionResult(t, err, tt.wantErr, tt.errContains)
-		})
+				processor := NewProcessor(flags)
+				err := processor.validateFileCollection(testFiles)
+				validateFileCollectionResult(t, err, tt.wantErr, tt.errContains)
+			},
+		)
 	}
 }
 
@@ -385,23 +395,30 @@ func TestProcessor_createOutputFile(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			flags := &Flags{
-				SourceDir:   t.TempDir(),
-				Format:      "markdown",
-				Concurrency: 1,
-				Destination: tt.setupDest(),
-			}
+		t.Run(
+			tt.name, func(t *testing.T) {
+				flags := &Flags{
+					SourceDir:   t.TempDir(),
+					Format:      "markdown",
+					Concurrency: 1,
+					Destination: tt.setupDest(),
+				}
 
-			processor := NewProcessor(flags)
-			outFile, err := processor.createOutputFile()
-			validateOutputFile(t, outFile, err, tt.wantErr, tt.errContains)
-		})
+				processor := NewProcessor(flags)
+				outFile, err := processor.createOutputFile()
+				validateOutputFile(t, outFile, err, tt.wantErr, tt.errContains)
+			},
+		)
 	}
 }
 
 // runProcessorIntegrationTest runs a single processor integration test.
-func runProcessorIntegrationTest(t *testing.T, testDir, format, outputPath string, concurrency int, timeout time.Duration) error {
+func runProcessorIntegrationTest(
+	t *testing.T,
+	testDir, format, outputPath string,
+	concurrency int,
+	timeout time.Duration,
+) error {
 	t.Helper()
 
 	flags := &Flags{
@@ -512,16 +529,18 @@ func TestProcessor_Process_Integration(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testutil.ResetViperConfig(t, "")
+		t.Run(
+			tt.name, func(t *testing.T) {
+				testutil.ResetViperConfig(t, "")
 
-			testDir := t.TempDir()
-			tt.setupFiles(testDir)
+				testDir := t.TempDir()
+				tt.setupFiles(testDir)
 
-			outputPath := filepath.Join(t.TempDir(), "output."+tt.format)
-			err := runProcessorIntegrationTest(t, testDir, tt.format, outputPath, tt.concurrency, tt.timeout)
-			validateProcessingResult(t, err, outputPath, tt.format, tt.wantErr, tt.errContains)
-		})
+				outputPath := filepath.Join(t.TempDir(), "output."+tt.format)
+				err := runProcessorIntegrationTest(t, testDir, tt.format, outputPath, tt.concurrency, tt.timeout)
+				validateProcessingResult(t, err, outputPath, tt.format, tt.wantErr, tt.errContains)
+			},
+		)
 	}
 }
 
@@ -588,42 +607,44 @@ func TestProcessor_Process_ResourceLimits(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testutil.ResetViperConfig(t, "")
-			tt.setupConfig()
+		t.Run(
+			tt.name, func(t *testing.T) {
+				testutil.ResetViperConfig(t, "")
+				tt.setupConfig()
 
-			testDir := t.TempDir()
-			tt.setupFiles(testDir)
+				testDir := t.TempDir()
+				tt.setupFiles(testDir)
 
-			outputPath := filepath.Join(t.TempDir(), "output.md")
+				outputPath := filepath.Join(t.TempDir(), "output.md")
 
-			flags := &Flags{
-				SourceDir:   testDir,
-				Format:      "markdown",
-				Concurrency: 1,
-				Destination: outputPath,
-				NoColors:    true,
-				NoProgress:  true,
-			}
-
-			processor := NewProcessor(flags)
-			ctx := context.Background()
-
-			err := processor.Process(ctx)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("Expected error but got none")
-
-					return
+				flags := &Flags{
+					SourceDir:   testDir,
+					Format:      "markdown",
+					Concurrency: 1,
+					Destination: outputPath,
+					NoColors:    true,
+					NoProgress:  true,
 				}
-				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-					t.Errorf("Error should contain %q, got: %v", tt.errContains, err)
+
+				processor := NewProcessor(flags)
+				ctx := context.Background()
+
+				err := processor.Process(ctx)
+
+				if tt.wantErr {
+					if err == nil {
+						t.Errorf("Expected error but got none")
+
+						return
+					}
+					if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
+						t.Errorf("Error should contain %q, got: %v", tt.errContains, err)
+					}
+				} else if err != nil {
+					t.Errorf("Unexpected error: %v", err)
 				}
-			} else if err != nil {
-				t.Errorf("Unexpected error: %v", err)
-			}
-		})
+			},
+		)
 	}
 }
 
@@ -709,7 +730,7 @@ func validateOutputContent(t *testing.T, content, format string) {
 	switch format {
 	case "markdown":
 		// Markdown should have some structure
-		// Check for markdown code blocks if content is substantial
+		// Check for Markdown code blocks if content is substantial
 		// Empty directories might produce minimal output which is expected behavior
 		if !strings.Contains(content, "```") && len(content) > 10 {
 			t.Log("Markdown output may be minimal for empty directories")

@@ -42,7 +42,7 @@ func testImageExtensionModifications(t *testing.T, registry *FileTypeRegistry) {
 	registry.AddImageExtension(".webp")
 	verifyImageExtension(t, registry, ".webp", "test.webp", true)
 
-	// Test case insensitive addition
+	// Test case-insensitive addition
 	registry.AddImageExtension(".AVIF")
 	verifyImageExtension(t, registry, ".AVIF", "test.avif", true)
 	verifyImageExtension(t, registry, ".AVIF", "test.AVIF", true)
@@ -64,7 +64,7 @@ func testBinaryExtensionModifications(t *testing.T, registry *FileTypeRegistry) 
 	registry.AddBinaryExtension(".custom")
 	verifyBinaryExtension(t, registry, ".custom", "file.custom", true)
 
-	// Test case insensitive addition
+	// Test case-insensitive addition
 	registry.AddBinaryExtension(".SPECIAL")
 	verifyBinaryExtension(t, registry, ".SPECIAL", "file.special", true)
 	verifyBinaryExtension(t, registry, ".SPECIAL", "file.SPECIAL", true)
@@ -86,7 +86,7 @@ func testLanguageMappingModifications(t *testing.T, registry *FileTypeRegistry) 
 	registry.AddLanguageMapping(".xyz", "CustomLang")
 	verifyLanguageMapping(t, registry, "file.xyz", "CustomLang")
 
-	// Test case insensitive addition
+	// Test case-insensitive addition
 	registry.AddLanguageMapping(".ABC", "UpperLang")
 	verifyLanguageMapping(t, registry, "file.abc", "UpperLang")
 	verifyLanguageMapping(t, registry, "file.ABC", "UpperLang")

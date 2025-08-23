@@ -57,9 +57,11 @@ func LoadConfig() {
 func setDefaultConfig() {
 	viper.SetDefault("fileSizeLimit", DefaultFileSizeLimit)
 	// Default ignored directories.
-	viper.SetDefault("ignoreDirectories", []string{
-		"vendor", "node_modules", ".git", "dist", "build", "target", "bower_components", "cache", "tmp",
-	})
+	viper.SetDefault(
+		"ignoreDirectories", []string{
+			"vendor", "node_modules", ".git", "dist", "build", "target", "bower_components", "cache", "tmp",
+		},
+	)
 
 	// FileTypeRegistry defaults
 	viper.SetDefault("fileTypes.enabled", true)

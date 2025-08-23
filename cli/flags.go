@@ -4,6 +4,7 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"os"
 	"runtime"
 
 	"github.com/ivuorinen/gibidify/config"
@@ -34,6 +35,8 @@ var (
 func ResetFlags() {
 	flagsParsed = false
 	globalFlags = nil
+	// Reset default FlagSet to avoid duplicate flag registration across tests
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 }
 
 // ParseFlags parses and validates CLI flags.
