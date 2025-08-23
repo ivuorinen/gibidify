@@ -11,9 +11,11 @@ func TestCreateTestFile(t *testing.T) {
 	tests := createTestFileTestCases()
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runCreateTestFileTest(t, tt.dir, tt.filename, tt.content)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runCreateTestFileTest(t, tt.dir, tt.filename, tt.content)
+			},
+		)
 	}
 }
 
@@ -168,32 +170,34 @@ func TestCreateTempOutputFile(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			file, path := CreateTempOutputFile(t, tt.pattern)
-			defer CloseFile(t, file)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				file, path := CreateTempOutputFile(t, tt.pattern)
+				defer CloseFile(t, file)
 
-			// Verify file exists
-			info, err := os.Stat(path)
-			if err != nil {
-				t.Fatalf("Temp file does not exist: %v", err)
-			}
+				// Verify file exists
+				info, err := os.Stat(path)
+				if err != nil {
+					t.Fatalf("Temp file does not exist: %v", err)
+				}
 
-			// Verify it's a regular file
-			if !info.Mode().IsRegular() {
-				t.Errorf("Created path is not a regular file")
-			}
+				// Verify it's a regular file
+				if !info.Mode().IsRegular() {
+					t.Errorf("Created path is not a regular file")
+				}
 
-			// Verify we can write to it
-			testContent := []byte("test content")
-			if _, err := file.Write(testContent); err != nil {
-				t.Errorf("Failed to write to temp file: %v", err)
-			}
+				// Verify we can write to it
+				testContent := []byte("test content")
+				if _, err := file.Write(testContent); err != nil {
+					t.Errorf("Failed to write to temp file: %v", err)
+				}
 
-			// Verify the path is in a temp directory (any temp directory)
-			if !strings.Contains(path, os.TempDir()) {
-				t.Errorf("Temp file not in temp directory: %s", path)
-			}
-		})
+				// Verify the path is in a temp directory (any temp directory)
+				if !strings.Contains(path, os.TempDir()) {
+					t.Errorf("Temp file not in temp directory: %s", path)
+				}
+			},
+		)
 	}
 }
 
@@ -201,9 +205,11 @@ func TestCreateTestDirectory(t *testing.T) {
 	tests := createTestDirectoryTestCases()
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runCreateTestDirectoryTest(t, tt.parent, tt.dir)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runCreateTestDirectoryTest(t, tt.parent, tt.dir)
+			},
+		)
 	}
 }
 
@@ -317,9 +323,11 @@ func TestCreateTestFiles(t *testing.T) {
 	tests := createTestFilesTestCases()
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runTestFilesTest(t, tt.fileSpecs, tt.wantCount)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runTestFilesTest(t, tt.fileSpecs, tt.wantCount)
+			},
+		)
 	}
 }
 

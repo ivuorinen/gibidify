@@ -81,28 +81,32 @@ func TestLogError(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := captureLogOutput(func() {
-				LogError(tt.operation, tt.err, tt.args...)
-			})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				output := captureLogOutput(
+					func() {
+						LogError(tt.operation, tt.err, tt.args...)
+					},
+				)
 
-			if tt.wantEmpty {
-				if output != "" {
-					t.Errorf("LogError() logged output when error was nil: %q", output)
+				if tt.wantEmpty {
+					if output != "" {
+						t.Errorf("LogError() logged output when error was nil: %q", output)
+					}
+
+					return
 				}
 
-				return
-			}
+				if !strings.Contains(output, tt.wantLog) {
+					t.Errorf("LogError() output = %q, want to contain %q", output, tt.wantLog)
+				}
 
-			if !strings.Contains(output, tt.wantLog) {
-				t.Errorf("LogError() output = %q, want to contain %q", output, tt.wantLog)
-			}
-
-			// Verify it's logged at ERROR level
-			if !strings.Contains(output, "level=error") {
-				t.Errorf("LogError() should log at ERROR level, got: %q", output)
-			}
-		})
+				// Verify it's logged at ERROR level
+				if !strings.Contains(output, "level=error") {
+					t.Errorf("LogError() should log at ERROR level, got: %q", output)
+				}
+			},
+		)
 	}
 }
 
@@ -153,35 +157,39 @@ func TestLogErrorf(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			output := captureLogOutput(func() {
-				LogErrorf(tt.err, tt.format, tt.args...)
-			})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				output := captureLogOutput(
+					func() {
+						LogErrorf(tt.err, tt.format, tt.args...)
+					},
+				)
 
-			if tt.wantEmpty {
-				if output != "" {
-					t.Errorf("LogErrorf() logged output when error was nil: %q", output)
+				if tt.wantEmpty {
+					if output != "" {
+						t.Errorf("LogErrorf() logged output when error was nil: %q", output)
+					}
+
+					return
 				}
 
-				return
-			}
+				if !strings.Contains(output, tt.wantLog) {
+					t.Errorf("LogErrorf() output = %q, want to contain %q", output, tt.wantLog)
+				}
 
-			if !strings.Contains(output, tt.wantLog) {
-				t.Errorf("LogErrorf() output = %q, want to contain %q", output, tt.wantLog)
-			}
-
-			// Verify it's logged at ERROR level
-			if !strings.Contains(output, "level=error") {
-				t.Errorf("LogErrorf() should log at ERROR level, got: %q", output)
-			}
-		})
+				// Verify it's logged at ERROR level
+				if !strings.Contains(output, "level=error") {
+					t.Errorf("LogErrorf() should log at ERROR level, got: %q", output)
+				}
+			},
+		)
 	}
 }
 
 func TestLogErrorConcurrency(_ *testing.T) {
 	// Test that LogError is safe for concurrent use
 	done := make(chan bool)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go func(n int) {
 			LogError("concurrent operation", fmt.Errorf("error %d", n))
 			done <- true
@@ -189,7 +197,7 @@ func TestLogErrorConcurrency(_ *testing.T) {
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 }
@@ -197,7 +205,7 @@ func TestLogErrorConcurrency(_ *testing.T) {
 func TestLogErrorfConcurrency(_ *testing.T) {
 	// Test that LogErrorf is safe for concurrent use
 	done := make(chan bool)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		go func(n int) {
 			LogErrorf(fmt.Errorf("error %d", n), "concurrent operation %d", n)
 			done <- true
@@ -205,7 +213,7 @@ func TestLogErrorfConcurrency(_ *testing.T) {
 	}
 
 	// Wait for all goroutines to complete
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		<-done
 	}
 }
@@ -218,8 +226,7 @@ func BenchmarkLogError(b *testing.B) {
 	logger.SetOutput(io.Discard)
 	defer logger.SetOutput(io.Discard)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		LogError("benchmark operation", err)
 	}
 }
@@ -290,12 +297,14 @@ func TestErrorType_String(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.errType.String()
-			if result != tt.expected {
-				t.Errorf("ErrorType.String() = %q, want %q", result, tt.expected)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := tt.errType.String()
+				if result != tt.expected {
+					t.Errorf("ErrorType.String() = %q, want %q", result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -336,12 +345,14 @@ func TestStructuredError_Error(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.err.Error()
-			if result != tt.expected {
-				t.Errorf("StructuredError.Error() = %q, want %q", result, tt.expected)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := tt.err.Error()
+				if result != tt.expected {
+					t.Errorf("StructuredError.Error() = %q, want %q", result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -373,12 +384,14 @@ func TestStructuredError_Unwrap(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.err.Unwrap()
-			if !errors.Is(result, tt.expected) {
-				t.Errorf("StructuredError.Unwrap() = %v, want %v", result, tt.expected)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := tt.err.Unwrap()
+				if !errors.Is(result, tt.expected) {
+					t.Errorf("StructuredError.Unwrap() = %v, want %v", result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -393,7 +406,7 @@ func TestStructuredError_WithContext(t *testing.T) {
 	result := err.WithContext("key1", "value1")
 
 	// Should return the same error instance
-	if result != err {
+	if !errors.Is(result, err) {
 		t.Error("WithContext() should return the same error instance")
 	}
 
@@ -429,7 +442,7 @@ func TestStructuredError_WithFilePath(t *testing.T) {
 	result := err.WithFilePath(filePath)
 
 	// Should return the same error instance
-	if result != err {
+	if !errors.Is(result, err) {
 		t.Error("WithFilePath() should return the same error instance")
 	}
 
@@ -458,7 +471,7 @@ func TestStructuredError_WithLine(t *testing.T) {
 	result := err.WithLine(lineNum)
 
 	// Should return the same error instance
-	if result != err {
+	if !errors.Is(result, err) {
 		t.Error("WithLine() should return the same error instance")
 	}
 
@@ -477,7 +490,12 @@ func TestStructuredError_WithLine(t *testing.T) {
 }
 
 // validateStructuredErrorBasics validates basic structured error fields.
-func validateStructuredErrorBasics(t *testing.T, err *StructuredError, errorType ErrorType, code, message, filePath string) {
+func validateStructuredErrorBasics(
+	t *testing.T,
+	err *StructuredError,
+	errorType ErrorType,
+	code, message, filePath string,
+) {
 	t.Helper()
 
 	if err.Type != errorType {
@@ -559,11 +577,13 @@ func TestNewStructuredError(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := NewStructuredError(tt.errorType, tt.code, tt.message, tt.filePath, tt.context)
-			validateStructuredErrorBasics(t, err, tt.errorType, tt.code, tt.message, tt.filePath)
-			validateStructuredErrorContext(t, err, tt.context)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				err := NewStructuredError(tt.errorType, tt.code, tt.message, tt.filePath, tt.context)
+				validateStructuredErrorBasics(t, err, tt.errorType, tt.code, tt.message, tt.filePath)
+				validateStructuredErrorContext(t, err, tt.context)
+			},
+		)
 	}
 }
 
@@ -603,24 +623,32 @@ func TestNewStructuredErrorf(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := NewStructuredErrorf(tt.errorType, tt.code, tt.format, tt.args...)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				err := NewStructuredErrorf(tt.errorType, tt.code, tt.format, tt.args...)
 
-			if err.Type != tt.errorType {
-				t.Errorf("Expected Type %v, got %v", tt.errorType, err.Type)
-			}
-			if err.Code != tt.code {
-				t.Errorf("Expected Code %q, got %q", tt.code, err.Code)
-			}
-			if err.Message != tt.expectedMsg {
-				t.Errorf("Expected Message %q, got %q", tt.expectedMsg, err.Message)
-			}
-		})
+				if err.Type != tt.errorType {
+					t.Errorf("Expected Type %v, got %v", tt.errorType, err.Type)
+				}
+				if err.Code != tt.code {
+					t.Errorf("Expected Code %q, got %q", tt.code, err.Code)
+				}
+				if err.Message != tt.expectedMsg {
+					t.Errorf("Expected Message %q, got %q", tt.expectedMsg, err.Message)
+				}
+			},
+		)
 	}
 }
 
 // validateWrapErrorResult validates wrap error results.
-func validateWrapErrorResult(t *testing.T, result *StructuredError, originalErr error, errorType ErrorType, code, message string) {
+func validateWrapErrorResult(
+	t *testing.T,
+	result *StructuredError,
+	originalErr error,
+	errorType ErrorType,
+	code, message string,
+) {
 	t.Helper()
 
 	if result.Type != errorType {
@@ -668,10 +696,12 @@ func TestWrapError(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := WrapError(tt.err, tt.errorType, tt.code, tt.message)
-			validateWrapErrorResult(t, result, tt.err, tt.errorType, tt.code, tt.message)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := WrapError(tt.err, tt.errorType, tt.code, tt.message)
+				validateWrapErrorResult(t, result, tt.err, tt.errorType, tt.code, tt.message)
+			},
+		)
 	}
 }
 
@@ -708,22 +738,24 @@ func TestWrapErrorf(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := WrapErrorf(tt.err, tt.errorType, tt.code, tt.format, tt.args...)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := WrapErrorf(tt.err, tt.errorType, tt.code, tt.format, tt.args...)
 
-			if result.Type != tt.errorType {
-				t.Errorf("Expected Type %v, got %v", tt.errorType, result.Type)
-			}
-			if result.Code != tt.code {
-				t.Errorf("Expected Code %q, got %q", tt.code, result.Code)
-			}
-			if result.Message != tt.expectedMsg {
-				t.Errorf("Expected Message %q, got %q", tt.expectedMsg, result.Message)
-			}
-			if !errors.Is(result.Cause, tt.err) {
-				t.Errorf("Expected Cause %v, got %v", tt.err, result.Cause)
-			}
-		})
+				if result.Type != tt.errorType {
+					t.Errorf("Expected Type %v, got %v", tt.errorType, result.Type)
+				}
+				if result.Code != tt.code {
+					t.Errorf("Expected Code %q, got %q", tt.code, result.Code)
+				}
+				if result.Message != tt.expectedMsg {
+					t.Errorf("Expected Message %q, got %q", tt.expectedMsg, result.Message)
+				}
+				if !errors.Is(result.Cause, tt.err) {
+					t.Errorf("Expected Cause %v, got %v", tt.err, result.Cause)
+				}
+			},
+		)
 	}
 }
 
@@ -779,19 +811,21 @@ func TestPredefinedErrorConstructors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			code := "TEST_CODE"
-			message := "test message"
+		t.Run(
+			tt.name, func(t *testing.T) {
+				code := "TEST_CODE"
+				message := "test message"
 
-			var err *StructuredError
-			if tt.name == "NewCLIMissingSourceError" {
-				err = NewCLIMissingSourceError()
-			} else {
-				err = tt.constructor(code, message)
-			}
+				var err *StructuredError
+				if tt.name == "NewCLIMissingSourceError" {
+					err = NewCLIMissingSourceError()
+				} else {
+					err = tt.constructor(code, message)
+				}
 
-			validatePredefinedError(t, err, tt.expectedType, tt.name, code, message)
-		})
+				validatePredefinedError(t, err, tt.expectedType, tt.name, code, message)
+			},
+		)
 	}
 }
 
@@ -870,17 +904,21 @@ func BenchmarkNewStructuredError(b *testing.B) {
 		"key2": 42,
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_ = NewStructuredError(ErrorTypeFileSystem, "ACCESS_DENIED", "access denied", "/test/file.txt", context) // nolint:errcheck // benchmark test
+	for b.Loop() {
+		_ = NewStructuredError( // nolint:errcheck // benchmark test
+			ErrorTypeFileSystem,
+			"ACCESS_DENIED",
+			"access denied",
+			"/test/file.txt",
+			context,
+		)
 	}
 }
 
 func BenchmarkStructuredErrorError(b *testing.B) {
 	err := NewStructuredError(ErrorTypeIO, "WRITE_FAILED", "write operation failed", "/tmp/file.txt", nil)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = err.Error()
 	}
 }
@@ -888,8 +926,7 @@ func BenchmarkStructuredErrorError(b *testing.B) {
 func BenchmarkStructuredErrorWithContext(b *testing.B) {
 	err := NewStructuredError(ErrorTypeProcessing, "PROC_FAILED", "processing failed", "", nil)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; b.Loop(); i++ {
 		_ = err.WithContext(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i)) // nolint:errcheck // benchmark test
 	}
 }

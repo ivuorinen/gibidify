@@ -90,7 +90,12 @@ func createTestRegistry() *FileTypeRegistry {
 }
 
 // verifyCustomExtensions verifies that custom extensions are applied correctly.
-func verifyCustomExtensions(t *testing.T, registry *FileTypeRegistry, customImages, customBinary []string, customLanguages map[string]string) {
+func verifyCustomExtensions(
+	t *testing.T,
+	registry *FileTypeRegistry,
+	customImages, customBinary []string,
+	customLanguages map[string]string,
+) {
 	t.Helper()
 
 	// Test custom image extensions

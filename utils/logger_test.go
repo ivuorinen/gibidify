@@ -83,20 +83,22 @@ func TestLogService_Levels(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			logger := GetLogger()
-			logger.SetOutput(&buf)
-			logger.SetLevel(tt.level)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				var buf bytes.Buffer
+				logger := GetLogger()
+				logger.SetOutput(&buf)
+				logger.SetLevel(tt.level)
 
-			tt.logFunc(logger)
+				tt.logFunc(logger)
 
-			output := buf.String()
-			hasOutput := len(strings.TrimSpace(output)) > 0
-			if hasOutput != tt.expected {
-				t.Errorf("Expected output: %v, got output: %v, output: %s", tt.expected, hasOutput, output)
-			}
-		})
+				output := buf.String()
+				hasOutput := len(strings.TrimSpace(output)) > 0
+				if hasOutput != tt.expected {
+					t.Errorf("Expected output: %v, got output: %v, output: %s", tt.expected, hasOutput, output)
+				}
+			},
+		)
 	}
 }
 
@@ -142,19 +144,21 @@ func TestLogService_FormattedLogging(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			logger := GetLogger()
-			logger.SetOutput(&buf)
-			logger.SetLevel(tt.level)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				var buf bytes.Buffer
+				logger := GetLogger()
+				logger.SetOutput(&buf)
+				logger.SetLevel(tt.level)
 
-			tt.logFunc(logger)
+				tt.logFunc(logger)
 
-			output := buf.String()
-			if !strings.Contains(output, tt.contains) {
-				t.Errorf("Expected output to contain %q, got: %s", tt.contains, output)
-			}
-		})
+				output := buf.String()
+				if !strings.Contains(output, tt.contains) {
+					t.Errorf("Expected output to contain %q, got: %s", tt.contains, output)
+				}
+			},
+		)
 	}
 }
 
@@ -222,12 +226,14 @@ func TestParseLogLevel(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			result := ParseLogLevel(tt.input)
-			if result != tt.expected {
-				t.Errorf("ParseLogLevel(%q) = %v, want %v", tt.input, result, tt.expected)
-			}
-		})
+		t.Run(
+			tt.input, func(t *testing.T) {
+				result := ParseLogLevel(tt.input)
+				if result != tt.expected {
+					t.Errorf("ParseLogLevel(%q) = %v, want %v", tt.input, result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -243,17 +249,19 @@ func TestValidateLogLevel(t *testing.T) {
 		{"error", true},
 		{"invalid", false},
 		{"", false},
-		{"DEBUG", false}, // case sensitive
-		{"INFO", false},  // case sensitive
+		{"DEBUG", false}, // case-sensitive
+		{"INFO", false},  // case-sensitive
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			result := ValidateLogLevel(tt.input)
-			if result != tt.expected {
-				t.Errorf("ValidateLogLevel(%q) = %v, want %v", tt.input, result, tt.expected)
-			}
-		})
+		t.Run(
+			tt.input, func(t *testing.T) {
+				result := ValidateLogLevel(tt.input)
+				if result != tt.expected {
+					t.Errorf("ValidateLogLevel(%q) = %v, want %v", tt.input, result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -319,20 +327,22 @@ func TestLogService_SetLevel(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			logger := GetLogger()
-			logger.SetOutput(&buf)
-			logger.SetLevel(tt.setLevel)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				var buf bytes.Buffer
+				logger := GetLogger()
+				logger.SetOutput(&buf)
+				logger.SetLevel(tt.setLevel)
 
-			tt.logFunc(logger)
+				tt.logFunc(logger)
 
-			output := buf.String()
-			hasOutput := len(strings.TrimSpace(output)) > 0
-			if hasOutput != tt.expected {
-				t.Errorf("Expected output: %v, got output: %v, level: %v", tt.expected, hasOutput, tt.setLevel)
-			}
-		})
+				output := buf.String()
+				hasOutput := len(strings.TrimSpace(output)) > 0
+				if hasOutput != tt.expected {
+					t.Errorf("Expected output: %v, got output: %v, level: %v", tt.expected, hasOutput, tt.setLevel)
+				}
+			},
+		)
 	}
 }
 

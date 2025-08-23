@@ -51,10 +51,16 @@ func validateFileSizeLimit() []string {
 
 	fileSizeLimit := viper.GetInt64("fileSizeLimit")
 	if fileSizeLimit < MinFileSizeLimit {
-		validationErrors = append(validationErrors, fmt.Sprintf("fileSizeLimit (%d) is below minimum (%d)", fileSizeLimit, MinFileSizeLimit))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("fileSizeLimit (%d) is below minimum (%d)", fileSizeLimit, MinFileSizeLimit),
+		)
 	}
 	if fileSizeLimit > MaxFileSizeLimit {
-		validationErrors = append(validationErrors, fmt.Sprintf("fileSizeLimit (%d) exceeds maximum (%d)", fileSizeLimit, MaxFileSizeLimit))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("fileSizeLimit (%d) exceeds maximum (%d)", fileSizeLimit, MaxFileSizeLimit),
+		)
 	}
 
 	return validationErrors
@@ -73,10 +79,16 @@ func validateIgnoreDirectories() []string {
 			continue
 		}
 		if strings.Contains(dir, "/") {
-			validationErrors = append(validationErrors, fmt.Sprintf("ignoreDirectories[%d] (%s) contains path separator - only directory names are allowed", i, dir))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("ignoreDirectories[%d] (%s) contains path separator - only directory names are allowed", i, dir),
+			)
 		}
 		if strings.HasPrefix(dir, ".") && dir != ".git" && dir != ".vscode" && dir != ".idea" {
-			validationErrors = append(validationErrors, fmt.Sprintf("ignoreDirectories[%d] (%s) starts with dot - this may cause unexpected behavior", i, dir))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("ignoreDirectories[%d] (%s) starts with dot - this may cause unexpected behavior", i, dir),
+			)
 		}
 	}
 
@@ -96,7 +108,10 @@ func validateSupportedFormats() []string {
 	for i, format := range supportedFormats {
 		format = strings.ToLower(strings.TrimSpace(format))
 		if !validFormats[format] {
-			validationErrors = append(validationErrors, fmt.Sprintf("supportedFormats[%d] (%s) is not a valid format (json, yaml, markdown)", i, format))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("supportedFormats[%d] (%s) is not a valid format (json, yaml, markdown)", i, format),
+			)
 		}
 	}
 
@@ -116,7 +131,10 @@ func validateConcurrencySettings() []string {
 		validationErrors = append(validationErrors, fmt.Sprintf("maxConcurrency (%d) must be at least 1", maxConcurrency))
 	}
 	if maxConcurrency > 100 {
-		validationErrors = append(validationErrors, fmt.Sprintf("maxConcurrency (%d) is unreasonably high (max 100)", maxConcurrency))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("maxConcurrency (%d) is unreasonably high (max 100)", maxConcurrency),
+		)
 	}
 
 	return validationErrors
@@ -140,7 +158,10 @@ func validateFilePatterns() []string {
 		}
 		// Basic validation - patterns should contain at least one alphanumeric character
 		if !strings.ContainsAny(pattern, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") {
-			validationErrors = append(validationErrors, fmt.Sprintf("filePatterns[%d] (%s) appears to be invalid", i, pattern))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("filePatterns[%d] (%s) appears to be invalid", i, pattern),
+			)
 		}
 	}
 
@@ -175,7 +196,10 @@ func validateCustomImageExtensions() []string {
 			continue
 		}
 		if !strings.HasPrefix(ext, ".") {
-			validationErrors = append(validationErrors, fmt.Sprintf("fileTypes.customImageExtensions[%d] (%s) must start with a dot", i, ext))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("fileTypes.customImageExtensions[%d] (%s) must start with a dot", i, ext),
+			)
 		}
 	}
 
@@ -199,7 +223,10 @@ func validateCustomBinaryExtensions() []string {
 			continue
 		}
 		if !strings.HasPrefix(ext, ".") {
-			validationErrors = append(validationErrors, fmt.Sprintf("fileTypes.customBinaryExtensions[%d] (%s) must start with a dot", i, ext))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("fileTypes.customBinaryExtensions[%d] (%s) must start with a dot", i, ext),
+			)
 		}
 	}
 
@@ -224,10 +251,16 @@ func validateCustomLanguages() []string {
 			continue
 		}
 		if !strings.HasPrefix(ext, ".") {
-			validationErrors = append(validationErrors, fmt.Sprintf("fileTypes.customLanguages extension (%s) must start with a dot", ext))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("fileTypes.customLanguages extension (%s) must start with a dot", ext),
+			)
 		}
 		if lang == "" {
-			validationErrors = append(validationErrors, fmt.Sprintf("fileTypes.customLanguages[%s] has empty language value", ext))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("fileTypes.customLanguages[%s] has empty language value", ext),
+			)
 		}
 	}
 
@@ -256,10 +289,16 @@ func validateMaxPendingFiles() []string {
 
 	maxPendingFiles := viper.GetInt("backpressure.maxPendingFiles")
 	if maxPendingFiles < 1 {
-		validationErrors = append(validationErrors, fmt.Sprintf("backpressure.maxPendingFiles (%d) must be at least 1", maxPendingFiles))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("backpressure.maxPendingFiles (%d) must be at least 1", maxPendingFiles),
+		)
 	}
 	if maxPendingFiles > 100000 {
-		validationErrors = append(validationErrors, fmt.Sprintf("backpressure.maxPendingFiles (%d) is unreasonably high (max 100000)", maxPendingFiles))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("backpressure.maxPendingFiles (%d) is unreasonably high (max 100000)", maxPendingFiles),
+		)
 	}
 
 	return validationErrors
@@ -275,10 +314,16 @@ func validateMaxPendingWrites() []string {
 
 	maxPendingWrites := viper.GetInt("backpressure.maxPendingWrites")
 	if maxPendingWrites < 1 {
-		validationErrors = append(validationErrors, fmt.Sprintf("backpressure.maxPendingWrites (%d) must be at least 1", maxPendingWrites))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("backpressure.maxPendingWrites (%d) must be at least 1", maxPendingWrites),
+		)
 	}
 	if maxPendingWrites > 10000 {
-		validationErrors = append(validationErrors, fmt.Sprintf("backpressure.maxPendingWrites (%d) is unreasonably high (max 10000)", maxPendingWrites))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("backpressure.maxPendingWrites (%d) is unreasonably high (max 10000)", maxPendingWrites),
+		)
 	}
 
 	return validationErrors
@@ -294,10 +339,16 @@ func validateMaxMemoryUsage() []string {
 
 	maxMemoryUsage := viper.GetInt64("backpressure.maxMemoryUsage")
 	if maxMemoryUsage < 1048576 { // 1MB minimum
-		validationErrors = append(validationErrors, fmt.Sprintf("backpressure.maxMemoryUsage (%d) must be at least 1MB (1048576 bytes)", maxMemoryUsage))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("backpressure.maxMemoryUsage (%d) must be at least 1MB (1048576 bytes)", maxMemoryUsage),
+		)
 	}
 	if maxMemoryUsage > 10737418240 { // 10GB maximum
-		validationErrors = append(validationErrors, fmt.Sprintf("backpressure.maxMemoryUsage (%d) is unreasonably high (max 10GB)", maxMemoryUsage))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("backpressure.maxMemoryUsage (%d) is unreasonably high (max 10GB)", maxMemoryUsage),
+		)
 	}
 
 	return validationErrors
@@ -313,10 +364,16 @@ func validateMemoryCheckInterval() []string {
 
 	interval := viper.GetInt("backpressure.memoryCheckInterval")
 	if interval < 1 {
-		validationErrors = append(validationErrors, fmt.Sprintf("backpressure.memoryCheckInterval (%d) must be at least 1", interval))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("backpressure.memoryCheckInterval (%d) must be at least 1", interval),
+		)
 	}
 	if interval > 100000 {
-		validationErrors = append(validationErrors, fmt.Sprintf("backpressure.memoryCheckInterval (%d) is unreasonably high (max 100000)", interval))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("backpressure.memoryCheckInterval (%d) is unreasonably high (max 100000)", interval),
+		)
 	}
 
 	return validationErrors
@@ -345,10 +402,16 @@ func validateMaxFilesLimit() []string {
 
 	maxFiles := viper.GetInt("resourceLimits.maxFiles")
 	if maxFiles < MinMaxFiles {
-		validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxFiles (%d) must be at least %d", maxFiles, MinMaxFiles))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("resourceLimits.maxFiles (%d) must be at least %d", maxFiles, MinMaxFiles),
+		)
 	}
 	if maxFiles > MaxMaxFiles {
-		validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxFiles (%d) exceeds maximum (%d)", maxFiles, MaxMaxFiles))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("resourceLimits.maxFiles (%d) exceeds maximum (%d)", maxFiles, MaxMaxFiles),
+		)
 	}
 
 	return validationErrors
@@ -364,10 +427,16 @@ func validateMaxTotalSizeLimit() []string {
 
 	maxTotalSize := viper.GetInt64("resourceLimits.maxTotalSize")
 	if maxTotalSize < MinMaxTotalSize {
-		validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxTotalSize (%d) must be at least %d", maxTotalSize, MinMaxTotalSize))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("resourceLimits.maxTotalSize (%d) must be at least %d", maxTotalSize, MinMaxTotalSize),
+		)
 	}
 	if maxTotalSize > MaxMaxTotalSize {
-		validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxTotalSize (%d) exceeds maximum (%d)", maxTotalSize, MaxMaxTotalSize))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("resourceLimits.maxTotalSize (%d) exceeds maximum (%d)", maxTotalSize, MaxMaxTotalSize),
+		)
 	}
 
 	return validationErrors
@@ -380,20 +449,40 @@ func validateTimeoutLimits() []string {
 	if viper.IsSet("resourceLimits.fileProcessingTimeoutSec") {
 		timeout := viper.GetInt("resourceLimits.fileProcessingTimeoutSec")
 		if timeout < MinFileProcessingTimeoutSec {
-			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.fileProcessingTimeoutSec (%d) must be at least %d", timeout, MinFileProcessingTimeoutSec))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf(
+					"resourceLimits.fileProcessingTimeoutSec (%d) must be at least %d",
+					timeout,
+					MinFileProcessingTimeoutSec,
+				),
+			)
 		}
 		if timeout > MaxFileProcessingTimeoutSec {
-			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.fileProcessingTimeoutSec (%d) exceeds maximum (%d)", timeout, MaxFileProcessingTimeoutSec))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf(
+					"resourceLimits.fileProcessingTimeoutSec (%d) exceeds maximum (%d)",
+					timeout,
+					MaxFileProcessingTimeoutSec,
+				),
+			)
 		}
 	}
 
 	if viper.IsSet("resourceLimits.overallTimeoutSec") {
 		timeout := viper.GetInt("resourceLimits.overallTimeoutSec")
 		if timeout < MinOverallTimeoutSec {
-			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.overallTimeoutSec (%d) must be at least %d", timeout, MinOverallTimeoutSec))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("resourceLimits.overallTimeoutSec (%d) must be at least %d", timeout, MinOverallTimeoutSec),
+			)
 		}
 		if timeout > MaxOverallTimeoutSec {
-			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.overallTimeoutSec (%d) exceeds maximum (%d)", timeout, MaxOverallTimeoutSec))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("resourceLimits.overallTimeoutSec (%d) exceeds maximum (%d)", timeout, MaxOverallTimeoutSec),
+			)
 		}
 	}
 
@@ -407,20 +496,36 @@ func validateConcurrencyLimits() []string {
 	if viper.IsSet("resourceLimits.maxConcurrentReads") {
 		maxReads := viper.GetInt("resourceLimits.maxConcurrentReads")
 		if maxReads < MinMaxConcurrentReads {
-			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxConcurrentReads (%d) must be at least %d", maxReads, MinMaxConcurrentReads))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("resourceLimits.maxConcurrentReads (%d) must be at least %d", maxReads, MinMaxConcurrentReads),
+			)
 		}
 		if maxReads > MaxMaxConcurrentReads {
-			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.maxConcurrentReads (%d) exceeds maximum (%d)", maxReads, MaxMaxConcurrentReads))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("resourceLimits.maxConcurrentReads (%d) exceeds maximum (%d)", maxReads, MaxMaxConcurrentReads),
+			)
 		}
 	}
 
 	if viper.IsSet("resourceLimits.rateLimitFilesPerSec") {
 		rateLimit := viper.GetInt("resourceLimits.rateLimitFilesPerSec")
 		if rateLimit < MinRateLimitFilesPerSec {
-			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.rateLimitFilesPerSec (%d) must be at least %d", rateLimit, MinRateLimitFilesPerSec))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf("resourceLimits.rateLimitFilesPerSec (%d) must be at least %d", rateLimit, MinRateLimitFilesPerSec),
+			)
 		}
 		if rateLimit > MaxRateLimitFilesPerSec {
-			validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.rateLimitFilesPerSec (%d) exceeds maximum (%d)", rateLimit, MaxRateLimitFilesPerSec))
+			validationErrors = append(
+				validationErrors,
+				fmt.Sprintf(
+					"resourceLimits.rateLimitFilesPerSec (%d) exceeds maximum (%d)",
+					rateLimit,
+					MaxRateLimitFilesPerSec,
+				),
+			)
 		}
 	}
 
@@ -437,10 +542,16 @@ func validateMemoryLimits() []string {
 
 	memLimit := viper.GetInt("resourceLimits.hardMemoryLimitMB")
 	if memLimit < MinHardMemoryLimitMB {
-		validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.hardMemoryLimitMB (%d) must be at least %d", memLimit, MinHardMemoryLimitMB))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("resourceLimits.hardMemoryLimitMB (%d) must be at least %d", memLimit, MinHardMemoryLimitMB),
+		)
 	}
 	if memLimit > MaxHardMemoryLimitMB {
-		validationErrors = append(validationErrors, fmt.Sprintf("resourceLimits.hardMemoryLimitMB (%d) exceeds maximum (%d)", memLimit, MaxHardMemoryLimitMB))
+		validationErrors = append(
+			validationErrors,
+			fmt.Sprintf("resourceLimits.hardMemoryLimitMB (%d) exceeds maximum (%d)", memLimit, MaxHardMemoryLimitMB),
+		)
 	}
 
 	return validationErrors

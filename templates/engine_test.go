@@ -387,16 +387,18 @@ func TestTemplateFunctions(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result, err := engine.renderTemplate(tc.template, tc.context)
-			if err != nil {
-				t.Fatalf("Template rendering failed: %v", err)
-			}
+		t.Run(
+			tc.name, func(t *testing.T) {
+				result, err := engine.renderTemplate(tc.template, tc.context)
+				if err != nil {
+					t.Fatalf("Template rendering failed: %v", err)
+				}
 
-			if result != tc.expected {
-				t.Errorf("Expected %q, got %q", tc.expected, result)
-			}
-		})
+				if result != tc.expected {
+					t.Errorf("Expected %q, got %q", tc.expected, result)
+				}
+			},
+		)
 	}
 }
 
@@ -458,12 +460,14 @@ func TestFormatBytes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.expected, func(t *testing.T) {
-			result := engine.formatBytes(tc.bytes)
-			if result != tc.expected {
-				t.Errorf("formatBytes(%d) = %s, want %s", tc.bytes, result, tc.expected)
-			}
-		})
+		t.Run(
+			tc.expected, func(t *testing.T) {
+				result := engine.formatBytes(tc.bytes)
+				if result != tc.expected {
+					t.Errorf("formatBytes(%d) = %s, want %s", tc.bytes, result, tc.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -520,13 +524,15 @@ func TestBuiltinTemplatesIntegrity(t *testing.T) {
 	}
 
 	for name := range BuiltinTemplates {
-		t.Run(name, func(t *testing.T) {
-			engine, err := NewEngine(name, context)
-			if err != nil {
-				t.Fatalf("Failed to create engine for template %s: %v", name, err)
-			}
+		t.Run(
+			name, func(t *testing.T) {
+				engine, err := NewEngine(name, context)
+				if err != nil {
+					t.Fatalf("Failed to create engine for template %s: %v", name, err)
+				}
 
-			validateTemplateRendering(t, engine, name)
-		})
+				validateTemplateRendering(t, engine, name)
+			},
+		)
 	}
 }

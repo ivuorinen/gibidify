@@ -14,16 +14,22 @@ func (p *Processor) logFinalStats() {
 	// Log back-pressure stats
 	backpressureStats := p.backpressure.GetStats()
 	if backpressureStats.Enabled {
-		logger.Infof("Back-pressure stats: processed=%d files, memory=%dMB/%dMB",
-			backpressureStats.FilesProcessed, backpressureStats.CurrentMemoryUsage/1024/1024, backpressureStats.MaxMemoryUsage/1024/1024)
+		logger.Infof(
+			"Back-pressure stats: processed=%d files, memory=%dMB/%dMB",
+			backpressureStats.FilesProcessed,
+			backpressureStats.CurrentMemoryUsage/1024/1024,
+			backpressureStats.MaxMemoryUsage/1024/1024,
+		)
 	}
 
 	// Log resource monitoring stats
 	resourceStats := p.resourceMonitor.GetMetrics()
 	if config.GetResourceLimitsEnabled() {
-		logger.Infof("Resource stats: processed=%d files, totalSize=%dMB, avgFileSize=%.2fKB, rate=%.2f files/sec",
+		logger.Infof(
+			"Resource stats: processed=%d files, totalSize=%dMB, avgFileSize=%.2fKB, rate=%.2f files/sec",
 			resourceStats.FilesProcessed, resourceStats.TotalSizeProcessed/1024/1024,
-			resourceStats.AverageFileSize/1024, resourceStats.ProcessingRate)
+			resourceStats.AverageFileSize/1024, resourceStats.ProcessingRate,
+		)
 
 		if len(resourceStats.ViolationsDetected) > 0 {
 			logger.Warnf("Resource violations detected: %v", resourceStats.ViolationsDetected)

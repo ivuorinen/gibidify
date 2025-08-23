@@ -72,10 +72,12 @@ func setTestConfiguration() {
 	viper.Set("fileTypes.enabled", false)
 	viper.Set("fileTypes.customImageExtensions", []string{".webp", ".avif"})
 	viper.Set("fileTypes.customBinaryExtensions", []string{".custom", ".mybin"})
-	viper.Set("fileTypes.customLanguages", map[string]string{
-		".zig": "zig",
-		".v":   "vlang",
-	})
+	viper.Set(
+		"fileTypes.customLanguages", map[string]string{
+			".zig": "zig",
+			".v":   "vlang",
+		},
+	)
 	viper.Set("fileTypes.disabledImageExtensions", []string{".gif", ".bmp"})
 	viper.Set("fileTypes.disabledBinaryExtensions", []string{".exe", ".dll"})
 	viper.Set("fileTypes.disabledLanguageExtensions", []string{".rb", ".pl"})
@@ -107,10 +109,12 @@ func verifyTestConfiguration(t *testing.T) {
 func setValidConfiguration() {
 	viper.Set("fileTypes.customImageExtensions", []string{".webp", ".avif"})
 	viper.Set("fileTypes.customBinaryExtensions", []string{".custom"})
-	viper.Set("fileTypes.customLanguages", map[string]string{
-		".zig": "zig",
-		".v":   "vlang",
-	})
+	viper.Set(
+		"fileTypes.customLanguages", map[string]string{
+			".zig": "zig",
+			".v":   "vlang",
+		},
+	)
 }
 
 // testInvalidImageExtensions tests validation failure with invalid image extensions.
@@ -147,10 +151,12 @@ func testInvalidCustomLanguages(t *testing.T) {
 
 	viper.Reset()
 	setDefaultConfig()
-	viper.Set("fileTypes.customLanguages", map[string]string{
-		"zig": "zig", // Missing dot in extension
-		".v":  "",    // Empty language
-	})
+	viper.Set(
+		"fileTypes.customLanguages", map[string]string{
+			"zig": "zig", // Missing dot in extension
+			".v":  "",    // Empty language
+		},
+	)
 
 	err := ValidateConfig()
 	if err == nil {

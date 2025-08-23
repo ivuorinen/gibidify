@@ -131,8 +131,12 @@ func (e *Engine) RenderMetadata() (string, error) {
 	}
 
 	if e.template.Metadata.IncludeFileCount {
-		buf.WriteString(fmt.Sprintf("**Files**: %d total (%d processed, %d skipped, %d errors)\n",
-			e.context.TotalFiles, e.context.ProcessedFiles, e.context.SkippedFiles, e.context.ErrorFiles))
+		buf.WriteString(
+			fmt.Sprintf(
+				"**Files**: %d total (%d processed, %d skipped, %d errors)\n",
+				e.context.TotalFiles, e.context.ProcessedFiles, e.context.SkippedFiles, e.context.ErrorFiles,
+			),
+		)
 	}
 
 	if e.template.Metadata.IncludeTotalSize {
@@ -144,8 +148,12 @@ func (e *Engine) RenderMetadata() (string, error) {
 	}
 
 	if e.template.Metadata.IncludeMetrics && e.context.FilesPerSecond > 0 {
-		buf.WriteString(fmt.Sprintf("**Performance**: %.1f files/sec, %.1f MB/sec\n",
-			e.context.FilesPerSecond, e.context.BytesPerSecond/1024/1024))
+		buf.WriteString(
+			fmt.Sprintf(
+				"**Performance**: %.1f files/sec, %.1f MB/sec\n",
+				e.context.FilesPerSecond, e.context.BytesPerSecond/1024/1024,
+			),
+		)
 	}
 
 	if e.template.Metadata.IncludeFileTypes && len(e.context.FileTypes) > 0 {

@@ -26,6 +26,7 @@ func main() {
 	flag.Parse()
 
 	if err := runBenchmarks(); err != nil {
+		//goland:noinspection GoUnhandledErrorResult
 		fmt.Fprintf(os.Stderr, "Benchmark failed: %v\n", err)
 		os.Exit(1)
 	}
@@ -62,7 +63,12 @@ func runCollectionBenchmark() error {
 	fmt.Println("Running file collection benchmark...")
 	result, err := benchmark.FileCollectionBenchmark(*sourceDir, *numFiles)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file collection benchmark failed")
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"file collection benchmark failed",
+		)
 	}
 	benchmark.PrintResult(result)
 
@@ -73,7 +79,12 @@ func runProcessingBenchmark() error {
 	fmt.Printf("Running file processing benchmark (format: %s, concurrency: %d)...\n", *format, *concurrency)
 	result, err := benchmark.FileProcessingBenchmark(*sourceDir, *format, *concurrency)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file processing benchmark failed")
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"file processing benchmark failed",
+		)
 	}
 	benchmark.PrintResult(result)
 
@@ -89,7 +100,12 @@ func runConcurrencyBenchmark() error {
 	fmt.Printf("Running concurrency benchmark (format: %s, levels: %v)...\n", *format, concurrencyLevels)
 	suite, err := benchmark.ConcurrencyBenchmark(*sourceDir, *format, concurrencyLevels)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "concurrency benchmark failed")
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"concurrency benchmark failed",
+		)
 	}
 	benchmark.PrintSuite(suite)
 
@@ -124,7 +140,13 @@ func parseConcurrencyList(list string) ([]int, error) {
 		part = strings.TrimSpace(part)
 		var level int
 		if _, err := fmt.Sscanf(part, "%d", &level); err != nil {
-			return nil, utils.WrapErrorf(err, utils.ErrorTypeValidation, utils.CodeValidationFormat, "invalid concurrency level: %s", part)
+			return nil, utils.WrapErrorf(
+				err,
+				utils.ErrorTypeValidation,
+				utils.CodeValidationFormat,
+				"invalid concurrency level: %s",
+				part,
+			)
 		}
 		if level <= 0 {
 			return nil, utils.NewValidationError(utils.CodeValidationFormat, "concurrency level must be positive: "+part)

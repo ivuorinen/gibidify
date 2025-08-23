@@ -53,7 +53,10 @@ func (rm *ResourceMonitor) CreateFileProcessingContext(parent context.Context) (
 }
 
 // CreateOverallProcessingContext creates a context with overall processing timeout.
-func (rm *ResourceMonitor) CreateOverallProcessingContext(parent context.Context) (context.Context, context.CancelFunc) {
+func (rm *ResourceMonitor) CreateOverallProcessingContext(parent context.Context) (
+	context.Context,
+	context.CancelFunc,
+) {
 	if !rm.enabled || rm.overallTimeout <= 0 {
 		return parent, func() {}
 	}

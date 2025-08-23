@@ -11,3 +11,6 @@ megalinter-reports/*
 output.json
 output.txt
 output.yaml
+gosec-report.json
+govulncheck-report.json
+security-report.md

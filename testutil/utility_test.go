@@ -80,19 +80,23 @@ func TestGetBaseName(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GetBaseName(tt.path)
-			if result != tt.expected {
-				t.Errorf("GetBaseName(%q) = %q, want %q", tt.path, result, tt.expected)
-			}
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := GetBaseName(tt.path)
+				if result != tt.expected {
+					t.Errorf("GetBaseName(%q) = %q, want %q", tt.path, result, tt.expected)
+				}
 
-			// Also verify against Go's filepath.Base for consistency
-			expected := filepath.Base(tt.path)
-			if result != expected {
-				t.Errorf("GetBaseName(%q) = %q, filepath.Base = %q, should be consistent",
-					tt.path, result, expected)
-			}
-		})
+				// Also verify against Go's filepath.Base for consistency
+				expected := filepath.Base(tt.path)
+				if result != expected {
+					t.Errorf(
+						"GetBaseName(%q) = %q, filepath.Base = %q, should be consistent",
+						tt.path, result, expected,
+					)
+				}
+			},
+		)
 	}
 }
 

@@ -88,7 +88,12 @@ func (w *JSONWriter) writeStreaming(req WriteRequest) error {
 	// Write file start
 	escapedPath := utils.EscapeForJSON(req.Path)
 	if _, err := fmt.Fprintf(w.outFile, `{"path":"%s","language":"%s","content":"`, escapedPath, language); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON file start").WithFilePath(req.Path)
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOWrite,
+			"failed to write JSON file start",
+		).WithFilePath(req.Path)
 	}
 
 	// Stream content with JSON escaping
@@ -98,7 +103,12 @@ func (w *JSONWriter) writeStreaming(req WriteRequest) error {
 
 	// Write file end
 	if _, err := w.outFile.WriteString(`"}`); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON file end").WithFilePath(req.Path)
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOWrite,
+			"failed to write JSON file end",
+		).WithFilePath(req.Path)
 	}
 
 	return nil
@@ -115,11 +125,21 @@ func (w *JSONWriter) writeInline(req WriteRequest) error {
 
 	encoded, err := json.Marshal(fileData)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingEncode, "failed to marshal JSON").WithFilePath(req.Path)
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingEncode,
+			"failed to marshal JSON",
+		).WithFilePath(req.Path)
 	}
 
 	if _, err := w.outFile.Write(encoded); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON file").WithFilePath(req.Path)
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOWrite,
+			"failed to write JSON file",
+		).WithFilePath(req.Path)
 	}
 
 	return nil
@@ -127,11 +147,13 @@ func (w *JSONWriter) writeInline(req WriteRequest) error {
 
 // streamJSONContent streams content with JSON escaping.
 func (w *JSONWriter) streamJSONContent(reader io.Reader, path string) error {
-	if err := utils.StreamContent(reader, w.outFile, StreamChunkSize, path, func(chunk []byte) []byte {
-		escaped := utils.EscapeForJSON(string(chunk))
+	if err := utils.StreamContent(
+		reader, w.outFile, StreamChunkSize, path, func(chunk []byte) []byte {
+			escaped := utils.EscapeForJSON(string(chunk))
 
-		return []byte(escaped)
-	}); err != nil {
+			return []byte(escaped)
+		},
+	); err != nil {
 		return fmt.Errorf("streaming JSON content: %w", err)
 	}
 

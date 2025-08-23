@@ -18,9 +18,11 @@ func testResetViperConfigVariations(t *testing.T) {
 	}
 
 	for _, configPath := range testCases {
-		t.Run("path_"+strings.ReplaceAll(configPath, "/", "_"), func(t *testing.T) {
-			ResetViperConfig(t, configPath)
-		})
+		t.Run(
+			"path_"+strings.ReplaceAll(configPath, "/", "_"), func(t *testing.T) {
+				ResetViperConfig(t, configPath)
+			},
+		)
 	}
 }
 
@@ -66,7 +68,11 @@ func testVerifyContentContainsScenarios(t *testing.T) {
 		content  string
 		expected []string
 	}{
-		{"all_substrings_found", "This is a comprehensive test with multiple search terms", []string{"comprehensive", "test", "multiple", "search"}},
+		{
+			"all_substrings_found",
+			"This is a comprehensive test with multiple search terms",
+			[]string{"comprehensive", "test", "multiple", "search"},
+		},
 		{"empty_expected_list", "Any content here", []string{}},
 		{"single_character_matches", "abcdefg", []string{"a", "c", "g"}},
 		{"repeated_substrings", "test test test", []string{"test", "test", "test"}},
@@ -74,9 +80,11 @@ func testVerifyContentContainsScenarios(t *testing.T) {
 	}
 
 	for _, scenario := range scenarios {
-		t.Run(scenario.name, func(t *testing.T) {
-			VerifyContentContains(t, scenario.content, scenario.expected)
-		})
+		t.Run(
+			scenario.name, func(t *testing.T) {
+				VerifyContentContains(t, scenario.content, scenario.expected)
+			},
+		)
 	}
 }
 
@@ -92,9 +100,11 @@ func testMustSucceedCases(t *testing.T) {
 	}
 
 	for i, op := range operations {
-		t.Run("operation_"+string(rune(i+'a')), func(t *testing.T) {
-			MustSucceed(t, nil, op)
-		})
+		t.Run(
+			"operation_"+string(rune(i+'a')), func(t *testing.T) {
+				MustSucceed(t, nil, op)
+			},
+		)
 	}
 }
 
@@ -102,30 +112,34 @@ func testMustSucceedCases(t *testing.T) {
 func testCloseFileScenarios(t *testing.T) {
 	t.Helper()
 
-	t.Run("close_regular_file", func(t *testing.T) {
-		file, err := os.CreateTemp(t.TempDir(), "test")
-		if err != nil {
-			t.Fatalf("Failed to create temp file: %v", err)
-		}
+	t.Run(
+		"close_regular_file", func(t *testing.T) {
+			file, err := os.CreateTemp(t.TempDir(), "test")
+			if err != nil {
+				t.Fatalf("Failed to create temp file: %v", err)
+			}
 
-		if _, err = file.WriteString("test content"); err != nil {
-			t.Fatalf("Failed to write to file: %v", err)
-		}
+			if _, err = file.WriteString("test content"); err != nil {
+				t.Fatalf("Failed to write to file: %v", err)
+			}
 
-		CloseFile(t, file)
+			CloseFile(t, file)
 
-		if _, writeErr := file.Write([]byte("should fail")); writeErr == nil {
-			t.Error("Expected write to fail after close")
-		}
-	})
+			if _, writeErr := file.Write([]byte("should fail")); writeErr == nil {
+				t.Error("Expected write to fail after close")
+			}
+		},
+	)
 
-	t.Run("close_empty_file", func(t *testing.T) {
-		file, err := os.CreateTemp(t.TempDir(), "empty")
-		if err != nil {
-			t.Fatalf("Failed to create temp file: %v", err)
-		}
-		CloseFile(t, file)
-	})
+	t.Run(
+		"close_empty_file", func(t *testing.T) {
+			file, err := os.CreateTemp(t.TempDir(), "empty")
+			if err != nil {
+				t.Fatalf("Failed to create temp file: %v", err)
+			}
+			CloseFile(t, file)
+		},
+	)
 }
 
 // TestCoverageImprovements focuses on improving coverage for existing functions.
@@ -181,10 +195,12 @@ func testFileSpecVariations(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for i, spec := range specs {
-		t.Run("spec_"+string(rune(i+'a')), func(t *testing.T) {
-			createDirectoryIfNeeded(t, tempDir, spec.Name)
-			attemptFileCreation(t, tempDir, spec.Name)
-		})
+		t.Run(
+			"spec_"+string(rune(i+'a')), func(t *testing.T) {
+				createDirectoryIfNeeded(t, tempDir, spec.Name)
+				attemptFileCreation(t, tempDir, spec.Name)
+			},
+		)
 	}
 }
 
@@ -195,11 +211,13 @@ func testDirSpecVariations(t *testing.T) {
 	specs := []DirSpec{
 		{Path: "empty-dir", Files: []FileSpec{}},
 		{Path: "single-file-dir", Files: []FileSpec{{Name: "single.txt", Content: "single file"}}},
-		{Path: "multi-file-dir", Files: []FileSpec{
-			{Name: "file1.txt", Content: "content1"},
-			{Name: "file2.txt", Content: "content2"},
-			{Name: "file3.txt", Content: "content3"},
-		}},
+		{
+			Path: "multi-file-dir", Files: []FileSpec{
+				{Name: "file1.txt", Content: "content1"},
+				{Name: "file2.txt", Content: "content2"},
+				{Name: "file3.txt", Content: "content3"},
+			},
+		},
 		{Path: "nested/deep/structure", Files: []FileSpec{{Name: "deep.txt", Content: "deep content"}}},
 		{Path: "unicode-αβγ", Files: []FileSpec{{Name: "unicode-file.txt", Content: "unicode directory content"}}},
 	}
@@ -226,61 +244,69 @@ func TestStructOperations(t *testing.T) {
 
 // BenchmarkUtilityFunctions provides comprehensive benchmarks.
 func BenchmarkUtilityFunctions(b *testing.B) {
-	b.Run("GetBaseName_variations", func(b *testing.B) {
-		paths := []string{
-			"",
-			"simple.txt",
-			"/path/to/file.go",
-			"/very/deep/nested/path/to/file.json",
-			"relative/path/file.txt",
-			".",
-			"..",
-			"/",
-			strings.Repeat("/very/long/path", 10) + "/file.txt",
-		}
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			path := paths[i%len(paths)]
-			_ = GetBaseName(path)
-		}
-	})
-
-	b.Run("StringOperations", func(b *testing.B) {
-		content := strings.Repeat("benchmark content with search terms ", 100)
-		searchTerms := []string{"benchmark", "content", "search", "terms", "not found"}
-
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			term := searchTerms[i%len(searchTerms)]
-			_ = strings.Contains(content, term)
-		}
-	})
-
-	b.Run("FileSpec_creation", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			spec := FileSpec{
-				Name:    "benchmark-file-" + string(rune(i%26+'a')) + ".txt",
-				Content: "benchmark content for iteration " + string(rune(i%10+'0')),
+	b.Run(
+		"GetBaseName_variations", func(b *testing.B) {
+			paths := []string{
+				"",
+				"simple.txt",
+				"/path/to/file.go",
+				"/very/deep/nested/path/to/file.json",
+				"relative/path/file.txt",
+				".",
+				"..",
+				"/",
+				strings.Repeat("/very/long/path", 10) + "/file.txt",
 			}
-			_ = len(spec.Name)
-			_ = len(spec.Content)
-		}
-	})
 
-	b.Run("DirSpec_creation", func(b *testing.B) {
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			spec := DirSpec{
-				Path: "benchmark-dir-" + string(rune(i%26+'a')),
-				Files: []FileSpec{
-					{Name: "file1.txt", Content: "content1"},
-					{Name: "file2.txt", Content: "content2"},
-				},
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				path := paths[i%len(paths)]
+				_ = GetBaseName(path)
 			}
-			_ = len(spec.Path)
-			_ = len(spec.Files)
-		}
-	})
+		},
+	)
+
+	b.Run(
+		"StringOperations", func(b *testing.B) {
+			content := strings.Repeat("benchmark content with search terms ", 100)
+			searchTerms := []string{"benchmark", "content", "search", "terms", "not found"}
+
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				term := searchTerms[i%len(searchTerms)]
+				_ = strings.Contains(content, term)
+			}
+		},
+	)
+
+	b.Run(
+		"FileSpec_creation", func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				spec := FileSpec{
+					Name:    "benchmark-file-" + string(rune(i%26+'a')) + ".txt",
+					Content: "benchmark content for iteration " + string(rune(i%10+'0')),
+				}
+				_ = len(spec.Name)
+				_ = len(spec.Content)
+			}
+		},
+	)
+
+	b.Run(
+		"DirSpec_creation", func(b *testing.B) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				spec := DirSpec{
+					Path: "benchmark-dir-" + string(rune(i%26+'a')),
+					Files: []FileSpec{
+						{Name: "file1.txt", Content: "content1"},
+						{Name: "file2.txt", Content: "content2"},
+					},
+				}
+				_ = len(spec.Path)
+				_ = len(spec.Files)
+			}
+		},
+	)
 }

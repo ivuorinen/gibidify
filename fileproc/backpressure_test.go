@@ -226,12 +226,10 @@ func BenchmarkBackpressureManager_GetStats(b *testing.B) {
 
 // TestBackpressureManager_ShouldApplyBackpressure_EdgeCases tests various edge cases for backpressure decision.
 func TestBackpressureManager_ShouldApplyBackpressure_EdgeCases(t *testing.T) {
-	testutil.ResetViperConfig(t, `
-backpressure:
-  enabled: true
-  memory_check_interval: 2
-  memory_limit_mb: 1
-`)
+	testutil.ResetViperConfig(t, "backpressure:\n"+
+		"enabled: true\n"+
+		"memory_check_interval: 2\n"+
+		"memory_limit_mb: 1\n")
 
 	bp := fileproc.NewBackpressureManager()
 	ctx := context.Background()
@@ -249,11 +247,9 @@ backpressure:
 // TestBackpressureManager_CreateChannels_EdgeCases tests edge cases in channel creation.
 func TestBackpressureManager_CreateChannels_EdgeCases(t *testing.T) {
 	// Test with custom configuration that might trigger different buffer sizes
-	testutil.ResetViperConfig(t, `
-backpressure:
-  file_buffer_size: 50
-  write_buffer_size: 25
-`)
+	testutil.ResetViperConfig(t, "backpressure:\n"+
+		"file_buffer_size: 50\n"+
+		"write_buffer_size: 25\n")
 
 	bp := fileproc.NewBackpressureManager()
 
@@ -281,11 +277,9 @@ backpressure:
 
 // TestBackpressureManager_WaitForChannelSpace_EdgeCases tests edge cases in channel space waiting.
 func TestBackpressureManager_WaitForChannelSpace_EdgeCases(t *testing.T) {
-	testutil.ResetViperConfig(t, `
-backpressure:
-  enabled: true
-  wait_timeout_ms: 10
-`)
+	testutil.ResetViperConfig(t, "backpressure:\n"+
+		"enabled: true\n"+
+		"wait_timeout_ms: 10\n")
 
 	bp := fileproc.NewBackpressureManager()
 	ctx := context.Background()
@@ -319,12 +313,10 @@ backpressure:
 // TestBackpressureManager_MemoryPressure tests behavior under simulated memory pressure.
 func TestBackpressureManager_MemoryPressure(t *testing.T) {
 	// Test with very low memory limit to trigger backpressure
-	testutil.ResetViperConfig(t, `
-backpressure:
-  enabled: true
-  memory_limit_mb: 0.001  
-  memory_check_interval: 1
-`)
+	testutil.ResetViperConfig(t, "backpressure:\n"+
+		"enabled: true\n"+
+		"memory_limit_mb: 0.001\n"+
+		"memory_check_interval: 1\n")
 
 	bp := fileproc.NewBackpressureManager()
 	ctx := context.Background()

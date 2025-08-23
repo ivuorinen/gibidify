@@ -86,7 +86,7 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := int64(m.Alloc)
+	currentMemory := utils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	if currentMemory <= rm.hardMemoryLimitBytes {
 		return nil
@@ -130,7 +130,7 @@ func (rm *ResourceMonitor) tryGracefulRecovery(_ int64) error {
 	// Check again after GC
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	newMemory := int64(m.Alloc)
+	newMemory := utils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	if newMemory > rm.hardMemoryLimitBytes {
 		// Still over limit, activate emergency stop

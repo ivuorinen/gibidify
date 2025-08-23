@@ -21,7 +21,12 @@ func NewYAMLWriter(outFile *os.File) *YAMLWriter {
 // Start writes the YAML header.
 func (w *YAMLWriter) Start(prefix, suffix string) error {
 	// Write YAML header
-	if _, err := fmt.Fprintf(w.outFile, "prefix: %s\nsuffix: %s\nfiles:\n", utils.EscapeForYAML(prefix), utils.EscapeForYAML(suffix)); err != nil {
+	if _, err := fmt.Fprintf(
+		w.outFile,
+		"prefix: %s\nsuffix: %s\nfiles:\n",
+		utils.EscapeForYAML(prefix),
+		utils.EscapeForYAML(suffix),
+	); err != nil {
 		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML header")
 	}
 
@@ -49,14 +54,26 @@ func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
 	language := detectLanguage(req.Path)
 
 	// Write YAML file entry start
-	if _, err := fmt.Fprintf(w.outFile, "  - path: %s\n    language: %s\n    content: |\n", utils.EscapeForYAML(req.Path), language); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML file start").WithFilePath(req.Path)
+	if _, err := fmt.Fprintf(
+		w.outFile,
+		"  - path: %s\n    language: %s\n    content: |\n",
+		utils.EscapeForYAML(req.Path),
+		language,
+	); err != nil {
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOWrite,
+			"failed to write YAML file start",
+		).WithFilePath(req.Path)
 	}
 
 	// Stream content with YAML indentation
-	if err := utils.StreamLines(req.Reader, w.outFile, req.Path, func(line string) string {
-		return "      " + line
-	}); err != nil {
+	if err := utils.StreamLines(
+		req.Reader, w.outFile, req.Path, func(line string) string {
+			return "      " + line
+		},
+	); err != nil {
 		return fmt.Errorf("streaming YAML content: %w", err)
 	}
 
@@ -73,15 +90,30 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	}
 
 	// Write YAML entry
-	if _, err := fmt.Fprintf(w.outFile, "  - path: %s\n    language: %s\n    content: |\n", utils.EscapeForYAML(fileData.Path), fileData.Language); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML entry start").WithFilePath(req.Path)
+	if _, err := fmt.Fprintf(
+		w.outFile,
+		"  - path: %s\n    language: %s\n    content: |\n",
+		utils.EscapeForYAML(fileData.Path),
+		fileData.Language,
+	); err != nil {
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOWrite,
+			"failed to write YAML entry start",
+		).WithFilePath(req.Path)
 	}
 
 	// Write indented content
 	lines := strings.Split(fileData.Content, "\n")
 	for _, line := range lines {
 		if _, err := fmt.Fprintf(w.outFile, "      %s\n", line); err != nil {
-			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML content line").WithFilePath(req.Path)
+			return utils.WrapError(
+				err,
+				utils.ErrorTypeIO,
+				utils.CodeIOWrite,
+				"failed to write YAML content line",
+			).WithFilePath(req.Path)
 		}
 	}
 

@@ -14,7 +14,12 @@ import (
 )
 
 // startWorkers starts the worker goroutines.
-func (p *Processor) startWorkers(ctx context.Context, wg *sync.WaitGroup, fileCh chan string, writeCh chan fileproc.WriteRequest) {
+func (p *Processor) startWorkers(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	fileCh chan string,
+	writeCh chan fileproc.WriteRequest,
+) {
 	for range p.flags.Concurrency {
 		wg.Add(1)
 		go p.worker(ctx, wg, fileCh, writeCh)
@@ -22,7 +27,12 @@ func (p *Processor) startWorkers(ctx context.Context, wg *sync.WaitGroup, fileCh
 }
 
 // worker is the worker goroutine function.
-func (p *Processor) worker(ctx context.Context, wg *sync.WaitGroup, fileCh chan string, writeCh chan fileproc.WriteRequest) {
+func (p *Processor) worker(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	fileCh chan string,
+	writeCh chan fileproc.WriteRequest,
+) {
 	defer wg.Done()
 	for {
 		select {
@@ -146,7 +156,15 @@ func (p *Processor) processFileWithMetrics(
 }
 
 // recordFileResult records the result of file processing in metrics.
-func (p *Processor) recordFileResult(filePath string, fileSize int64, format string, success bool, skipped bool, skipReason string, err error) {
+func (p *Processor) recordFileResult(
+	filePath string,
+	fileSize int64,
+	format string,
+	success bool,
+	skipped bool,
+	skipReason string,
+	err error,
+) {
 	result := metrics.FileProcessingResult{
 		FilePath:   filePath,
 		FileSize:   fileSize,
@@ -161,7 +179,11 @@ func (p *Processor) recordFileResult(filePath string, fileSize int64, format str
 }
 
 // waitForCompletion waits for all workers to complete.
-func (p *Processor) waitForCompletion(wg *sync.WaitGroup, writeCh chan fileproc.WriteRequest, writerDone chan struct{}) {
+func (p *Processor) waitForCompletion(
+	wg *sync.WaitGroup,
+	writeCh chan fileproc.WriteRequest,
+	writerDone chan struct{},
+) {
 	wg.Wait()
 	close(writeCh)
 	<-writerDone

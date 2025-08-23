@@ -58,7 +58,12 @@ func FileCollectionBenchmark(sourceDir string, numFiles int) (*Result, error) {
 	if sourceDir == "" {
 		tempDir, cleanupFunc, err := createBenchmarkFiles(numFiles)
 		if err != nil {
-			return nil, utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSAccess, "failed to create benchmark files")
+			return nil, utils.WrapError(
+				err,
+				utils.ErrorTypeFileSystem,
+				utils.CodeFSAccess,
+				"failed to create benchmark files",
+			)
 		}
 		cleanup = cleanupFunc
 		defer cleanup()
@@ -74,7 +79,12 @@ func FileCollectionBenchmark(sourceDir string, numFiles int) (*Result, error) {
 	// Run the file collection benchmark
 	files, err := fileproc.CollectFiles(sourceDir)
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "benchmark file collection failed")
+		return nil, utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"benchmark file collection failed",
+		)
 	}
 
 	duration := time.Since(startTime)
@@ -99,8 +109,8 @@ func FileCollectionBenchmark(sourceDir string, numFiles int) (*Result, error) {
 		FilesPerSecond: float64(len(files)) / duration.Seconds(),
 		BytesPerSecond: float64(totalBytes) / duration.Seconds(),
 		MemoryUsage: MemoryStats{
-			AllocMB:      float64(memAfter.Alloc-memBefore.Alloc) / 1024 / 1024,
-			SysMB:        float64(memAfter.Sys-memBefore.Sys) / 1024 / 1024,
+			AllocMB:      utils.SafeMemoryDiffMB(memAfter.Alloc, memBefore.Alloc),
+			SysMB:        utils.SafeMemoryDiffMB(memAfter.Sys, memBefore.Sys),
 			NumGC:        memAfter.NumGC - memBefore.NumGC,
 			PauseTotalNs: memAfter.PauseTotalNs - memBefore.PauseTotalNs,
 		},
@@ -122,7 +132,12 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 		// Create temporary directory with test files
 		tempDir, cleanupFunc, err := createBenchmarkFiles(100)
 		if err != nil {
-			return nil, utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSAccess, "failed to create benchmark files")
+			return nil, utils.WrapError(
+				err,
+				utils.ErrorTypeFileSystem,
+				utils.CodeFSAccess,
+				"failed to create benchmark files",
+			)
 		}
 		cleanup = cleanupFunc
 		defer cleanup()
@@ -132,7 +147,12 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 	// Create temporary output file
 	outputFile, err := os.CreateTemp("", "benchmark_output_*."+format)
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileCreate, "failed to create benchmark output file")
+		return nil, utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOFileCreate,
+			"failed to create benchmark output file",
+		)
 	}
 	defer func() {
 		if err := outputFile.Close(); err != nil {
@@ -154,13 +174,23 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 	// Run the full processing pipeline
 	files, err := fileproc.CollectFiles(sourceDir)
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "benchmark file collection failed")
+		return nil, utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"benchmark file collection failed",
+		)
 	}
 
 	// Process files with concurrency
 	err = runProcessingPipeline(context.Background(), files, outputFile, format, concurrency, sourceDir)
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingFileRead, "benchmark processing pipeline failed")
+		return nil, utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingFileRead,
+			"benchmark processing pipeline failed",
+		)
 	}
 
 	duration := time.Since(startTime)
@@ -185,8 +215,8 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 		FilesPerSecond: float64(len(files)) / duration.Seconds(),
 		BytesPerSecond: float64(totalBytes) / duration.Seconds(),
 		MemoryUsage: MemoryStats{
-			AllocMB:      float64(memAfter.Alloc-memBefore.Alloc) / 1024 / 1024,
-			SysMB:        float64(memAfter.Sys-memBefore.Sys) / 1024 / 1024,
+			AllocMB:      utils.SafeMemoryDiffMB(memAfter.Alloc, memBefore.Alloc),
+			SysMB:        utils.SafeMemoryDiffMB(memAfter.Sys, memBefore.Sys),
 			NumGC:        memAfter.NumGC - memBefore.NumGC,
 			PauseTotalNs: memAfter.PauseTotalNs - memBefore.PauseTotalNs,
 		},
@@ -208,7 +238,13 @@ func ConcurrencyBenchmark(sourceDir string, format string, concurrencyLevels []i
 	for _, concurrency := range concurrencyLevels {
 		result, err := FileProcessingBenchmark(sourceDir, format, concurrency)
 		if err != nil {
-			return nil, utils.WrapErrorf(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "concurrency benchmark failed for level %d", concurrency)
+			return nil, utils.WrapErrorf(
+				err,
+				utils.ErrorTypeProcessing,
+				utils.CodeProcessingCollection,
+				"concurrency benchmark failed for level %d",
+				concurrency,
+			)
 		}
 		suite.Results = append(suite.Results, *result)
 	}
@@ -226,7 +262,13 @@ func FormatBenchmark(sourceDir string, formats []string) (*Suite, error) {
 	for _, format := range formats {
 		result, err := FileProcessingBenchmark(sourceDir, format, runtime.NumCPU())
 		if err != nil {
-			return nil, utils.WrapErrorf(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "format benchmark failed for format %s", format)
+			return nil, utils.WrapErrorf(
+				err,
+				utils.ErrorTypeProcessing,
+				utils.CodeProcessingCollection,
+				"format benchmark failed for format %s",
+				format,
+			)
 		}
 		suite.Results = append(suite.Results, *result)
 	}
@@ -238,7 +280,12 @@ func FormatBenchmark(sourceDir string, formats []string) (*Suite, error) {
 func createBenchmarkFiles(numFiles int) (string, func(), error) {
 	tempDir, err := os.MkdirTemp("", "gibidify_benchmark_*")
 	if err != nil {
-		return "", nil, utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSAccess, "failed to create temp directory")
+		return "", nil, utils.WrapError(
+			err,
+			utils.ErrorTypeFileSystem,
+			utils.CodeFSAccess,
+			"failed to create temp directory",
+		)
 	}
 
 	cleanup := func() {
@@ -256,7 +303,11 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 		{".go", "package main\n\nfunc main() {\n\tprintln(\"Hello, World!\")\n}"},
 		{".js", "console.log('Hello, World!');"},
 		{".py", "print('Hello, World!')"},
-		{".java", "public class Hello {\n\tpublic static void main(String[] args) {\n\t\tSystem.out.println(\"Hello, World!\");\n\t}\n}"},
+		{
+			".java",
+			"public class Hello {\n\tpublic static void main(String[] args) {\n\t" +
+				"\tSystem.out.println(\"Hello, World!\");\n\t}\n}",
+		},
 		{".cpp", "#include <iostream>\n\nint main() {\n\tstd::cout << \"Hello, World!\" << std::endl;\n\treturn 0;\n}"},
 		{".rs", "fn main() {\n\tprintln!(\"Hello, World!\");\n}"},
 		{".rb", "puts 'Hello, World!'"},
@@ -272,10 +323,15 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 		// Create subdirectories for some files
 		if i%10 == 0 {
 			subdir := filepath.Join(tempDir, fmt.Sprintf("subdir_%d", i/10))
-			if err := os.MkdirAll(subdir, 0o755); err != nil {
+			if err := os.MkdirAll(subdir, 0o750); err != nil {
 				cleanup()
 
-				return "", nil, utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSAccess, "failed to create subdirectory")
+				return "", nil, utils.WrapError(
+					err,
+					utils.ErrorTypeFileSystem,
+					utils.CodeFSAccess,
+					"failed to create subdirectory",
+				)
 			}
 			filename = filepath.Join(subdir, filename)
 		} else {
@@ -288,7 +344,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 			content += fmt.Sprintf("// Line %d\n%s\n", j, fileType.content)
 		}
 
-		if err := os.WriteFile(filename, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filename, []byte(content), 0o600); err != nil {
 			cleanup()
 
 			return "", nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileWrite, "failed to write benchmark file")
@@ -299,7 +355,14 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 }
 
 // runProcessingPipeline runs the processing pipeline similar to main.go.
-func runProcessingPipeline(ctx context.Context, files []string, outputFile *os.File, format string, concurrency int, sourceDir string) error {
+func runProcessingPipeline(
+	ctx context.Context,
+	files []string,
+	outputFile *os.File,
+	format string,
+	concurrency int,
+	sourceDir string,
+) error {
 	fileCh := make(chan string, concurrency)
 	writeCh := make(chan fileproc.WriteRequest, concurrency)
 	writerDone := make(chan struct{})
@@ -310,7 +373,12 @@ func runProcessingPipeline(ctx context.Context, files []string, outputFile *os.F
 	// Get absolute path once
 	absRoot, err := utils.GetAbsolutePath(sourceDir)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSPathResolution, "failed to get absolute path for source directory")
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeFileSystem,
+			utils.CodeFSPathResolution,
+			"failed to get absolute path for source directory",
+		)
 	}
 
 	// Start workers with proper synchronization
@@ -359,7 +427,8 @@ func PrintResult(result *Result) {
 	fmt.Printf("Files/sec: %.2f\n", result.FilesPerSecond)
 	fmt.Printf("Bytes/sec: %.2f MB/sec\n", result.BytesPerSecond/1024/1024)
 	fmt.Printf("Memory Usage: +%.2f MB (Sys: +%.2f MB)\n", result.MemoryUsage.AllocMB, result.MemoryUsage.SysMB)
-	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, time.Duration(result.MemoryUsage.PauseTotalNs))
+	pauseDuration, _ := utils.SafeUint64ToInt64(result.MemoryUsage.PauseTotalNs)
+	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, time.Duration(pauseDuration))
 	fmt.Printf("Goroutines: %d\n", result.CPUUsage.Goroutines)
 	fmt.Println()
 }
@@ -383,7 +452,12 @@ func RunAllBenchmarks(sourceDir string) error {
 	fmt.Println("Running file collection benchmark...")
 	result, err := FileCollectionBenchmark(sourceDir, 1000)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file collection benchmark failed")
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"file collection benchmark failed",
+		)
 	}
 	PrintResult(result)
 
@@ -400,7 +474,12 @@ func RunAllBenchmarks(sourceDir string) error {
 	concurrencyLevels := []int{1, 2, 4, 8, runtime.NumCPU()}
 	concurrencySuite, err := ConcurrencyBenchmark(sourceDir, "json", concurrencyLevels)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "concurrency benchmark failed")
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"concurrency benchmark failed",
+		)
 	}
 	PrintSuite(concurrencySuite)
 
