@@ -1,12 +1,15 @@
 # CLAUDE.md
 
-Go CLI aggregating code files into LLM-optimized output. Supports markdown/JSON/YAML with concurrent processing.
+Go CLI aggregating code files into LLM-optimized output.
+Supports markdown/JSON/YAML with concurrent processing.
 
-## Architecture (69 files, 9.3K lines)
+## Architecture (92 files, 21.5K lines)
 
-**Core**: `main.go` (55), `cli/` (8), `fileproc/` (38), `config/` (8), `utils/` (5), `testutil/` (5), `cmd/` (1)
+**Core**: `main.go` (37), `cli/` (12), `fileproc/` (39), `config/` (8), `utils/` (10), `testutil/` (9), `cmd/` (1)
 
-**Modules**: Collection, processing, writers, registry (~63ns cache), resource limits
+**Advanced**: `metrics/` (5), `templates/` (3), `benchmark/` (2)
+
+**Modules**: Collection, processing, writers, registry (~63ns cache), resource limits, metrics, templating
 
 **Patterns**: Producer-consumer, thread-safe registry, streaming, modular (50-200 lines)
 
@@ -36,7 +39,7 @@ Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 
 ## Testing
 
-**Coverage**: 84%+ overall (utils 95%, cli 86%, config 83%, testutil 84%, fileproc 84%+)
+**Coverage**: 77.9% overall (utils 90.0%, cli 83.8%, config 77.0%, testutil 73.7%, fileproc 74.5%, metrics 96.0%, templates 87.3%)
 **Patterns**: Table-driven tests, shared testutil helpers, mock objects, error assertions
 **Race detection**, benchmarks, comprehensive integration tests
 
@@ -44,7 +47,7 @@ Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 
 **Logging**: Use `utils.GetLogger()` for all logging (replaces logrus). Default WARN level, set via `--log-level` flag
 **Error Handling**: Use `utils.WrapError` family for structured errors with context
-**Streaming**: Use `utils.StreamContent/StreamLines` for consistent file processing  
+**Streaming**: Use `utils.StreamContent/StreamLines` for consistent file processing
 **Context**: Use `utils.CheckContextCancellation` for standardized cancellation
 **Testing**: Use `testutil.*` helpers for directory setup, error assertions
 **Validation**: Centralized in `config/validation.go` with structured error collection
@@ -62,8 +65,11 @@ The linting configuration is carefully tuned and should not be altered during no
 
 **Health: 9/10** - Production-ready with systematic deduplication complete
 
-**Done**: Deduplication, errors, benchmarks, config, optimization, testing (84%+), modularization, linting (0 issues)
+**Done**: Deduplication, errors, benchmarks, config, optimization, testing (77.9%), modularization, linting (0 issues), metrics system, templating
 
 ## Workflow
 
-1. `make lint-fix` first 2. >80% coverage 3. Follow patterns 4. Update docs
+1. `make lint-fix` first
+2. >80% coverage
+3. Follow patterns
+4. Update docs

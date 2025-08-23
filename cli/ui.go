@@ -44,23 +44,28 @@ func (ui *UIManager) StartProgress(total int, description string) {
 		return
 	}
 
-	ui.progressBar = progressbar.NewOptions(total,
+	ui.progressBar = progressbar.NewOptions(
+		total,
 		progressbar.OptionSetWriter(ui.output),
 		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        color.GreenString("█"),
-			SaucerHead:    color.GreenString("█"),
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
+		progressbar.OptionSetTheme(
+			progressbar.Theme{
+				Saucer:        color.GreenString("█"),
+				SaucerHead:    color.GreenString("█"),
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			},
+		),
 		progressbar.OptionShowCount(),
 		progressbar.OptionShowIts(),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionThrottle(100*time.Millisecond),
-		progressbar.OptionOnCompletion(func() {
-			_, _ = fmt.Fprint(ui.output, "\n")
-		}),
+		progressbar.OptionOnCompletion(
+			func() {
+				_, _ = fmt.Fprint(ui.output, "\n")
+			},
+		),
 		progressbar.OptionSetRenderBlankState(true),
 	)
 }

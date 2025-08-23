@@ -14,10 +14,10 @@ file sections with separators, and a suffix.
 - **Concurrent processing** with configurable worker pools
 - **Comprehensive configuration** via YAML with validation
 - **Production-ready** with structured error handling and benchmarking
-- **Modular architecture** - clean, focused codebase with ~63ns registry lookups
+- **Modular architecture** - clean, focused codebase (92 files, ~21.5K lines) with ~63ns registry lookups
 - **Enhanced CLI experience** - progress bars, colored output, helpful error messages
 - **Cross-platform** with Docker support
-- **Advanced template system** - 4 built-in templates (default, minimal, detailed, compact) with custom template support and variable substitution
+- **Advanced template system** - 4 built-in templates (default, minimal, detailed, compact) with custom template support, variable substitution, and YAML-based configuration
 - **Comprehensive metrics and profiling** - real-time processing statistics, performance analysis, memory usage tracking, and automated recommendations
 
 ## Installation
@@ -42,7 +42,8 @@ go build -o gibidify .
   --suffix="..." \
   --no-colors \
   --no-progress \
-  --verbose
+  --verbose \
+  --log-level debug
 ```
 
 Flags:
@@ -69,13 +70,13 @@ Run the Docker container:
 
 ```bash
 docker run --rm \
-	-v $(pwd):/workspace \
-	-v $HOME/.config/gibidify:/config \
-	ghcr.io/ivuorinen/gibidify:<tag> \
-	-source /workspace/your_source_directory \
-	-destination /workspace/output.txt \
-	--prefix="Your prefix text" \
-	--suffix="Your suffix text"
+  -v $(pwd):/workspace \
+  -v $HOME/.config/gibidify:/config \
+  ghcr.io/ivuorinen/gibidify:<tag> \
+  -source /workspace/your_source_directory \
+  -destination /workspace/output.txt \
+  --prefix="Your prefix text" \
+  --suffix="Your suffix text"
 ```
 
 ## Configuration
@@ -130,6 +131,7 @@ backpressure:
 # Output and template customization
 output:
   # Template selection: default, minimal, detailed, compact, or custom
+  # Templates control output structure and formatting
   template: "default"
   # Metadata options
   metadata:

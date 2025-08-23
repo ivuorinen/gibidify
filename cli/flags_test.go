@@ -168,9 +168,11 @@ func TestParseFlags(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runParseFlagsTest(t, tt.args, tt.want, tt.wantErr, tt.errContains)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runParseFlagsTest(t, tt.args, tt.want, tt.wantErr, tt.errContains)
+			},
+		)
 	}
 }
 
@@ -272,15 +274,24 @@ func TestFlags_validate(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.flags.validate()
-			validateFlagsValidationResult(t, err, tt.wantErr, tt.errContains)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				err := tt.flags.validate()
+				validateFlagsValidationResult(t, err, tt.wantErr, tt.errContains)
+			},
+		)
 	}
 }
 
 // validateDefaultDestinationResult validates default destination test results.
-func validateDefaultDestinationResult(t *testing.T, flags *Flags, err error, wantDestination string, wantErr bool, errContains string) {
+func validateDefaultDestinationResult(
+	t *testing.T,
+	flags *Flags,
+	err error,
+	wantDestination string,
+	wantErr bool,
+	errContains string,
+) {
 	t.Helper()
 
 	if wantErr {
@@ -362,10 +373,12 @@ func TestFlags_setDefaultDestination(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.flags.setDefaultDestination()
-			validateDefaultDestinationResult(t, tt.flags, err, tt.wantDestination, tt.wantErr, tt.errContains)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				err := tt.flags.setDefaultDestination()
+				validateDefaultDestinationResult(t, tt.flags, err, tt.wantDestination, tt.wantErr, tt.errContains)
+			},
+		)
 	}
 }
 

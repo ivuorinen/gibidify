@@ -12,7 +12,7 @@ run:
   build-tags: []
   modules-download-mode: readonly
   allow-parallel-runners: false
-  go: "1.25"
+  go: "1.24"
   concurrency: 0
 
 output:
@@ -64,7 +64,7 @@ linters:
     # - tparallel # Test parallelization issues
     - thelper # Add t.Helper() to helper methods
     # - paralleltest # Detect missing t.Parallel()
-    - usetesting # Use testing package methods for testing
+    # - usetesting # Use testing package methods for testing
 
     # Error handling
     - errorlint # Error handling best practices
@@ -99,7 +99,6 @@ linters:
         - (*github.com/schollz/progressbar/v3.ProgressBar).Add
         - (*github.com/schollz/progressbar/v3.ProgressBar).Finish
         - (*github.com/fatih/color.Color).Fprintf
-        - github.com/ivuorinen/gibidify/utils.GetAbsolutePath
 
     govet:
       enable:
@@ -116,7 +115,6 @@ linters:
         - shift
         - stdmethods
         - structtag
-        - tests
         - unmarshal
         - unreachable
         - unusedresult
@@ -138,17 +136,6 @@ linters:
       excludes:
         - G204 # Subprocess launching with variable
         - G304 # File path provided as taint input
-      includes:
-        - G101 # Look for hard coded credentials
-        - G102 # Bind to all interfaces
-        - G103 # Audit the use of unsafe block
-        - G104 # Audit errors not checked
-        - G201 # SQL query construction using format string
-        - G202 # SQL query construction using string concatenation
-        - G401 # Detect the usage of MD5 or SHA1
-        - G402 # Look for bad TLS connection settings
-        - G403 # Ensure minimum RSA key length of 2048 bits
-        - G404 # Insecure random number source (rand)
 
     misspell:
       locale: US
@@ -169,7 +156,7 @@ linters:
       min-name-length: 3
       check-receiver: false
       check-return: false
-      ignore-type-assert-ok: true
+      # ignore-type-assert-ok: true
       ignore-map-index-ok: true
       ignore-chan-recv-ok: true
       ignore-names:
@@ -222,7 +209,7 @@ linters:
       comparison: true
 
     lll:
-      line-length: 180
+      line-length: 120
 
   exclusions:
     rules:

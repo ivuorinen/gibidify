@@ -228,7 +228,7 @@ func BenchmarkRun(b *testing.B) {
 
 	for name, content := range files {
 		filePath := filepath.Join(srcDir, name)
-		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
 			b.Fatalf("Failed to create benchmark file %s: %v", name, err)
 		}
 	}
@@ -280,7 +280,7 @@ func BenchmarkRun_LargeFiles(b *testing.B) {
 
 	for name, content := range files {
 		filePath := filepath.Join(srcDir, name)
-		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), 0o600); err != nil {
 			b.Fatalf("Failed to create large benchmark file %s: %v", name, err)
 		}
 	}

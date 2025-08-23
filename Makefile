@@ -1,4 +1,4 @@
-.PHONY: help install-tools lint lint-fix lint-verbose test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check check-all dev-setup
+.PHONY: all help install-tools lint lint-fix lint-verbose test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check update-deps check-all dev-setup
 
 # Default target shows help
 .DEFAULT_GOAL := help
@@ -30,6 +30,8 @@ install-tools:
 	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
 	@echo "Installing yamllint (Go-based)..."
 	@go install github.com/excilsploft/yamllint@latest
+	@echo "Installing eclint..."
+	@go install gitlab.com/greut/eclint/cmd/eclint@latest
 	@echo "All tools installed successfully!"
 
 # Run linters
@@ -56,6 +58,8 @@ lint-fix:
 	@checkmake --config=.checkmake Makefile
 	@echo "Running yamllint..."
 	@yamllint -c .yamllint .
+	@echo "Running eclint fix..."
+	@eclint -fix
 
 # Run linters with verbose output
 lint-verbose:
@@ -67,6 +71,8 @@ lint-verbose:
 	@shfmt -d .
 	@echo "Running yamllint (verbose)..."
 	@yamllint -c .yamllint -f parsable .
+	@echo "Running eclint (verbose)..."
+	@eclint -verbose
 
 # Run tests
 test:
@@ -139,9 +145,15 @@ security-full:
 	@echo "Running full security analysis..."
 	@./scripts/security-scan.sh
 	@echo "Running additional security checks..."
-	@golangci-lint run --enable-all --disable=depguard,exhaustruct,ireturn,varnamelen,wrapcheck --timeout=10m
+	@golangci-lint run --enable-all \
+		--disable=depguard,exhaustruct,ireturn,varnamelen,wrapcheck --timeout=10m
 
 vuln-check:
 	@echo "Checking for dependency vulnerabilities..."
 	@go install golang.org/x/vuln/cmd/govulncheck@latest
 	@govulncheck ./...
+
+# Update dependencies
+update-deps:
+	@echo "Updating Go dependencies..."
+	@./scripts/update-deps.sh

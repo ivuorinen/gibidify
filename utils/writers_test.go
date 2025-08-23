@@ -90,24 +90,26 @@ func TestSafeCloseReader(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Capture the reader if it's a mockCloser
-			var closerMock *mockCloser
-			if closer, ok := tt.reader.(*mockCloser); ok {
-				closerMock = closer
-			}
-
-			// Call SafeCloseReader (should not panic)
-			SafeCloseReader(tt.reader, tt.path)
-
-			// Verify expectations
-			if closerMock != nil {
-				if closerMock.closed != tt.expectClosed {
-					t.Errorf("Expected closed=%v, got %v", tt.expectClosed, closerMock.closed)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				// Capture the reader if it's a mockCloser
+				var closerMock *mockCloser
+				if closer, ok := tt.reader.(*mockCloser); ok {
+					closerMock = closer
 				}
-			}
-			// Note: Error logging is tested indirectly through no panic
-		})
+
+				// Call SafeCloseReader (should not panic)
+				SafeCloseReader(tt.reader, tt.path)
+
+				// Verify expectations
+				if closerMock != nil {
+					if closerMock.closed != tt.expectClosed {
+						t.Errorf("Expected closed=%v, got %v", tt.expectClosed, closerMock.closed)
+					}
+				}
+				// Note: Error logging is tested indirectly through no panic
+			},
+		)
 	}
 }
 
@@ -190,23 +192,25 @@ func TestWriteWithErrorWrap(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			writer := &mockWriter{writeError: tt.writeError}
-			err := WriteWithErrorWrap(writer, tt.content, tt.errorMsg, tt.filePath)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				writer := &mockWriter{writeError: tt.writeError}
+				err := WriteWithErrorWrap(writer, tt.content, tt.errorMsg, tt.filePath)
 
-			if tt.wantErr {
-				validateWriteError(t, err, tt.errContains, tt.filePath)
+				if tt.wantErr {
+					validateWriteError(t, err, tt.errContains, tt.filePath)
 
-				return
-			}
+					return
+				}
 
-			if err != nil {
-				t.Errorf("WriteWithErrorWrap() unexpected error: %v", err)
-			}
-			if string(writer.written) != tt.content {
-				t.Errorf("Expected content %q, got %q", tt.content, string(writer.written))
-			}
-		})
+				if err != nil {
+					t.Errorf("WriteWithErrorWrap() unexpected error: %v", err)
+				}
+				if string(writer.written) != tt.content {
+					t.Errorf("Expected content %q, got %q", tt.content, string(writer.written))
+				}
+			},
+		)
 	}
 }
 
@@ -298,24 +302,26 @@ func TestStreamContent(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			reader := strings.NewReader(tt.content)
-			writer := &mockWriter{writeError: tt.writeError}
-			err := StreamContent(reader, writer, tt.chunkSize, tt.filePath, tt.processChunk)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				reader := strings.NewReader(tt.content)
+				writer := &mockWriter{writeError: tt.writeError}
+				err := StreamContent(reader, writer, tt.chunkSize, tt.filePath, tt.processChunk)
 
-			if tt.wantErr {
-				validateStreamError(t, err, tt.errContains, tt.filePath)
+				if tt.wantErr {
+					validateStreamError(t, err, tt.errContains, tt.filePath)
 
-				return
-			}
+					return
+				}
 
-			if err != nil {
-				t.Errorf("StreamContent() unexpected error: %v", err)
-			}
-			if string(writer.written) != tt.expectedContent {
-				t.Errorf("Expected content %q, got %q", tt.expectedContent, string(writer.written))
-			}
-		})
+				if err != nil {
+					t.Errorf("StreamContent() unexpected error: %v", err)
+				}
+				if string(writer.written) != tt.expectedContent {
+					t.Errorf("Expected content %q, got %q", tt.expectedContent, string(writer.written))
+				}
+			},
+		)
 	}
 }
 
@@ -373,12 +379,14 @@ func TestEscapeForJSON(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := EscapeForJSON(tt.input)
-			if result != tt.expected {
-				t.Errorf("EscapeForJSON() = %q, want %q", result, tt.expected)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := EscapeForJSON(tt.input)
+				if result != tt.expected {
+					t.Errorf("EscapeForJSON() = %q, want %q", result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -486,12 +494,14 @@ func TestEscapeForYAML(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := EscapeForYAML(tt.input)
-			if result != tt.expected {
-				t.Errorf("EscapeForYAML() = %q, want %q", result, tt.expected)
-			}
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				result := EscapeForYAML(tt.input)
+				if result != tt.expected {
+					t.Errorf("EscapeForYAML() = %q, want %q", result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -571,24 +581,26 @@ func TestStreamLines(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			reader := strings.NewReader(tt.content)
-			writer := &mockWriter{writeError: tt.writeError}
-			err := StreamLines(reader, writer, tt.filePath, tt.lineProcessor)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				reader := strings.NewReader(tt.content)
+				writer := &mockWriter{writeError: tt.writeError}
+				err := StreamLines(reader, writer, tt.filePath, tt.lineProcessor)
 
-			if tt.wantErr {
-				validateStreamError(t, err, tt.errContains, tt.filePath)
+				if tt.wantErr {
+					validateStreamError(t, err, tt.errContains, tt.filePath)
 
-				return
-			}
+					return
+				}
 
-			if err != nil {
-				t.Errorf("StreamLines() unexpected error: %v", err)
-			}
-			if string(writer.written) != tt.expectedContent {
-				t.Errorf("Expected content %q, got %q", tt.expectedContent, string(writer.written))
-			}
-		})
+				if err != nil {
+					t.Errorf("StreamLines() unexpected error: %v", err)
+				}
+				if string(writer.written) != tt.expectedContent {
+					t.Errorf("Expected content %q, got %q", tt.expectedContent, string(writer.written))
+				}
+			},
+		)
 	}
 }
 
@@ -627,29 +639,37 @@ func TestWriteProcessedChunk(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			writer := &mockWriter{writeError: tt.writeError}
+		t.Run(
+			tt.name, func(t *testing.T) {
+				writer := &mockWriter{writeError: tt.writeError}
 
-			err := writeProcessedChunk(writer, tt.chunk, tt.filePath, tt.processChunk)
+				err := writeProcessedChunk(writer, tt.chunk, tt.filePath, tt.processChunk)
 
-			if tt.wantErr {
-				if err == nil {
-					t.Error("writeProcessedChunk() expected error, got nil")
+				if tt.wantErr {
+					if err == nil {
+						t.Error("writeProcessedChunk() expected error, got nil")
+					}
+				} else {
+					if err != nil {
+						t.Errorf("writeProcessedChunk() unexpected error: %v", err)
+					}
+					if string(writer.written) != tt.expected {
+						t.Errorf("Expected %q, got %q", tt.expected, string(writer.written))
+					}
 				}
-			} else {
-				if err != nil {
-					t.Errorf("writeProcessedChunk() unexpected error: %v", err)
-				}
-				if string(writer.written) != tt.expected {
-					t.Errorf("Expected %q, got %q", tt.expected, string(writer.written))
-				}
-			}
-		})
+			},
+		)
 	}
 }
 
 // testWrapErrorFunc is a helper function to test error wrapping functions without duplication.
-func testWrapErrorFunc(t *testing.T, wrapFunc func(error, string) error, expectedCode string, expectedMessage string, testName string) {
+func testWrapErrorFunc(
+	t *testing.T,
+	wrapFunc func(error, string) error,
+	expectedCode string,
+	expectedMessage string,
+	testName string,
+) {
 	t.Helper()
 
 	originalErr := errors.New("original " + testName + " error")
@@ -733,7 +753,12 @@ Line 3 with unicode: 世界`
 	// Test JSON escaping in content
 	var jsonBuf bytes.Buffer
 	processedContent := EscapeForJSON(content)
-	err := WriteWithErrorWrap(&jsonBuf, fmt.Sprintf(`{"content":"%s"}`, processedContent), "JSON write failed", "/test/file.json")
+	err := WriteWithErrorWrap(
+		&jsonBuf,
+		fmt.Sprintf(`{"content":"%s"}`, processedContent),
+		"JSON write failed",
+		"/test/file.json",
+	)
 	if err != nil {
 		t.Fatalf("JSON integration failed: %v", err)
 	}
@@ -741,9 +766,11 @@ Line 3 with unicode: 世界`
 	// Test YAML escaping and line streaming
 	var yamlBuf bytes.Buffer
 	reader := strings.NewReader(content)
-	err = StreamLines(reader, &yamlBuf, "/test/file.yaml", func(line string) string {
-		return "content: " + EscapeForYAML(line)
-	})
+	err = StreamLines(
+		reader, &yamlBuf, "/test/file.yaml", func(line string) string {
+			return "content: " + EscapeForYAML(line)
+		},
+	)
 	if err != nil {
 		t.Fatalf("YAML integration failed: %v", err)
 	}

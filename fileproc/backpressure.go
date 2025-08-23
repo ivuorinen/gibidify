@@ -80,7 +80,7 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(ctx context.Context) bool
 	// Get current memory usage
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := int64(m.Alloc)
+	currentMemory := utils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
@@ -91,8 +91,10 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(ctx context.Context) bool
 	logger := utils.GetLogger()
 	if currentMemory > bp.maxMemoryUsage {
 		if !bp.memoryWarningLogged {
-			logger.Warnf("Memory usage (%d bytes) exceeds limit (%d bytes), applying back-pressure",
-				currentMemory, bp.maxMemoryUsage)
+			logger.Warnf(
+				"Memory usage (%d bytes) exceeds limit (%d bytes), applying back-pressure",
+				currentMemory, bp.maxMemoryUsage,
+			)
 			bp.memoryWarningLogged = true
 		}
 
@@ -143,7 +145,7 @@ func (bp *BackpressureManager) GetStats() BackpressureStats {
 	return BackpressureStats{
 		Enabled:             bp.enabled,
 		FilesProcessed:      atomic.LoadInt64(&bp.filesProcessed),
-		CurrentMemoryUsage:  int64(m.Alloc),
+		CurrentMemoryUsage:  utils.SafeUint64ToInt64WithDefault(m.Alloc, 0),
 		MaxMemoryUsage:      bp.maxMemoryUsage,
 		MemoryWarningActive: bp.memoryWarningLogged,
 		LastMemoryCheck:     bp.lastMemoryCheck,
@@ -200,8 +202,10 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 func (bp *BackpressureManager) LogBackpressureInfo() {
 	logger := utils.GetLogger()
 	if bp.enabled {
-		logger.Infof("Back-pressure enabled: maxMemory=%dMB, fileBuffer=%d, writeBuffer=%d, checkInterval=%d",
-			bp.maxMemoryUsage/1024/1024, bp.maxPendingFiles, bp.maxPendingWrites, bp.memoryCheckInterval)
+		logger.Infof(
+			"Back-pressure enabled: maxMemory=%dMB, fileBuffer=%d, writeBuffer=%d, checkInterval=%d",
+			bp.maxMemoryUsage/1024/1024, bp.maxPendingFiles, bp.maxPendingWrites, bp.memoryCheckInterval,
+		)
 	} else {
 		logger.Info("Back-pressure disabled")
 	}

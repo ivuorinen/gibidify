@@ -100,7 +100,12 @@ func verifySpecialCharacters(t *testing.T, rootDir string, _ []string) {
 }
 
 // runCreateDirectoryTest runs a single create directory structure test.
-func runCreateDirectoryTest(t *testing.T, dirSpecs []DirSpec, wantPaths int, verifyFunc func(t *testing.T, rootDir string, createdPaths []string)) {
+func runCreateDirectoryTest(
+	t *testing.T,
+	dirSpecs []DirSpec,
+	wantPaths int,
+	verifyFunc func(t *testing.T, rootDir string, createdPaths []string),
+) {
 	t.Helper()
 
 	rootDir := t.TempDir()
@@ -210,9 +215,11 @@ func TestCreateTestDirectoryStructure(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runCreateDirectoryTest(t, tt.dirSpecs, tt.wantPaths, tt.verifyFunc)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runCreateDirectoryTest(t, tt.dirSpecs, tt.wantPaths, tt.verifyFunc)
+			},
+		)
 	}
 }
 
@@ -399,9 +406,11 @@ func TestSetupTempDirWithStructure(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			runSetupTempDirTest(t, tt.dirSpecs, tt.verifyFunc)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runSetupTempDirTest(t, tt.dirSpecs, tt.verifyFunc)
+			},
+		)
 	}
 }
 
@@ -476,8 +485,10 @@ func BenchmarkDirectoryCreation(b *testing.B) {
 	}
 
 	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			benchmarkDirectoryStructure(b, tc.dirSpecs)
-		})
+		b.Run(
+			tc.name, func(b *testing.B) {
+				benchmarkDirectoryStructure(b, tc.dirSpecs)
+			},
+		)
 	}
 }

@@ -29,15 +29,17 @@ func TestStartWriter_Formats(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			data := runWriterTest(t, tc.format)
-			if tc.expectError {
-				verifyErrorOutput(t, data)
-			} else {
-				verifyValidOutput(t, data, tc.format)
-				verifyPrefixSuffix(t, data)
-			}
-		})
+		t.Run(
+			tc.name, func(t *testing.T) {
+				data := runWriterTest(t, tc.format)
+				if tc.expectError {
+					verifyErrorOutput(t, data)
+				} else {
+					verifyValidOutput(t, data, tc.format)
+					verifyPrefixSuffix(t, data)
+				}
+			},
+		)
 	}
 }
 
@@ -143,24 +145,26 @@ func TestStartWriter_StreamingFormats(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			data := runStreamingWriterTest(t, tc.format, tc.content)
+		t.Run(
+			tc.name, func(t *testing.T) {
+				data := runStreamingWriterTest(t, tc.format, tc.content)
 
-			// Verify output is not empty
-			if len(data) == 0 {
-				t.Error("Expected streaming output but got empty result")
-			}
+				// Verify output is not empty
+				if len(data) == 0 {
+					t.Error("Expected streaming output but got empty result")
+				}
 
-			// Format-specific validation
-			verifyValidOutput(t, data, tc.format)
-			verifyPrefixSuffix(t, data)
+				// Format-specific validation
+				verifyValidOutput(t, data, tc.format)
+				verifyPrefixSuffix(t, data)
 
-			// Verify content was written
-			content := string(data)
-			if !strings.Contains(content, "stream_test.txt") {
-				t.Error("Expected file path in streaming output")
-			}
-		})
+				// Verify content was written
+				content := string(data)
+				if !strings.Contains(content, "stream_test.txt") {
+					t.Error("Expected file path in streaming output")
+				}
+			},
+		)
 	}
 }
 
@@ -283,7 +287,10 @@ func setupStreamingError(t *testing.T) (*os.File, chan fileproc.WriteRequest, ch
 	doneCh := make(chan struct{})
 
 	pr, pw := io.Pipe()
-	pw.CloseWithError(errors.New("simulated stream error"))
+	err = pw.CloseWithError(errors.New("simulated stream error"))
+	if err != nil {
+		return nil, nil, nil
+	}
 
 	writeCh <- fileproc.WriteRequest{
 		Path:     "stream_fail.yaml",
@@ -323,7 +330,13 @@ func setupSpecialCharacters(t *testing.T) (*os.File, chan fileproc.WriteRequest,
 }
 
 // runErrorHandlingTest runs a single error handling test.
-func runErrorHandlingTest(t *testing.T, outFile *os.File, writeCh chan fileproc.WriteRequest, doneCh chan struct{}, format string) {
+func runErrorHandlingTest(
+	t *testing.T,
+	outFile *os.File,
+	writeCh chan fileproc.WriteRequest,
+	doneCh chan struct{},
+	format string,
+) {
 	t.Helper()
 
 	defer func() {
@@ -377,10 +390,12 @@ func TestStartWriter_ErrorHandling(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			outFile, writeCh, doneCh := tc.setupError(t)
-			runErrorHandlingTest(t, outFile, writeCh, doneCh, tc.format)
-		})
+		t.Run(
+			tc.name, func(t *testing.T) {
+				outFile, writeCh, doneCh := tc.setupError(t)
+				runErrorHandlingTest(t, outFile, writeCh, doneCh, tc.format)
+			},
+		)
 	}
 }
 
@@ -408,7 +423,13 @@ func setupCloseTest(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan st
 }
 
 // runCloseTest executes writer and validates output.
-func runCloseTest(t *testing.T, outFile *os.File, writeCh chan fileproc.WriteRequest, doneCh chan struct{}, format string) {
+func runCloseTest(
+	t *testing.T,
+	outFile *os.File,
+	writeCh chan fileproc.WriteRequest,
+	doneCh chan struct{},
+	format string,
+) {
 	t.Helper()
 
 	defer func() {
@@ -462,9 +483,11 @@ func TestStartWriter_WriterCloseErrors(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			outFile, writeCh, doneCh := setupCloseTest(t)
-			runCloseTest(t, outFile, writeCh, doneCh, tc.format)
-		})
+		t.Run(
+			tc.name, func(t *testing.T) {
+				outFile, writeCh, doneCh := setupCloseTest(t)
+				runCloseTest(t, outFile, writeCh, doneCh, tc.format)
+			},
+		)
 	}
 }

@@ -25,6 +25,7 @@ jobs:
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           token: ${{ github.token }}
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
@@ -80,7 +81,7 @@ jobs:
       # Makefile Linting
       - name: Run checkmake on Makefile
         run: |
-          go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+          go install github.com/checkmake/checkmake@latest
           checkmake --config=.checkmake Makefile
 
       # Shell Script Formatting Check

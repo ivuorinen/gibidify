@@ -52,20 +52,24 @@ var (
 // GetLogger returns the singleton logger instance.
 // Default level is WARNING to reduce noise in CLI output.
 func GetLogger() Logger {
-	once.Do(func() {
-		logger := logrus.New()
-		logger.SetLevel(logrus.WarnLevel) // Default to WARNING level
-		logger.SetOutput(os.Stderr)
-		logger.SetFormatter(&logrus.TextFormatter{
-			DisableColors: false,
-			FullTimestamp: false,
-		})
+	once.Do(
+		func() {
+			logger := logrus.New()
+			logger.SetLevel(logrus.WarnLevel) // Default to WARNING level
+			logger.SetOutput(os.Stderr)
+			logger.SetFormatter(
+				&logrus.TextFormatter{
+					DisableColors: false,
+					FullTimestamp: false,
+				},
+			)
 
-		instance = &logService{
-			logger: logger,
-			entry:  logger.WithFields(logrus.Fields{}),
-		}
-	})
+			instance = &logService{
+				logger: logger,
+				entry:  logger.WithFields(logrus.Fields{}),
+			}
+		},
+	)
 
 	return instance
 }

@@ -23,5 +23,10 @@ if ! yamllint -c .yamllint .; then
   exit_code=1
 fi
 
+echo "Running eclint..."
+if ! eclint; then
+  exit_code=1
+fi
+
 # Exit with failure status if any linter failed
 exit $exit_code

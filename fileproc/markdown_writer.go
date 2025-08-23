@@ -7,7 +7,7 @@ import (
 	"github.com/ivuorinen/gibidify/utils"
 )
 
-// MarkdownWriter handles markdown format output with streaming support.
+// MarkdownWriter handles Markdown format output with streaming support.
 type MarkdownWriter struct {
 	outFile *os.File
 	suffix  string
@@ -32,7 +32,7 @@ func (w *MarkdownWriter) Start(prefix, suffix string) error {
 	return nil
 }
 
-// WriteFile writes a file entry in markdown format.
+// WriteFile writes a file entry in Markdown format.
 func (w *MarkdownWriter) WriteFile(req WriteRequest) error {
 	if req.IsStream {
 		return w.writeStreaming(req)
@@ -60,7 +60,12 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 
 	// Write file header
 	if _, err := fmt.Fprintf(w.outFile, "## File: `%s`\n```%s\n", req.Path, language); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write file header").WithFilePath(req.Path)
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOWrite,
+			"failed to write file header",
+		).WithFilePath(req.Path)
 	}
 
 	// Stream file content in chunks
@@ -70,7 +75,12 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 
 	// Write file footer
 	if _, err := w.outFile.WriteString("\n```\n\n"); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write file footer").WithFilePath(req.Path)
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOWrite,
+			"failed to write file footer",
+		).WithFilePath(req.Path)
 	}
 
 	return nil
@@ -82,13 +92,18 @@ func (w *MarkdownWriter) writeInline(req WriteRequest) error {
 	formatted := fmt.Sprintf("## File: `%s`\n```%s\n%s\n```\n\n", req.Path, language, req.Content)
 
 	if _, err := w.outFile.WriteString(formatted); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write inline content").WithFilePath(req.Path)
+		return utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOWrite,
+			"failed to write inline content",
+		).WithFilePath(req.Path)
 	}
 
 	return nil
 }
 
-// startMarkdownWriter handles markdown format output with streaming support.
+// startMarkdownWriter handles Markdown format output with streaming support.
 func startMarkdownWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
 	defer close(done)
 

@@ -89,26 +89,28 @@ func TestValidateConfig(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Reset viper for each test
-			viper.Reset()
+		t.Run(
+			tt.name, func(t *testing.T) {
+				// Reset viper for each test
+				viper.Reset()
 
-			// Set test configuration
-			for key, value := range tt.config {
-				viper.Set(key, value)
-			}
+				// Set test configuration
+				for key, value := range tt.config {
+					viper.Set(key, value)
+				}
 
-			// Load defaults for missing values
-			config.LoadConfig()
+				// Load defaults for missing values
+				config.LoadConfig()
 
-			err := config.ValidateConfig()
+				err := config.ValidateConfig()
 
-			if tt.wantErr {
-				validateExpectedError(t, err, tt.errContains)
-			} else if err != nil {
-				t.Errorf("Expected no error but got: %v", err)
-			}
-		})
+				if tt.wantErr {
+					validateExpectedError(t, err, tt.errContains)
+				} else if err != nil {
+					t.Errorf("Expected no error but got: %v", err)
+				}
+			},
+		)
 	}
 }
 

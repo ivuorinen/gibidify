@@ -116,7 +116,12 @@ func (p *Processor) createOutputFile() (*os.File, error) {
 	// Destination path has been validated in CLI flags validation for path traversal attempts
 	outFile, err := os.Create(p.flags.Destination) // #nosec G304 - destination is validated in flags.validate()
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileCreate, "failed to create output file").WithFilePath(p.flags.Destination)
+		return nil, utils.WrapError(
+			err,
+			utils.ErrorTypeIO,
+			utils.CodeIOFileCreate,
+			"failed to create output file",
+		).WithFilePath(p.flags.Destination)
 	}
 
 	return outFile, nil

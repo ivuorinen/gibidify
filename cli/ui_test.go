@@ -95,19 +95,21 @@ func TestUIManager_StartProgress(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ui, _ := createTestUI()
-			ui.SetProgressOutput(tt.enabled)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				ui, _ := createTestUI()
+				ui.SetProgressOutput(tt.enabled)
 
-			ui.StartProgress(tt.total, tt.description)
+				ui.StartProgress(tt.total, tt.description)
 
-			if tt.expectBar && ui.progressBar == nil {
-				t.Error("StartProgress() should have created progress bar but didn't")
-			}
-			if !tt.expectBar && ui.progressBar != nil {
-				t.Error("StartProgress() should not have created progress bar but did")
-			}
-		})
+				if tt.expectBar && ui.progressBar == nil {
+					t.Error("StartProgress() should have created progress bar but didn't")
+				}
+				if !tt.expectBar && ui.progressBar != nil {
+					t.Error("StartProgress() should not have created progress bar but did")
+				}
+			},
+		)
 	}
 }
 
@@ -157,32 +159,41 @@ type printMethodTest struct {
 	expectedText string
 }
 
-func testPrintMethod(t *testing.T, methodName string, printFunc func(*UIManager, string, ...any), tests []printMethodTest) {
+func testPrintMethod(
+	t *testing.T,
+	methodName string,
+	printFunc func(*UIManager, string, ...any),
+	tests []printMethodTest,
+) {
 	t.Helper()
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ui, output := createTestUI()
-			ui.SetColorOutput(tt.enableColors)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				ui, output := createTestUI()
+				ui.SetColorOutput(tt.enableColors)
 
-			printFunc(ui, tt.format, tt.args...)
+				printFunc(ui, tt.format, tt.args...)
 
-			if !tt.enableColors {
-				outputStr := output.String()
-				if !strings.Contains(outputStr, tt.expectedText) {
-					t.Errorf("%s() output %q should contain %q", methodName, outputStr, tt.expectedText)
+				if !tt.enableColors {
+					outputStr := output.String()
+					if !strings.Contains(outputStr, tt.expectedText) {
+						t.Errorf("%s() output %q should contain %q", methodName, outputStr, tt.expectedText)
+					}
 				}
-			}
-		})
+			},
+		)
 	}
 
 	// Test color method separately (doesn't capture output but shouldn't panic)
-	t.Run(methodName+" with colors should not panic", func(_ *testing.T) {
-		ui, _ := createTestUI()
-		ui.SetColorOutput(true)
-		// Should not panic
-		printFunc(ui, "Test message")
-	})
+	t.Run(
+		methodName+" with colors should not panic", func(_ *testing.T) {
+			ui, _ := createTestUI()
+			ui.SetColorOutput(true)
+			// Should not panic
+			printFunc(ui, "Test message")
+		},
+	)
 }
 
 func TestUIManager_PrintSuccess(t *testing.T) {
@@ -203,9 +214,11 @@ func TestUIManager_PrintSuccess(t *testing.T) {
 		},
 	}
 
-	testPrintMethod(t, "PrintSuccess", func(ui *UIManager, format string, args ...any) {
-		ui.PrintSuccess(format, args...)
-	}, tests)
+	testPrintMethod(
+		t, "PrintSuccess", func(ui *UIManager, format string, args ...any) {
+			ui.PrintSuccess(format, args...)
+		}, tests,
+	)
 }
 
 func TestUIManager_PrintError(t *testing.T) {
@@ -226,9 +239,11 @@ func TestUIManager_PrintError(t *testing.T) {
 		},
 	}
 
-	testPrintMethod(t, "PrintError", func(ui *UIManager, format string, args ...any) {
-		ui.PrintError(format, args...)
-	}, tests)
+	testPrintMethod(
+		t, "PrintError", func(ui *UIManager, format string, args ...any) {
+			ui.PrintError(format, args...)
+		}, tests,
+	)
 }
 
 func TestUIManager_PrintWarning(t *testing.T) {
@@ -249,9 +264,11 @@ func TestUIManager_PrintWarning(t *testing.T) {
 		},
 	}
 
-	testPrintMethod(t, "PrintWarning", func(ui *UIManager, format string, args ...any) {
-		ui.PrintWarning(format, args...)
-	}, tests)
+	testPrintMethod(
+		t, "PrintWarning", func(ui *UIManager, format string, args ...any) {
+			ui.PrintWarning(format, args...)
+		}, tests,
+	)
 }
 
 func TestUIManager_PrintInfo(t *testing.T) {
@@ -272,9 +289,11 @@ func TestUIManager_PrintInfo(t *testing.T) {
 		},
 	}
 
-	testPrintMethod(t, "PrintInfo", func(ui *UIManager, format string, args ...any) {
-		ui.PrintInfo(format, args...)
-	}, tests)
+	testPrintMethod(
+		t, "PrintInfo", func(ui *UIManager, format string, args ...any) {
+			ui.PrintInfo(format, args...)
+		}, tests,
+	)
 }
 
 func TestUIManager_PrintHeader(t *testing.T) {
@@ -309,17 +328,19 @@ func TestUIManager_PrintHeader(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ui, output := createTestUI()
-			ui.SetColorOutput(tt.enableColors)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				ui, output := createTestUI()
+				ui.SetColorOutput(tt.enableColors)
 
-			ui.PrintHeader(tt.format, tt.args...)
+				ui.PrintHeader(tt.format, tt.args...)
 
-			outputStr := output.String()
-			if !strings.Contains(outputStr, tt.expectedText) {
-				t.Errorf("PrintHeader() output %q should contain %q", outputStr, tt.expectedText)
-			}
-		})
+				outputStr := output.String()
+				if !strings.Contains(outputStr, tt.expectedText) {
+					t.Errorf("PrintHeader() output %q should contain %q", outputStr, tt.expectedText)
+				}
+			},
+		)
 	}
 }
 
@@ -420,15 +441,17 @@ func TestIsColorTerminal(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			clearColorTerminalEnvVars(t)
-			setColorTerminalTestEnv(t, tt)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				clearColorTerminalEnvVars(t)
+				setColorTerminalTestEnv(t, tt)
 
-			result := isColorTerminal()
-			if result != tt.expected {
-				t.Errorf("isColorTerminal() = %v, want %v", result, tt.expected)
-			}
-		})
+				result := isColorTerminal()
+				if result != tt.expected {
+					t.Errorf("isColorTerminal() = %v, want %v", result, tt.expected)
+				}
+			},
+		)
 	}
 }
 
@@ -458,13 +481,13 @@ func TestUIManager_printf(t *testing.T) {
 func setEnvOrUnset(key, value string) {
 	if value == "" {
 		if err := os.Unsetenv(key); err != nil {
-			// In tests, environment variable errors are not critical
+			// In tests, environment variable errors are not critical,
 			// but we should still handle them to avoid linting issues
 			_ = err // explicitly ignore error
 		}
 	} else {
 		if err := os.Setenv(key, value); err != nil {
-			// In tests, environment variable errors are not critical
+			// In tests, environment variable errors are not critical,
 			// but we should still handle them to avoid linting issues
 			_ = err // explicitly ignore error
 		}

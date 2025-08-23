@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"sync/atomic"
 	"time"
+
+	"github.com/ivuorinen/gibidify/utils"
 )
 
 // NewCollector creates a new metrics collector.
@@ -45,7 +47,7 @@ func (c *Collector) updateFileStatusCounters(result FileProcessingResult) {
 
 // updateFileSizeExtremes updates the largest and smallest file size atomically.
 func (c *Collector) updateFileSizeExtremes(fileSize int64) {
-	// Update largest file atomically
+	// Update the largest file atomically
 	for {
 		current := atomic.LoadInt64(&c.largestFile)
 		if fileSize <= current {
@@ -56,7 +58,7 @@ func (c *Collector) updateFileSizeExtremes(fileSize int64) {
 		}
 	}
 
-	// Update smallest file atomically
+	// Update the smallest file atomically
 	for {
 		current := atomic.LoadInt64(&c.smallestFile)
 		if fileSize >= current {
@@ -173,8 +175,8 @@ func (c *Collector) GetCurrentMetrics() ProcessingMetrics {
 		ProcessingTime:     processingTime,
 		FilesPerSecond:     filesPerSec,
 		BytesPerSecond:     bytesPerSec,
-		PeakMemoryMB:       int64(m.Sys) / 1024 / 1024,
-		CurrentMemoryMB:    int64(m.Alloc) / 1024 / 1024,
+		PeakMemoryMB:       utils.BytesToMB(m.Sys),
+		CurrentMemoryMB:    utils.BytesToMB(m.Alloc),
 		GoroutineCount:     runtime.NumGoroutine(),
 		FormatCounts:       formatCounts,
 		ErrorCounts:        errorCounts,
@@ -287,13 +289,17 @@ func (c *Collector) generateRecommendations(metrics ProcessingMetrics) []string 
 	}
 
 	// Concurrency recommendations
-	if int32(metrics.MaxConcurrency/2) > 0 && metrics.CurrentConcurrency < int32(metrics.MaxConcurrency/2) {
+	halfMaxConcurrency := utils.SafeIntToInt32WithDefault(metrics.MaxConcurrency/2, 1)
+	if halfMaxConcurrency > 0 && metrics.CurrentConcurrency < halfMaxConcurrency {
 		recommendations = append(recommendations, "Low concurrency utilization - consider increasing concurrent processing")
 	}
 
 	// Large file recommendations
 	if metrics.LargestFile > 50*1024*1024 { // 50MB
-		recommendations = append(recommendations, "Very large files detected (>50MB) - consider streaming processing for large files")
+		recommendations = append(
+			recommendations,
+			"Very large files detected (>50MB) - consider streaming processing for large files",
+		)
 	}
 
 	return recommendations
