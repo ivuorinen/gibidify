@@ -1,14 +1,27 @@
 #!/bin/bash
-set -e
+
+# Track overall exit status
+exit_code=0
 
 echo "Running golangci-lint..."
-golangci-lint run ./...
+if ! golangci-lint run ./...; then
+  exit_code=1
+fi
 
 echo "Running checkmake..."
-checkmake --config=.checkmake Makefile
+if ! checkmake --config=.checkmake Makefile; then
+  exit_code=1
+fi
 
 echo "Running shfmt check..."
-shfmt -d .
+if ! shfmt -d .; then
+  exit_code=1
+fi
 
 echo "Running yamllint..."
-yamllint -c .yamllint .
+if ! yamllint -c .yamllint .; then
+  exit_code=1
+fi
+
+# Exit with failure status if any linter failed
+exit $exit_code

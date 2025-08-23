@@ -17,7 +17,7 @@ type mockCloser struct {
 	closed     bool
 }
 
-func (m *mockCloser) Read(p []byte) (n int, err error) {
+func (m *mockCloser) Read(_ []byte) (n int, err error) {
 	return 0, io.EOF
 }
 
@@ -30,7 +30,7 @@ func (m *mockCloser) Close() error {
 // mockReader implements io.Reader that returns EOF.
 type mockReader struct{}
 
-func (m *mockReader) Read(p []byte) (n int, err error) {
+func (m *mockReader) Read(_ []byte) (n int, err error) {
 	return 0, io.EOF
 }
 

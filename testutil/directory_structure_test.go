@@ -8,7 +8,7 @@ import (
 )
 
 // verifySingleDirectoryFiles verifies single directory with files test case.
-func verifySingleDirectoryFiles(t *testing.T, rootDir string, createdPaths []string) {
+func verifySingleDirectoryFiles(t *testing.T, rootDir string, _ []string) {
 	t.Helper()
 
 	srcDir := filepath.Join(rootDir, "src")
@@ -37,7 +37,7 @@ func verifySingleDirectoryFiles(t *testing.T, rootDir string, createdPaths []str
 }
 
 // verifyMultipleDirectories verifies multiple directories with nested structure.
-func verifyMultipleDirectories(t *testing.T, rootDir string, createdPaths []string) {
+func verifyMultipleDirectories(t *testing.T, rootDir string, _ []string) {
 	t.Helper()
 
 	expectedDirs := []string{
@@ -64,7 +64,7 @@ func verifyMultipleDirectories(t *testing.T, rootDir string, createdPaths []stri
 }
 
 // verifyEmptyDirectory verifies directory with no files.
-func verifyEmptyDirectory(t *testing.T, rootDir string, createdPaths []string) {
+func verifyEmptyDirectory(t *testing.T, rootDir string, _ []string) {
 	t.Helper()
 
 	emptyDir := filepath.Join(rootDir, "empty")
@@ -76,7 +76,7 @@ func verifyEmptyDirectory(t *testing.T, rootDir string, createdPaths []string) {
 }
 
 // verifySpecialCharacters verifies directories with special characters.
-func verifySpecialCharacters(t *testing.T, rootDir string, createdPaths []string) {
+func verifySpecialCharacters(t *testing.T, rootDir string, _ []string) {
 	t.Helper()
 
 	specialDir := filepath.Join(rootDir, "special-dir_123")
@@ -182,7 +182,7 @@ func TestCreateTestDirectoryStructure(t *testing.T) {
 			name:      "empty directory specs",
 			dirSpecs:  []DirSpec{},
 			wantPaths: 0,
-			verifyFunc: func(t *testing.T, rootDir string, createdPaths []string) {
+			verifyFunc: func(t *testing.T, _ string, _ []string) {
 				t.Helper()
 				// Nothing to verify for empty specs
 			},

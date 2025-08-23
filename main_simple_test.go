@@ -316,7 +316,7 @@ func TestErrorClassification(t *testing.T) {
 		},
 		{
 			name:      "cli_missing_source",
-			err:       cli.NewCLIMissingSourceError(),
+			err:       cli.NewMissingSourceError(),
 			isUserErr: true,
 		},
 		{

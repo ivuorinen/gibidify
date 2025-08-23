@@ -241,16 +241,16 @@ func (ef *ErrorFormatter) provideGenericSuggestions(err error) {
 
 // CLI-specific error types
 
-// CLIMissingSourceError represents a missing source directory error.
-type CLIMissingSourceError struct{}
+// MissingSourceError represents a missing source directory error.
+type MissingSourceError struct{}
 
-func (e CLIMissingSourceError) Error() string {
+func (e MissingSourceError) Error() string {
 	return "source directory is required"
 }
 
-// NewCLIMissingSourceError creates a new CLI missing source error with suggestions.
-func NewCLIMissingSourceError() error {
-	return &CLIMissingSourceError{}
+// NewMissingSourceError creates a new CLI missing source error with suggestions.
+func NewMissingSourceError() error {
+	return &MissingSourceError{}
 }
 
 // IsUserError checks if an error is a user input error that should be handled gracefully.
@@ -260,7 +260,7 @@ func IsUserError(err error) bool {
 	}
 
 	// Check for specific user error types
-	var cliErr *CLIMissingSourceError
+	var cliErr *MissingSourceError
 	if errors.As(err, &cliErr) {
 		return true
 	}
