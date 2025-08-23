@@ -6,169 +6,213 @@ import (
 	"github.com/spf13/viper"
 )
 
-// TestFileTypeRegistryConfig tests the FileTypeRegistry configuration functionality.
-func TestFileTypeRegistryConfig(t *testing.T) {
-	// Test default values
-	t.Run("DefaultValues", func(t *testing.T) {
-		viper.Reset()
-		setDefaultConfig()
+// TestFileTypeRegistryDefaultValues tests default configuration values.
+func TestFileTypeRegistryDefaultValues(t *testing.T) {
+	viper.Reset()
+	setDefaultConfig()
 
-		if !GetFileTypesEnabled() {
-			t.Error("Expected file types to be enabled by default")
-		}
+	verifyDefaultValues(t)
+}
 
-		if len(GetCustomImageExtensions()) != 0 {
-			t.Error("Expected custom image extensions to be empty by default")
-		}
+// TestFileTypeRegistrySetGet tests configuration setting and getting.
+func TestFileTypeRegistrySetGet(t *testing.T) {
+	viper.Reset()
 
-		if len(GetCustomBinaryExtensions()) != 0 {
-			t.Error("Expected custom binary extensions to be empty by default")
-		}
+	// Set test values
+	setTestConfiguration()
 
-		if len(GetCustomLanguages()) != 0 {
-			t.Error("Expected custom languages to be empty by default")
-		}
+	// Test getter functions
+	verifyTestConfiguration(t)
+}
 
-		if len(GetDisabledImageExtensions()) != 0 {
-			t.Error("Expected disabled image extensions to be empty by default")
-		}
+// TestFileTypeRegistryValidationSuccess tests successful validation.
+func TestFileTypeRegistryValidationSuccess(t *testing.T) {
+	viper.Reset()
+	setDefaultConfig()
 
-		if len(GetDisabledBinaryExtensions()) != 0 {
-			t.Error("Expected disabled binary extensions to be empty by default")
-		}
+	// Set valid configuration
+	setValidConfiguration()
 
-		if len(GetDisabledLanguageExtensions()) != 0 {
-			t.Error("Expected disabled language extensions to be empty by default")
-		}
+	err := ValidateConfig()
+	if err != nil {
+		t.Errorf("Expected validation to pass with valid config, got error: %v", err)
+	}
+}
+
+// TestFileTypeRegistryValidationFailure tests validation failures.
+func TestFileTypeRegistryValidationFailure(t *testing.T) {
+	// Test invalid custom image extensions
+	testInvalidImageExtensions(t)
+
+	// Test invalid custom binary extensions
+	testInvalidBinaryExtensions(t)
+
+	// Test invalid custom languages
+	testInvalidCustomLanguages(t)
+}
+
+// verifyDefaultValues verifies that default values are correct.
+func verifyDefaultValues(t *testing.T) {
+	t.Helper()
+
+	if !GetFileTypesEnabled() {
+		t.Error("Expected file types to be enabled by default")
+	}
+
+	verifyEmptySlice(t, GetCustomImageExtensions(), "custom image extensions")
+	verifyEmptySlice(t, GetCustomBinaryExtensions(), "custom binary extensions")
+	verifyEmptyMap(t, GetCustomLanguages(), "custom languages")
+	verifyEmptySlice(t, GetDisabledImageExtensions(), "disabled image extensions")
+	verifyEmptySlice(t, GetDisabledBinaryExtensions(), "disabled binary extensions")
+	verifyEmptySlice(t, GetDisabledLanguageExtensions(), "disabled language extensions")
+}
+
+// setTestConfiguration sets test configuration values.
+func setTestConfiguration() {
+	viper.Set("fileTypes.enabled", false)
+	viper.Set("fileTypes.customImageExtensions", []string{".webp", ".avif"})
+	viper.Set("fileTypes.customBinaryExtensions", []string{".custom", ".mybin"})
+	viper.Set("fileTypes.customLanguages", map[string]string{
+		".zig": "zig",
+		".v":   "vlang",
+	})
+	viper.Set("fileTypes.disabledImageExtensions", []string{".gif", ".bmp"})
+	viper.Set("fileTypes.disabledBinaryExtensions", []string{".exe", ".dll"})
+	viper.Set("fileTypes.disabledLanguageExtensions", []string{".rb", ".pl"})
+}
+
+// verifyTestConfiguration verifies that test configuration is retrieved correctly.
+func verifyTestConfiguration(t *testing.T) {
+	t.Helper()
+
+	if GetFileTypesEnabled() {
+		t.Error("Expected file types to be disabled")
+	}
+
+	verifyStringSlice(t, GetCustomImageExtensions(), []string{".webp", ".avif"}, "custom image extensions")
+	verifyStringSlice(t, GetCustomBinaryExtensions(), []string{".custom", ".mybin"}, "custom binary extensions")
+
+	expectedLangs := map[string]string{
+		".zig": "zig",
+		".v":   "vlang",
+	}
+	verifyStringMap(t, GetCustomLanguages(), expectedLangs, "custom languages")
+
+	verifyStringSliceLength(t, GetDisabledImageExtensions(), []string{".gif", ".bmp"}, "disabled image extensions")
+	verifyStringSliceLength(t, GetDisabledBinaryExtensions(), []string{".exe", ".dll"}, "disabled binary extensions")
+	verifyStringSliceLength(t, GetDisabledLanguageExtensions(), []string{".rb", ".pl"}, "disabled language extensions")
+}
+
+// setValidConfiguration sets valid configuration for validation tests.
+func setValidConfiguration() {
+	viper.Set("fileTypes.customImageExtensions", []string{".webp", ".avif"})
+	viper.Set("fileTypes.customBinaryExtensions", []string{".custom"})
+	viper.Set("fileTypes.customLanguages", map[string]string{
+		".zig": "zig",
+		".v":   "vlang",
+	})
+}
+
+// testInvalidImageExtensions tests validation failure with invalid image extensions.
+func testInvalidImageExtensions(t *testing.T) {
+	t.Helper()
+
+	viper.Reset()
+	setDefaultConfig()
+	viper.Set("fileTypes.customImageExtensions", []string{"", "webp"}) // Empty and missing dot
+
+	err := ValidateConfig()
+	if err == nil {
+		t.Error("Expected validation to fail with invalid custom image extensions")
+	}
+}
+
+// testInvalidBinaryExtensions tests validation failure with invalid binary extensions.
+func testInvalidBinaryExtensions(t *testing.T) {
+	t.Helper()
+
+	viper.Reset()
+	setDefaultConfig()
+	viper.Set("fileTypes.customBinaryExtensions", []string{"custom"}) // Missing dot
+
+	err := ValidateConfig()
+	if err == nil {
+		t.Error("Expected validation to fail with invalid custom binary extensions")
+	}
+}
+
+// testInvalidCustomLanguages tests validation failure with invalid custom languages.
+func testInvalidCustomLanguages(t *testing.T) {
+	t.Helper()
+
+	viper.Reset()
+	setDefaultConfig()
+	viper.Set("fileTypes.customLanguages", map[string]string{
+		"zig": "zig", // Missing dot in extension
+		".v":  "",    // Empty language
 	})
 
-	// Test configuration setting and getting
-	t.Run("ConfigurationSetGet", func(t *testing.T) {
-		viper.Reset()
+	err := ValidateConfig()
+	if err == nil {
+		t.Error("Expected validation to fail with invalid custom languages")
+	}
+}
 
-		// Set test values
-		viper.Set("fileTypes.enabled", false)
-		viper.Set("fileTypes.customImageExtensions", []string{".webp", ".avif"})
-		viper.Set("fileTypes.customBinaryExtensions", []string{".custom", ".mybin"})
-		viper.Set("fileTypes.customLanguages", map[string]string{
-			".zig": "zig",
-			".v":   "vlang",
-		})
-		viper.Set("fileTypes.disabledImageExtensions", []string{".gif", ".bmp"})
-		viper.Set("fileTypes.disabledBinaryExtensions", []string{".exe", ".dll"})
-		viper.Set("fileTypes.disabledLanguageExtensions", []string{".rb", ".pl"})
+// verifyEmptySlice verifies that a slice is empty.
+func verifyEmptySlice(t *testing.T, slice []string, name string) {
+	t.Helper()
 
-		// Test getter functions
-		if GetFileTypesEnabled() {
-			t.Error("Expected file types to be disabled")
+	if len(slice) != 0 {
+		t.Errorf("Expected %s to be empty by default", name)
+	}
+}
+
+// verifyEmptyMap verifies that a map is empty.
+func verifyEmptyMap(t *testing.T, m map[string]string, name string) {
+	t.Helper()
+
+	if len(m) != 0 {
+		t.Errorf("Expected %s to be empty by default", name)
+	}
+}
+
+// verifyStringSlice verifies that a string slice matches expected values.
+func verifyStringSlice(t *testing.T, actual, expected []string, name string) {
+	t.Helper()
+
+	if len(actual) != len(expected) {
+		t.Errorf("Expected %d %s, got %d", len(expected), name, len(actual))
+
+		return
+	}
+	for i, ext := range expected {
+		if actual[i] != ext {
+			t.Errorf("Expected %s %s, got %s", name, ext, actual[i])
 		}
+	}
+}
 
-		customImages := GetCustomImageExtensions()
-		expectedImages := []string{".webp", ".avif"}
-		if len(customImages) != len(expectedImages) {
-			t.Errorf("Expected %d custom image extensions, got %d", len(expectedImages), len(customImages))
+// verifyStringMap verifies that a string map matches expected values.
+func verifyStringMap(t *testing.T, actual, expected map[string]string, name string) {
+	t.Helper()
+
+	if len(actual) != len(expected) {
+		t.Errorf("Expected %d %s, got %d", len(expected), name, len(actual))
+
+		return
+	}
+	for ext, lang := range expected {
+		if actual[ext] != lang {
+			t.Errorf("Expected %s %s -> %s, got %s", name, ext, lang, actual[ext])
 		}
-		for i, ext := range expectedImages {
-			if customImages[i] != ext {
-				t.Errorf("Expected custom image extension %s, got %s", ext, customImages[i])
-			}
-		}
+	}
+}
 
-		customBinary := GetCustomBinaryExtensions()
-		expectedBinary := []string{".custom", ".mybin"}
-		if len(customBinary) != len(expectedBinary) {
-			t.Errorf("Expected %d custom binary extensions, got %d", len(expectedBinary), len(customBinary))
-		}
-		for i, ext := range expectedBinary {
-			if customBinary[i] != ext {
-				t.Errorf("Expected custom binary extension %s, got %s", ext, customBinary[i])
-			}
-		}
+// verifyStringSliceLength verifies that a string slice has the expected length.
+func verifyStringSliceLength(t *testing.T, actual, expected []string, name string) {
+	t.Helper()
 
-		customLangs := GetCustomLanguages()
-		expectedLangs := map[string]string{
-			".zig": "zig",
-			".v":   "vlang",
-		}
-		if len(customLangs) != len(expectedLangs) {
-			t.Errorf("Expected %d custom languages, got %d", len(expectedLangs), len(customLangs))
-		}
-		for ext, lang := range expectedLangs {
-			if customLangs[ext] != lang {
-				t.Errorf("Expected custom language %s -> %s, got %s", ext, lang, customLangs[ext])
-			}
-		}
-
-		disabledImages := GetDisabledImageExtensions()
-		expectedDisabledImages := []string{".gif", ".bmp"}
-		if len(disabledImages) != len(expectedDisabledImages) {
-			t.Errorf("Expected %d disabled image extensions, got %d", len(expectedDisabledImages), len(disabledImages))
-		}
-
-		disabledBinary := GetDisabledBinaryExtensions()
-		expectedDisabledBinary := []string{".exe", ".dll"}
-		if len(disabledBinary) != len(expectedDisabledBinary) {
-			t.Errorf("Expected %d disabled binary extensions, got %d", len(expectedDisabledBinary), len(disabledBinary))
-		}
-
-		disabledLangs := GetDisabledLanguageExtensions()
-		expectedDisabledLangs := []string{".rb", ".pl"}
-		if len(disabledLangs) != len(expectedDisabledLangs) {
-			t.Errorf("Expected %d disabled language extensions, got %d", len(expectedDisabledLangs), len(disabledLangs))
-		}
-	})
-
-	// Test validation
-	t.Run("ValidationSuccess", func(t *testing.T) {
-		viper.Reset()
-		setDefaultConfig()
-
-		// Set valid configuration
-		viper.Set("fileTypes.customImageExtensions", []string{".webp", ".avif"})
-		viper.Set("fileTypes.customBinaryExtensions", []string{".custom"})
-		viper.Set("fileTypes.customLanguages", map[string]string{
-			".zig": "zig",
-			".v":   "vlang",
-		})
-
-		err := ValidateConfig()
-		if err != nil {
-			t.Errorf("Expected validation to pass with valid config, got error: %v", err)
-		}
-	})
-
-	t.Run("ValidationFailure", func(t *testing.T) {
-		// Test invalid custom image extensions
-		viper.Reset()
-		setDefaultConfig()
-		viper.Set("fileTypes.customImageExtensions", []string{"", "webp"}) // Empty and missing dot
-
-		err := ValidateConfig()
-		if err == nil {
-			t.Error("Expected validation to fail with invalid custom image extensions")
-		}
-
-		// Test invalid custom binary extensions
-		viper.Reset()
-		setDefaultConfig()
-		viper.Set("fileTypes.customBinaryExtensions", []string{"custom"}) // Missing dot
-
-		err = ValidateConfig()
-		if err == nil {
-			t.Error("Expected validation to fail with invalid custom binary extensions")
-		}
-
-		// Test invalid custom languages
-		viper.Reset()
-		setDefaultConfig()
-		viper.Set("fileTypes.customLanguages", map[string]string{
-			"zig": "zig", // Missing dot in extension
-			".v":  "",    // Empty language
-		})
-
-		err = ValidateConfig()
-		if err == nil {
-			t.Error("Expected validation to fail with invalid custom languages")
-		}
-	})
+	if len(actual) != len(expected) {
+		t.Errorf("Expected %d %s, got %d", len(expected), name, len(actual))
+	}
 }

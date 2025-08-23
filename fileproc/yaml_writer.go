@@ -1,9 +1,7 @@
 package fileproc
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -23,9 +21,10 @@ func NewYAMLWriter(outFile *os.File) *YAMLWriter {
 // Start writes the YAML header.
 func (w *YAMLWriter) Start(prefix, suffix string) error {
 	// Write YAML header
-	if _, err := fmt.Fprintf(w.outFile, "prefix: %s\nsuffix: %s\nfiles:\n", yamlQuoteString(prefix), yamlQuoteString(suffix)); err != nil {
+	if _, err := fmt.Fprintf(w.outFile, "prefix: %s\nsuffix: %s\nfiles:\n", utils.EscapeForYAML(prefix), utils.EscapeForYAML(suffix)); err != nil {
 		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML header")
 	}
+
 	return nil
 }
 
@@ -34,6 +33,7 @@ func (w *YAMLWriter) WriteFile(req WriteRequest) error {
 	if req.IsStream {
 		return w.writeStreaming(req)
 	}
+
 	return w.writeInline(req)
 }
 
@@ -44,17 +44,23 @@ func (w *YAMLWriter) Close() error {
 
 // writeStreaming writes a large file as YAML in streaming chunks.
 func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
-	defer w.closeReader(req.Reader, req.Path)
+	defer utils.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
 	// Write YAML file entry start
-	if _, err := fmt.Fprintf(w.outFile, "  - path: %s\n    language: %s\n    content: |\n", yamlQuoteString(req.Path), language); err != nil {
+	if _, err := fmt.Fprintf(w.outFile, "  - path: %s\n    language: %s\n    content: |\n", utils.EscapeForYAML(req.Path), language); err != nil {
 		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML file start").WithFilePath(req.Path)
 	}
 
 	// Stream content with YAML indentation
-	return w.streamYAMLContent(req.Reader, req.Path)
+	if err := utils.StreamLines(req.Reader, w.outFile, req.Path, func(line string) string {
+		return "      " + line
+	}); err != nil {
+		return fmt.Errorf("streaming YAML content: %w", err)
+	}
+
+	return nil
 }
 
 // writeInline writes a small file directly as YAML.
@@ -67,7 +73,7 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	}
 
 	// Write YAML entry
-	if _, err := fmt.Fprintf(w.outFile, "  - path: %s\n    language: %s\n    content: |\n", yamlQuoteString(fileData.Path), fileData.Language); err != nil {
+	if _, err := fmt.Fprintf(w.outFile, "  - path: %s\n    language: %s\n    content: |\n", utils.EscapeForYAML(fileData.Path), fileData.Language); err != nil {
 		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML entry start").WithFilePath(req.Path)
 	}
 
@@ -82,46 +88,6 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	return nil
 }
 
-// streamYAMLContent streams content with YAML indentation.
-func (w *YAMLWriter) streamYAMLContent(reader io.Reader, path string) error {
-	scanner := bufio.NewScanner(reader)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if _, err := fmt.Fprintf(w.outFile, "      %s\n", line); err != nil {
-			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML line").WithFilePath(path)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIORead, "failed to scan YAML content").WithFilePath(path)
-	}
-	return nil
-}
-
-// closeReader safely closes a reader if it implements io.Closer.
-func (w *YAMLWriter) closeReader(reader io.Reader, path string) {
-	if closer, ok := reader.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
-			utils.LogError(
-				"Failed to close file reader",
-				utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOClose, "failed to close file reader").WithFilePath(path),
-			)
-		}
-	}
-}
-
-// yamlQuoteString quotes a string for YAML output if needed.
-func yamlQuoteString(s string) string {
-	if s == "" {
-		return `""`
-	}
-	// Simple YAML quoting - use double quotes if string contains special characters
-	if strings.ContainsAny(s, "\n\r\t:\"'\\") {
-		return fmt.Sprintf(`"%s"`, strings.ReplaceAll(s, `"`, `\"`))
-	}
-	return s
-}
-
 // startYAMLWriter handles YAML format output with streaming support.
 func startYAMLWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
 	defer close(done)
@@ -131,6 +97,7 @@ func startYAMLWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- 
 	// Start writing
 	if err := writer.Start(prefix, suffix); err != nil {
 		utils.LogError("Failed to write YAML header", err)
+
 		return
 	}
 

@@ -6,6 +6,7 @@ func (r *FileTypeRegistry) getNormalizedExtension(filename string) string {
 	r.cacheMutex.RLock()
 	if ext, exists := r.extCache[filename]; exists {
 		r.cacheMutex.RUnlock()
+
 		return ext
 	}
 	r.cacheMutex.RUnlock()
@@ -42,6 +43,7 @@ func (r *FileTypeRegistry) getFileTypeResult(filename string) FileTypeResult {
 		r.updateStats(func() {
 			r.stats.CacheHits++
 		})
+
 		return result
 	}
 	r.cacheMutex.RUnlock()

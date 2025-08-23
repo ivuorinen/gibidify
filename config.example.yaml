@@ -1,3 +1,4 @@
+---
 # gibidify configuration example
 # Place this file in one of these locations:
 # - $XDG_CONFIG_HOME/gibidify/config.yaml
@@ -82,3 +83,41 @@ filePatterns:
   - "*.py"
   - "*.js"
   - "*.ts"
+
+# Output and template customization
+output:
+  # Template selection: default, minimal, detailed, compact, or custom
+  template: "default"
+  # Metadata options
+  metadata:
+    includeStats: true
+    includeTimestamp: true
+    includeFileCount: true
+    includeSourcePath: true
+    includeFileTypes: false
+    includeProcessingTime: false
+    includeTotalSize: false
+    includeMetrics: false
+  # Markdown-specific options
+  markdown:
+    useCodeBlocks: true
+    includeLanguage: true
+    headerLevel: 2
+    tableOfContents: false
+    useCollapsible: false
+    syntaxHighlighting: true
+    lineNumbers: false
+    foldLongFiles: false
+    maxLineLength: 120
+    customCSS: ""
+  # Custom template overrides (when template is "custom")
+  custom:
+    header: ""
+    footer: ""
+    fileHeader: ""
+    fileFooter: ""
+  # Custom template variables
+  variables:
+    project_name: "My Project"
+    author: "Developer Name"
+    version: "1.0.0"

@@ -2,7 +2,6 @@
 package fileproc
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/ivuorinen/gibidify/utils"
@@ -18,13 +17,13 @@ func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- stru
 	case "yaml":
 		startYAMLWriter(outFile, writeCh, done, prefix, suffix)
 	default:
-		context := map[string]interface{}{
+		context := map[string]any{
 			"format": format,
 		}
 		err := utils.NewStructuredError(
 			utils.ErrorTypeValidation,
 			utils.CodeValidationFormat,
-			fmt.Sprintf("unsupported format: %s", format),
+			"unsupported format: "+format,
 			"",
 			context,
 		)
