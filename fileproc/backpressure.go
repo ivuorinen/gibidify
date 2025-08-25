@@ -174,8 +174,9 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 
 	logger := utils.GetLogger()
 	// Check if file channel is getting full (>90% capacity)
-	if len(fileCh) > bp.maxPendingFiles*9/10 {
-		logger.Debugf("File channel is %d%% full, waiting for space", len(fileCh)*100/bp.maxPendingFiles)
+	fileCap := cap(fileCh)
+	if fileCap > 0 && len(fileCh) > fileCap*9/10 {
+		logger.Debugf("File channel is %d%% full, waiting for space", len(fileCh)*100/fileCap)
 
 		// Wait a bit for the channel to drain
 		select {
@@ -186,8 +187,9 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 	}
 
 	// Check if write channel is getting full (>90% capacity)
-	if len(writeCh) > bp.maxPendingWrites*9/10 {
-		logger.Debugf("Write channel is %d%% full, waiting for space", len(writeCh)*100/bp.maxPendingWrites)
+	writeCap := cap(writeCh)
+	if writeCap > 0 && len(writeCh) > writeCap*9/10 {
+		logger.Debugf("Write channel is %d%% full, waiting for space", len(writeCh)*100/writeCap)
 
 		// Wait a bit for the channel to drain
 		select {

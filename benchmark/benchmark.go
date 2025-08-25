@@ -106,17 +106,27 @@ func FileCollectionBenchmark(sourceDir string, numFiles int) (*Result, error) {
 		Duration:       duration,
 		FilesProcessed: len(files),
 		BytesProcessed: totalBytes,
-		FilesPerSecond: float64(len(files)) / duration.Seconds(),
-		BytesPerSecond: float64(totalBytes) / duration.Seconds(),
-		MemoryUsage: MemoryStats{
-			AllocMB:      utils.SafeMemoryDiffMB(memAfter.Alloc, memBefore.Alloc),
-			SysMB:        utils.SafeMemoryDiffMB(memAfter.Sys, memBefore.Sys),
-			NumGC:        memAfter.NumGC - memBefore.NumGC,
-			PauseTotalNs: memAfter.PauseTotalNs - memBefore.PauseTotalNs,
-		},
-		CPUUsage: CPUStats{
-			Goroutines: runtime.NumGoroutine(),
-		},
+	}
+
+	// Calculate rates with zero-division guard
+	secs := duration.Seconds()
+	if secs == 0 {
+		result.FilesPerSecond = 0
+		result.BytesPerSecond = 0
+	} else {
+		result.FilesPerSecond = float64(len(files)) / secs
+		result.BytesPerSecond = float64(totalBytes) / secs
+	}
+
+	result.MemoryUsage = MemoryStats{
+		AllocMB:      utils.SafeMemoryDiffMB(memAfter.Alloc, memBefore.Alloc),
+		SysMB:        utils.SafeMemoryDiffMB(memAfter.Sys, memBefore.Sys),
+		NumGC:        memAfter.NumGC - memBefore.NumGC,
+		PauseTotalNs: memAfter.PauseTotalNs - memBefore.PauseTotalNs,
+	}
+
+	result.CPUUsage = CPUStats{
+		Goroutines: runtime.NumGoroutine(),
 	}
 
 	return result, nil
@@ -212,17 +222,27 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 		Duration:       duration,
 		FilesProcessed: len(files),
 		BytesProcessed: totalBytes,
-		FilesPerSecond: float64(len(files)) / duration.Seconds(),
-		BytesPerSecond: float64(totalBytes) / duration.Seconds(),
-		MemoryUsage: MemoryStats{
-			AllocMB:      utils.SafeMemoryDiffMB(memAfter.Alloc, memBefore.Alloc),
-			SysMB:        utils.SafeMemoryDiffMB(memAfter.Sys, memBefore.Sys),
-			NumGC:        memAfter.NumGC - memBefore.NumGC,
-			PauseTotalNs: memAfter.PauseTotalNs - memBefore.PauseTotalNs,
-		},
-		CPUUsage: CPUStats{
-			Goroutines: runtime.NumGoroutine(),
-		},
+	}
+
+	// Calculate rates with zero-division guard
+	secs := duration.Seconds()
+	if secs == 0 {
+		result.FilesPerSecond = 0
+		result.BytesPerSecond = 0
+	} else {
+		result.FilesPerSecond = float64(len(files)) / secs
+		result.BytesPerSecond = float64(totalBytes) / secs
+	}
+
+	result.MemoryUsage = MemoryStats{
+		AllocMB:      utils.SafeMemoryDiffMB(memAfter.Alloc, memBefore.Alloc),
+		SysMB:        utils.SafeMemoryDiffMB(memAfter.Sys, memBefore.Sys),
+		NumGC:        memAfter.NumGC - memBefore.NumGC,
+		PauseTotalNs: memAfter.PauseTotalNs - memBefore.PauseTotalNs,
+	}
+
+	result.CPUUsage = CPUStats{
+		Goroutines: runtime.NumGoroutine(),
 	}
 
 	return result, nil

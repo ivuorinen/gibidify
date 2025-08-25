@@ -28,9 +28,7 @@ func TestFileTypeRegistry_ConcurrentReads(_ *testing.T) {
 // TestFileTypeRegistry_ConcurrentRegistryAccess tests concurrent registry access.
 func TestFileTypeRegistry_ConcurrentRegistryAccess(t *testing.T) {
 	// Reset the registry to test concurrent initialization
-	// Note: This is not safe in a real application, but needed for testing
-	registryOnce = sync.Once{}
-	registry = nil
+	ResetRegistryForTesting()
 
 	registries := make([]*FileTypeRegistry, numGoroutines)
 	var wg sync.WaitGroup

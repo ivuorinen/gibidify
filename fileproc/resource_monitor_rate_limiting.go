@@ -29,11 +29,16 @@ func (rm *ResourceMonitor) WaitForRateLimit(ctx context.Context) error {
 
 // rateLimiterRefill refills the rate limiting channel periodically.
 func (rm *ResourceMonitor) rateLimiterRefill() {
-	for range rm.rateLimiter.C {
+	for {
 		select {
-		case rm.rateLimitChan <- struct{}{}:
-		default:
-			// Channel is full, skip
+		case <-rm.done:
+			return
+		case <-rm.rateLimiter.C:
+			select {
+			case rm.rateLimitChan <- struct{}{}:
+			default:
+				// Channel is full, skip
+			}
 		}
 	}
 }
