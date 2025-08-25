@@ -31,12 +31,14 @@ type ResourceMonitor struct {
 	// Rate limiting
 	rateLimiter   *time.Ticker
 	rateLimitChan chan struct{}
+	done          chan struct{} // Signal to stop goroutines
 
 	// Synchronization
 	mu                     sync.RWMutex
 	violationLogged        map[string]bool
 	degradationActive      bool
 	emergencyStopRequested bool
+	closed                 bool
 }
 
 // ResourceMetrics holds comprehensive resource usage metrics.
@@ -82,6 +84,7 @@ func NewResourceMonitor() *ResourceMonitor {
 		lastRateLimitCheck:    time.Now(),
 		violationLogged:       make(map[string]bool),
 		hardMemoryLimitBytes:  int64(config.GetHardMemoryLimitMB()) * 1024 * 1024,
+		done:                  make(chan struct{}),
 	}
 
 	// Initialize rate limiter if rate limiting is enabled

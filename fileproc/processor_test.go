@@ -111,18 +111,27 @@ func TestProcessFileWithMonitor(t *testing.T) {
 
 	// Test ProcessFileWithMonitor
 	var wg sync.WaitGroup
+	var result string
+
+	// Start reader goroutine first to prevent deadlock
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fileproc.ProcessFileWithMonitor(ctx, tmpFile.Name(), ch, "", monitor)
+		for req := range ch {
+			result = req.Content
+		}
 	}()
-	wg.Wait()
+
+	// Process the file
+	err = fileproc.ProcessFileWithMonitor(ctx, tmpFile.Name(), ch, "", monitor)
 	close(ch)
 
-	var result string
-	for req := range ch {
-		result = req.Content
+	if err != nil {
+		t.Fatalf("ProcessFileWithMonitor failed: %v", err)
 	}
+
+	// Wait for reader to finish
+	wg.Wait()
 
 	if !strings.Contains(result, content) {
 		t.Errorf("Expected content not found in processed result")
@@ -321,7 +330,11 @@ func TestProcessor_ContextCancellation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		defer close(ch)
-		processor.ProcessWithContext(ctx, tmpDir, ch)
+		// Error is expected due to cancellation
+		if err := processor.ProcessWithContext(ctx, tmpDir, ch); err != nil {
+			// Log error for debugging, but don't fail test since cancellation is expected
+			t.Logf("Expected error due to cancellation: %v", err)
+		}
 	}()
 
 	// Collect results - should be minimal due to cancellation
@@ -419,7 +432,9 @@ func TestProcessor_ContextCancellationDuringValidation(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		defer close(ch)
-		processor.ProcessWithContext(ctx, testFile, ch)
+		if err := processor.ProcessWithContext(ctx, testFile, ch); err != nil {
+			t.Logf("ProcessWithContext error (may be expected): %v", err)
+		}
 	}()
 
 	results := make([]fileproc.WriteRequest, 0)
@@ -500,7 +515,11 @@ func TestProcessor_StreamingEdgeCases(t *testing.T) {
 		defer close(ch)
 
 		// Start processing
-		processor.ProcessWithContext(ctx, largeFile, ch)
+		// Error is expected due to cancellation
+		if err := processor.ProcessWithContext(ctx, largeFile, ch); err != nil {
+			// Log error for debugging, but don't fail test since cancellation is expected
+			t.Logf("Expected error due to cancellation: %v", err)
+		}
 	}()
 
 	// Cancel context after a very short time

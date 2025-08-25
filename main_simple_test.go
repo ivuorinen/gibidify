@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -97,7 +98,8 @@ func TestRun_ProcessingErrors(t *testing.T) {
 			}
 		}()
 
-		nonExistentDir := "/this/path/absolutely/does/not/exist"
+		// Create a temporary directory and immediately remove it to ensure it doesn't exist
+		nonExistentDir := filepath.Join(t.TempDir(), "nonexistent", "path")
 		os.Args = []string{"test", "-source", nonExistentDir, "-destination", outPath}
 
 		err := run(context.Background())

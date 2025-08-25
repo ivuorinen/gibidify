@@ -85,7 +85,7 @@ func runCreateTestFileTest(t *testing.T, dir, filename string, content []byte) {
 func createSubdirectoryIfNeeded(t *testing.T, dir, filename string) {
 	t.Helper()
 
-	if strings.Contains(filename, "/") {
+	if strings.ContainsRune(filename, filepath.Separator) {
 		subdir := filepath.Join(dir, filepath.Dir(filename))
 		if err := os.MkdirAll(subdir, DirPermission); err != nil {
 			t.Fatalf("Failed to create subdirectory: %v", err)

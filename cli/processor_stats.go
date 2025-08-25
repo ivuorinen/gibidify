@@ -45,11 +45,15 @@ func (p *Processor) logFinalStats() {
 	}
 
 	// Finalize and report comprehensive metrics
-	p.metricsCollector.Finish()
+	if p.metricsCollector != nil {
+		p.metricsCollector.Finish()
+	}
 
 	// Display final metrics report
-	finalReport := p.metricsReporter.ReportFinal()
-	fmt.Print(finalReport)
+	if p.metricsReporter != nil {
+		finalReport := p.metricsReporter.ReportFinal()
+		fmt.Print(finalReport)
+	}
 
 	// Log for structured logging if verbose
 	if p.flags.Verbose {

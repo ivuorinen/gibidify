@@ -18,6 +18,21 @@ func (rm *ResourceMonitor) IsDegradationActive() bool {
 
 // Close cleans up the resource monitor.
 func (rm *ResourceMonitor) Close() {
+	rm.mu.Lock()
+	defer rm.mu.Unlock()
+
+	// Prevent multiple closes
+	if rm.closed {
+		return
+	}
+	rm.closed = true
+
+	// Signal goroutines to stop
+	if rm.done != nil {
+		close(rm.done)
+	}
+
+	// Stop the ticker
 	if rm.rateLimiter != nil {
 		rm.rateLimiter.Stop()
 	}

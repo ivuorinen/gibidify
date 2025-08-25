@@ -70,7 +70,7 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 
 	// Stream file content in chunks
 	if err := utils.StreamContent(req.Reader, w.outFile, StreamChunkSize, req.Path, nil); err != nil {
-		return fmt.Errorf("streaming content for markdown file: %w", err)
+		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "streaming content for markdown file")
 	}
 
 	// Write file footer
