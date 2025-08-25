@@ -40,7 +40,7 @@ jobs:
 
       # Security Scanning with gosec
       - name: Run gosec Security Scanner
-        uses: securecodewarrior/github-action-gosec@master
+        uses: securego/gosec@v2.22.8
         with:
           args: '-fmt sarif -out gosec-results.sarif ./...'
 
