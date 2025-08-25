@@ -283,9 +283,11 @@ func (c *Collector) generateRecommendations(metrics ProcessingMetrics) []string 
 	}
 
 	// Error rate recommendations
-	errorRate := float64(metrics.ErrorFiles) / float64(metrics.TotalFiles) * 100
-	if errorRate > 5 {
-		recommendations = append(recommendations, "High error rate (>5%) detected - review error logs")
+	if metrics.TotalFiles > 0 {
+		errorRate := float64(metrics.ErrorFiles) / float64(metrics.TotalFiles) * 100
+		if errorRate > 5 {
+			recommendations = append(recommendations, "High error rate (>5%) detected - review error logs")
+		}
 	}
 
 	// Concurrency recommendations
@@ -326,5 +328,6 @@ func (c *Collector) Reset() {
 
 	c.formatCounts = make(map[string]int64)
 	c.errorCounts = make(map[string]int64)
+	c.metrics = ProcessingMetrics{} // Clear final snapshot
 	c.phaseTimings = make(map[string]time.Duration)
 }

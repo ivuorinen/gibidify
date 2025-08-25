@@ -74,7 +74,7 @@ func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
 			return "      " + line
 		},
 	); err != nil {
-		return fmt.Errorf("streaming YAML content: %w", err)
+		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "streaming YAML content")
 	}
 
 	return nil

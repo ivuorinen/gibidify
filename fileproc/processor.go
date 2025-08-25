@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ivuorinen/gibidify/config"
@@ -62,7 +63,9 @@ func NewFileProcessorWithMonitor(rootPath string, monitor *ResourceMonitor) *Fil
 func ProcessFile(filePath string, outCh chan<- WriteRequest, rootPath string) {
 	processor := NewFileProcessor(rootPath)
 	ctx := context.Background()
-	processor.ProcessWithContext(ctx, filePath, outCh)
+	if err := processor.ProcessWithContext(ctx, filePath, outCh); err != nil {
+		utils.LogErrorf(err, "Failed to process file: %s", filePath)
+	}
 }
 
 // ProcessFileWithMonitor processes a file using a shared resource monitor.
@@ -72,19 +75,22 @@ func ProcessFileWithMonitor(
 	outCh chan<- WriteRequest,
 	rootPath string,
 	monitor *ResourceMonitor,
-) {
+) error {
 	processor := NewFileProcessorWithMonitor(rootPath, monitor)
-	processor.ProcessWithContext(ctx, filePath, outCh)
+
+	return processor.ProcessWithContext(ctx, filePath, outCh)
 }
 
 // Process handles file processing with the configured settings.
 func (p *FileProcessor) Process(filePath string, outCh chan<- WriteRequest) {
 	ctx := context.Background()
-	p.ProcessWithContext(ctx, filePath, outCh)
+	if err := p.ProcessWithContext(ctx, filePath, outCh); err != nil {
+		utils.LogErrorf(err, "Failed to process file: %s", filePath)
+	}
 }
 
 // ProcessWithContext handles file processing with context and resource monitoring.
-func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string, outCh chan<- WriteRequest) {
+func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string, outCh chan<- WriteRequest) error {
 	// Create file processing context with timeout
 	fileCtx, fileCancel := p.resourceMonitor.CreateFileProcessingContext(ctx)
 	defer fileCancel()
@@ -92,43 +98,43 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 	// Wait for rate limiting
 	if err := p.resourceMonitor.WaitForRateLimit(fileCtx); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			utils.LogErrorf(
-				utils.NewStructuredError(
-					utils.ErrorTypeValidation,
-					utils.CodeResourceLimitTimeout,
-					"file processing timeout during rate limiting",
-					filePath,
-					nil,
-				),
-				"File processing timeout during rate limiting: %s", filePath,
+			structErr := utils.NewStructuredError(
+				utils.ErrorTypeValidation,
+				utils.CodeResourceLimitTimeout,
+				"file processing timeout during rate limiting",
+				filePath,
+				nil,
 			)
+			utils.LogErrorf(structErr, "File processing timeout during rate limiting: %s", filePath)
+
+			return structErr
 		}
 
-		return
+		return err
 	}
 
 	// Validate file and check resource limits
 	fileInfo, err := p.validateFileWithLimits(fileCtx, filePath)
 	if err != nil {
-		return // Error already logged
+		return err // Error already logged
 	}
 
 	// Acquire read slot for concurrent processing
 	if err := p.resourceMonitor.AcquireReadSlot(fileCtx); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			utils.LogErrorf(
-				utils.NewStructuredError(
-					utils.ErrorTypeValidation,
-					utils.CodeResourceLimitTimeout,
-					"file processing timeout waiting for read slot",
-					filePath,
-					nil,
-				),
-				"File processing timeout waiting for read slot: %s", filePath,
+			structErr := utils.NewStructuredError(
+				utils.ErrorTypeValidation,
+				utils.CodeResourceLimitTimeout,
+				"file processing timeout waiting for read slot",
+				filePath,
+				nil,
 			)
+			utils.LogErrorf(structErr, "File processing timeout waiting for read slot: %s", filePath)
+
+			return structErr
 		}
 
-		return
+		return err
 	}
 	defer p.resourceMonitor.ReleaseReadSlot()
 
@@ -136,7 +142,7 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 	if err := p.resourceMonitor.CheckHardMemoryLimit(); err != nil {
 		utils.LogErrorf(err, "Hard memory limit check failed for file: %s", filePath)
 
-		return
+		return err
 	}
 
 	// Get relative path
@@ -157,6 +163,8 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 	} else {
 		p.processStreamingWithContext(fileCtx, filePath, relPath, outCh)
 	}
+
+	return nil
 }
 
 // validateFileWithLimits checks if the file can be processed with resource limits.
@@ -369,11 +377,9 @@ func (p *FileProcessor) createStreamReaderWithContext(ctx context.Context, fileP
 
 		return nil
 	}
-	// Note: file will be closed by the writer
-
 	header := p.formatHeader(relPath)
 
-	return io.MultiReader(header, file)
+	return newHeaderFileReader(header, file)
 }
 
 // formatContent formats the file content with header.
@@ -384,4 +390,47 @@ func (p *FileProcessor) formatContent(relPath, content string) string {
 // formatHeader creates a reader for the file header.
 func (p *FileProcessor) formatHeader(relPath string) io.Reader {
 	return strings.NewReader(fmt.Sprintf("\n---\n%s\n", relPath))
+}
+
+// headerFileReader wraps a MultiReader and closes the file when EOF is reached.
+type headerFileReader struct {
+	reader io.Reader
+	file   *os.File
+	mu     sync.Mutex
+	closed bool
+}
+
+// newHeaderFileReader creates a new headerFileReader.
+func newHeaderFileReader(header io.Reader, file *os.File) *headerFileReader {
+	return &headerFileReader{
+		reader: io.MultiReader(header, file),
+		file:   file,
+	}
+}
+
+// Read implements io.Reader and closes the file on EOF.
+func (r *headerFileReader) Read(p []byte) (n int, err error) {
+	n, err = r.reader.Read(p)
+	if err == io.EOF {
+		r.closeFile()
+		// EOF is a sentinel value that must be passed through unchanged for io.Reader interface
+		return n, err //nolint:wrapcheck // EOF must not be wrapped
+	}
+	if err != nil {
+		return n, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIORead, "failed to read from header file reader")
+	}
+
+	return n, nil
+}
+
+// closeFile closes the file once.
+func (r *headerFileReader) closeFile() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.closed && r.file != nil {
+		if err := r.file.Close(); err != nil {
+			utils.LogError("Failed to close file", err)
+		}
+		r.closed = true
+	}
 }

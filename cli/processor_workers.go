@@ -50,11 +50,13 @@ func (p *Processor) worker(
 // processFile processes a single file with resource monitoring and metrics collection.
 func (p *Processor) processFile(ctx context.Context, filePath string, writeCh chan fileproc.WriteRequest) {
 	// Track concurrency
-	p.metricsCollector.IncrementConcurrency()
-	defer p.metricsCollector.DecrementConcurrency()
+	if p.metricsCollector != nil {
+		p.metricsCollector.IncrementConcurrency()
+		defer p.metricsCollector.DecrementConcurrency()
+	}
 
 	// Check for emergency stop
-	if p.resourceMonitor.IsEmergencyStopActive() {
+	if p.resourceMonitor != nil && p.resourceMonitor.IsEmergencyStopActive() {
 		logger := utils.GetLogger()
 		logger.Warnf("Emergency stop active, skipping file: %s", filePath)
 
@@ -84,9 +86,12 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 	p.ui.UpdateProgress(1)
 
 	// Show real-time stats in verbose mode
-	if p.flags.Verbose && p.metricsCollector.GetCurrentMetrics().ProcessedFiles%10 == 0 {
-		logger := utils.GetLogger()
-		logger.Info(p.metricsReporter.ReportProgress())
+	if p.flags.Verbose && p.metricsCollector != nil {
+		metrics := p.metricsCollector.GetCurrentMetrics()
+		if metrics.ProcessedFiles%10 == 0 && p.metricsReporter != nil {
+			logger := utils.GetLogger()
+			logger.Info(p.metricsReporter.ReportProgress())
+		}
 	}
 }
 
@@ -143,14 +148,17 @@ func (p *Processor) processFileWithMetrics(
 	}
 
 	// Use the existing resource monitor-aware processing
-	fileproc.ProcessFileWithMonitor(ctx, filePath, writeCh, absRoot, p.resourceMonitor)
+	err = fileproc.ProcessFileWithMonitor(ctx, filePath, writeCh, absRoot, p.resourceMonitor)
 
 	// Check if processing was successful
-	// For now, we assume success if no panic occurred and context wasn't canceled
 	select {
 	case <-ctx.Done():
 		return fileSize, format, false, fmt.Errorf("file processing worker canceled: %w", ctx.Err())
 	default:
+		if err != nil {
+			return fileSize, format, false, fmt.Errorf("processing file %s: %w", filePath, err)
+		}
+
 		return fileSize, format, true, nil
 	}
 }

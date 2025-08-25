@@ -124,6 +124,16 @@ func ResetViperConfig(t *testing.T, configPath string) {
 	config.LoadConfig()
 }
 
+// SetViperKeys sets specific configuration keys for testing.
+func SetViperKeys(t *testing.T, keyValues map[string]any) {
+	t.Helper()
+	viper.Reset()
+	for key, value := range keyValues {
+		viper.Set(key, value)
+	}
+	config.LoadConfig()
+}
+
 // SetupCLIArgs configures os.Args for CLI testing.
 func SetupCLIArgs(srcDir, outFilePath, prefix, suffix string, concurrency int) {
 	os.Args = []string{

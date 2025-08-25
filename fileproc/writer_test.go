@@ -131,6 +131,18 @@ func verifyPrefixSuffix(t *testing.T, data []byte) {
 	}
 }
 
+// verifyPrefixSuffixWith checks that output contains expected custom prefix and suffix.
+func verifyPrefixSuffixWith(t *testing.T, data []byte, expectedPrefix, expectedSuffix string) {
+	t.Helper()
+	content := string(data)
+	if !strings.Contains(content, expectedPrefix) {
+		t.Errorf("Missing prefix '%s' in output: %s", expectedPrefix, data)
+	}
+	if !strings.Contains(content, expectedSuffix) {
+		t.Errorf("Missing suffix '%s' in output: %s", expectedSuffix, data)
+	}
+}
+
 // TestStartWriter_StreamingFormats tests streaming functionality in all writers.
 func TestStartWriter_StreamingFormats(t *testing.T) {
 	tests := []struct {
@@ -156,7 +168,7 @@ func TestStartWriter_StreamingFormats(t *testing.T) {
 
 				// Format-specific validation
 				verifyValidOutput(t, data, tc.format)
-				verifyPrefixSuffix(t, data)
+				verifyPrefixSuffixWith(t, data, "STREAM_PREFIX", "STREAM_SUFFIX")
 
 				// Verify content was written
 				content := string(data)
