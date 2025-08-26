@@ -1,3 +1,4 @@
+// Package templates provides templating engine functionality for output formatting.
 package templates
 
 import (

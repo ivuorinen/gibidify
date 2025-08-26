@@ -88,7 +88,7 @@ check_dependencies() {
 run_gosec() {
   print_status "Running gosec security scanner..."
 
-  if gosec -fmt=json -out=gosec-report.json -stdout -verbose=text ./...; then
+  if gosec -fmt=json -out=gosec-report.json -stdout -verbose=text ./**/*.go; then
     print_success "gosec scan completed successfully"
   else
     print_error "gosec found security issues!"
@@ -103,7 +103,7 @@ run_gosec() {
 run_govulncheck() {
   print_status "Running govulncheck for dependency vulnerabilities..."
 
-  if govulncheck -json ./... >govulncheck-report.json 2>&1; then
+  if govulncheck -json ./**/*.go >govulncheck-report.json 2>&1; then
     print_success "No known vulnerabilities found in dependencies"
   else
     if grep -q '"finding"' govulncheck-report.json 2>/dev/null; then
@@ -120,7 +120,7 @@ run_govulncheck() {
 run_security_lint() {
   print_status "Running comprehensive code quality linting with revive..."
 
-  if revive -config revive.toml -set_exit_status ./...; then
+  if revive -config revive.toml -set_exit_status ./**/*.go; then
     print_success "Revive linting passed"
   else
     print_error "Revive linting found issues!"
@@ -242,16 +242,16 @@ check_file_permissions() {
   local perm_issues=false
 
   # Check for overly permissive files
-  if find . -type f -perm /o+w -not -path "./.git/*" | grep -q .; then
+  if find . -type f -perm +002 -not -path "./.git/*" | grep -q .; then
     print_warning "World-writable files found:"
-    find . -type f -perm /o+w -not -path "./.git/*" || true
+    find . -type f -perm +002 -not -path "./.git/*" || true
     perm_issues=true
   fi
 
   # Check for executable files that shouldn't be
-  if find . -type f -name "*.go" -perm /a+x | grep -q .; then
+  if find . -type f -name "*.go" -perm +111 | grep -q .; then
     print_warning "Executable Go files found (should not be executable):"
-    find . -type f -name "*.go" -perm /a+x || true
+    find . -type f -name "*.go" -perm +111 || true
     perm_issues=true
   fi
 
