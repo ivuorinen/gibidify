@@ -633,7 +633,7 @@ func TestProcessor_Process_ResourceLimits(t *testing.T) {
 
 				if tt.wantErr {
 					if err == nil {
-						t.Errorf("Expected error but got none")
+						t.Error("Expected error but got none")
 
 						return
 					}
@@ -748,6 +748,9 @@ func validateOutputContent(t *testing.T, content, format string) {
 		if len(content) == 0 {
 			t.Log("YAML output is empty, which may be expected for minimal input")
 		}
+	default:
+		// For unknown formats, just log that we have content
+		t.Logf("Unknown format %s, content length: %d", format, len(content))
 	}
 }
 

@@ -4,7 +4,7 @@ Prioritized improvements by impact/effort.
 
 ## ✅ Completed
 
-**Core**: Config validation, structured errors, benchmarking, linting (261→0 issues) ✅
+**Core**: Config validation, structured errors, benchmarking, linting (revive: 0 issues) ✅
 **Architecture**: Modularization (92 files, ~21.5K lines), CLI (progress/colors), security (path validation, resource limits, scanning) ✅
 
 ## 🚀 Critical Priorities

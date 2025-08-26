@@ -400,7 +400,7 @@ func TestParseFlagsSingleton(t *testing.T) {
 	}
 
 	if flags1 != flags2 {
-		t.Errorf("ParseFlags() should return singleton instance, got different pointers")
+		t.Error("ParseFlags() should return singleton instance, got different pointers")
 	}
 }
 

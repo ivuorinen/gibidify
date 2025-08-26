@@ -39,7 +39,8 @@ func ValidateSourcePath(path string) error {
 	// Check for path traversal patterns before cleaning
 	if strings.Contains(path, "..") {
 		return NewStructuredError(
-			ErrorTypeValidation, CodeValidationPath, "path traversal attempt detected in source path", path, map[string]any{
+			ErrorTypeValidation, CodeValidationPath,
+			"path traversal attempt detected in source path", path, map[string]any{
 				"original_path": path,
 			},
 		)
@@ -71,7 +72,8 @@ func ValidateSourcePath(path string) error {
 		cwdAbs, err := filepath.Abs(cwd)
 		if err != nil {
 			return NewStructuredError(
-				ErrorTypeFileSystem, CodeFSPathResolution, "cannot resolve current working directory", path, map[string]any{
+				ErrorTypeFileSystem, CodeFSPathResolution,
+				"cannot resolve current working directory", path, map[string]any{
 					"error": err.Error(),
 				},
 			)
@@ -164,7 +166,8 @@ func ValidateDestinationPath(path string) error {
 	if parentInfo, err := os.Stat(parentDir); err != nil {
 		if os.IsNotExist(err) {
 			return NewStructuredError(
-				ErrorTypeFileSystem, CodeFSNotFound, "destination parent directory does not exist", path, map[string]any{
+				ErrorTypeFileSystem, CodeFSNotFound,
+				"destination parent directory does not exist", path, map[string]any{
 					"parent_dir": parentDir,
 				},
 			)
@@ -197,7 +200,8 @@ func ValidateConfigPath(path string) error {
 	// Check for path traversal patterns before cleaning
 	if strings.Contains(path, "..") {
 		return NewStructuredError(
-			ErrorTypeValidation, CodeValidationPath, "path traversal attempt detected in config path", path, map[string]any{
+			ErrorTypeValidation, CodeValidationPath,
+			"path traversal attempt detected in config path", path, map[string]any{
 				"original_path": path,
 			},
 		)

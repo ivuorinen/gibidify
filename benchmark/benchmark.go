@@ -167,11 +167,11 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 	defer func() {
 		if err := outputFile.Close(); err != nil {
 			// Log error but don't fail the benchmark
-			fmt.Printf("Warning: failed to close benchmark output file: %v\n", err)
+			_, _ = fmt.Printf("Warning: failed to close benchmark output file: %v\n", err)
 		}
 		if err := os.Remove(outputFile.Name()); err != nil {
 			// Log error but don't fail the benchmark
-			fmt.Printf("Warning: failed to remove benchmark output file: %v\n", err)
+			_, _ = fmt.Printf("Warning: failed to remove benchmark output file: %v\n", err)
 		}
 	}()
 
@@ -311,7 +311,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 	cleanup := func() {
 		if err := os.RemoveAll(tempDir); err != nil {
 			// Log error but don't fail the benchmark
-			fmt.Printf("Warning: failed to remove benchmark temp directory: %v\n", err)
+			_, _ = fmt.Printf("Warning: failed to remove benchmark temp directory: %v\n", err)
 		}
 	}
 
@@ -367,7 +367,9 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 		if err := os.WriteFile(filename, []byte(content), 0o600); err != nil {
 			cleanup()
 
-			return "", nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileWrite, "failed to write benchmark file")
+			return "", nil, utils.WrapError(
+				err, utils.ErrorTypeIO, utils.CodeIOFileWrite, "failed to write benchmark file",
+			)
 		}
 	}
 
@@ -440,22 +442,23 @@ func runProcessingPipeline(
 
 // PrintResult prints a formatted benchmark result.
 func PrintResult(result *Result) {
-	fmt.Printf("=== %s ===\n", result.Name)
-	fmt.Printf("Duration: %v\n", result.Duration)
-	fmt.Printf("Files Processed: %d\n", result.FilesProcessed)
-	fmt.Printf("Bytes Processed: %d (%.2f MB)\n", result.BytesProcessed, float64(result.BytesProcessed)/1024/1024)
-	fmt.Printf("Files/sec: %.2f\n", result.FilesPerSecond)
-	fmt.Printf("Bytes/sec: %.2f MB/sec\n", result.BytesPerSecond/1024/1024)
-	fmt.Printf("Memory Usage: +%.2f MB (Sys: +%.2f MB)\n", result.MemoryUsage.AllocMB, result.MemoryUsage.SysMB)
+	_, _ = fmt.Printf("=== %s ===\n", result.Name)
+	_, _ = fmt.Printf("Duration: %v\n", result.Duration)
+	_, _ = fmt.Printf("Files Processed: %d\n", result.FilesProcessed)
+	_, _ = fmt.Printf("Bytes Processed: %d (%.2f MB)\n", result.BytesProcessed,
+		float64(result.BytesProcessed)/1024/1024)
+	_, _ = fmt.Printf("Files/sec: %.2f\n", result.FilesPerSecond)
+	_, _ = fmt.Printf("Bytes/sec: %.2f MB/sec\n", result.BytesPerSecond/1024/1024)
+	_, _ = fmt.Printf("Memory Usage: +%.2f MB (Sys: +%.2f MB)\n", result.MemoryUsage.AllocMB, result.MemoryUsage.SysMB)
 	pauseDuration, _ := utils.SafeUint64ToInt64(result.MemoryUsage.PauseTotalNs)
-	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, time.Duration(pauseDuration))
-	fmt.Printf("Goroutines: %d\n", result.CPUUsage.Goroutines)
-	fmt.Println()
+	_, _ = fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, time.Duration(pauseDuration))
+	_, _ = fmt.Printf("Goroutines: %d\n", result.CPUUsage.Goroutines)
+	_, _ = fmt.Println()
 }
 
 // PrintSuite prints all results in a benchmark suite.
 func PrintSuite(suite *Suite) {
-	fmt.Printf("=== %s ===\n", suite.Name)
+	_, _ = fmt.Printf("=== %s ===\n", suite.Name)
 	for _, result := range suite.Results {
 		PrintResult(&result)
 	}
@@ -463,13 +466,13 @@ func PrintSuite(suite *Suite) {
 
 // RunAllBenchmarks runs a comprehensive benchmark suite.
 func RunAllBenchmarks(sourceDir string) error {
-	fmt.Println("Running gibidify benchmark suite...")
+	_, _ = fmt.Println("Running gibidify benchmark suite...")
 
 	// Load configuration
 	config.LoadConfig()
 
 	// File collection benchmark
-	fmt.Println("Running file collection benchmark...")
+	_, _ = fmt.Println("Running file collection benchmark...")
 	result, err := FileCollectionBenchmark(sourceDir, 1000)
 	if err != nil {
 		return utils.WrapError(
@@ -482,15 +485,17 @@ func RunAllBenchmarks(sourceDir string) error {
 	PrintResult(result)
 
 	// Format benchmarks
-	fmt.Println("Running format benchmarks...")
+	_, _ = fmt.Println("Running format benchmarks...")
 	formatSuite, err := FormatBenchmark(sourceDir, []string{"json", "yaml", "markdown"})
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "format benchmark failed")
+		return utils.WrapError(
+			err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "format benchmark failed",
+		)
 	}
 	PrintSuite(formatSuite)
 
 	// Concurrency benchmarks
-	fmt.Println("Running concurrency benchmarks...")
+	_, _ = fmt.Println("Running concurrency benchmarks...")
 	concurrencyLevels := []int{1, 2, 4, 8, runtime.NumCPU()}
 	concurrencySuite, err := ConcurrencyBenchmark(sourceDir, "json", concurrencyLevels)
 	if err != nil {

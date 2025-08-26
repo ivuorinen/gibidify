@@ -53,23 +53,23 @@ func (r *Reporter) formatBasicProgress(metrics ProcessingMetrics) string {
 	var b strings.Builder
 
 	// Basic stats
-	b.WriteString(fmt.Sprintf("Processed: %d files", metrics.ProcessedFiles))
+	_, _ = b.WriteString(fmt.Sprintf("Processed: %d files", metrics.ProcessedFiles))
 
 	if metrics.SkippedFiles > 0 {
-		b.WriteString(fmt.Sprintf(", Skipped: %d", metrics.SkippedFiles))
+		_, _ = b.WriteString(fmt.Sprintf(", Skipped: %d", metrics.SkippedFiles))
 	}
 
 	if metrics.ErrorFiles > 0 {
 		if r.colors {
-			b.WriteString(fmt.Sprintf(", \033[31mErrors: %d\033[0m", metrics.ErrorFiles))
+			_, _ = b.WriteString(fmt.Sprintf(", \033[31mErrors: %d\033[0m", metrics.ErrorFiles))
 		} else {
-			b.WriteString(fmt.Sprintf(", Errors: %d", metrics.ErrorFiles))
+			_, _ = b.WriteString(fmt.Sprintf(", Errors: %d", metrics.ErrorFiles))
 		}
 	}
 
 	// Processing rate
 	if metrics.FilesPerSecond > 0 {
-		b.WriteString(fmt.Sprintf(" (%.1f files/sec)", metrics.FilesPerSecond))
+		_, _ = b.WriteString(fmt.Sprintf(" (%.1f files/sec)", metrics.FilesPerSecond))
 	}
 
 	return b.String()
@@ -80,10 +80,10 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 	var b strings.Builder
 
 	// Header
-	b.WriteString("=== Processing Statistics ===\n")
+	_, _ = b.WriteString("=== Processing Statistics ===\n")
 
 	// File counts
-	b.WriteString(
+	_, _ = b.WriteString(
 		fmt.Sprintf(
 			"Files - Total: %d, Processed: %d, Skipped: %d, Errors: %d\n",
 			metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles,
@@ -91,7 +91,7 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 	)
 
 	// Size information
-	b.WriteString(
+	_, _ = b.WriteString(
 		fmt.Sprintf(
 			"Size - Processed: %s, Average: %s\n",
 			r.formatBytes(metrics.ProcessedSize),
@@ -100,7 +100,7 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 	)
 
 	if metrics.LargestFile > 0 {
-		b.WriteString(
+		_, _ = b.WriteString(
 			fmt.Sprintf(
 				"File Size Range: %s - %s\n",
 				r.formatBytes(metrics.SmallestFile),
@@ -110,7 +110,7 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 	}
 
 	// Performance
-	b.WriteString(
+	_, _ = b.WriteString(
 		fmt.Sprintf(
 			"Performance - Files/sec: %.1f, MB/sec: %.1f\n",
 			metrics.FilesPerSecond,
@@ -119,7 +119,7 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 	)
 
 	// Memory usage
-	b.WriteString(
+	_, _ = b.WriteString(
 		fmt.Sprintf(
 			"Memory - Current: %dMB, Peak: %dMB, Goroutines: %d\n",
 			metrics.CurrentMemoryMB, metrics.PeakMemoryMB, metrics.GoroutineCount,
@@ -127,7 +127,7 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 	)
 
 	// Concurrency
-	b.WriteString(
+	_, _ = b.WriteString(
 		fmt.Sprintf(
 			"Concurrency - Current: %d, Max: %d\n",
 			metrics.CurrentConcurrency, metrics.MaxConcurrency,
@@ -136,16 +136,16 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 
 	// Format breakdown (if available)
 	if len(metrics.FormatCounts) > 0 {
-		b.WriteString("Format Breakdown:\n")
+		_, _ = b.WriteString("Format Breakdown:\n")
 		formats := r.sortedMapKeys(metrics.FormatCounts)
 		for _, format := range formats {
 			count := metrics.FormatCounts[format]
-			b.WriteString(fmt.Sprintf("  %s: %d files\n", format, count))
+			_, _ = b.WriteString(fmt.Sprintf("  %s: %d files\n", format, count))
 		}
 	}
 
 	// Processing time
-	b.WriteString(fmt.Sprintf("Processing Time: %v\n", metrics.ProcessingTime.Truncate(time.Millisecond)))
+	_, _ = b.WriteString(fmt.Sprintf("Processing Time: %v\n", metrics.ProcessingTime.Truncate(time.Millisecond)))
 
 	return b.String()
 }
@@ -154,22 +154,22 @@ func (r *Reporter) formatVerboseProgress(metrics ProcessingMetrics) string {
 func (r *Reporter) formatBasicReport(metrics ProcessingMetrics) string {
 	var b strings.Builder
 
-	b.WriteString("=== Processing Complete ===\n")
-	b.WriteString(
+	_, _ = b.WriteString("=== Processing Complete ===\n")
+	_, _ = b.WriteString(
 		fmt.Sprintf(
 			"Total Files: %d (Processed: %d, Skipped: %d, Errors: %d)\n",
 			metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles,
 		),
 	)
 
-	b.WriteString(
+	_, _ = b.WriteString(
 		fmt.Sprintf(
 			"Total Size: %s, Average Rate: %.1f files/sec\n",
 			r.formatBytes(metrics.ProcessedSize), metrics.FilesPerSecond,
 		),
 	)
 
-	b.WriteString(fmt.Sprintf("Processing Time: %v\n", metrics.ProcessingTime.Truncate(time.Millisecond)))
+	_, _ = b.WriteString(fmt.Sprintf("Processing Time: %v\n", metrics.ProcessingTime.Truncate(time.Millisecond)))
 
 	return b.String()
 }
@@ -178,7 +178,7 @@ func (r *Reporter) formatBasicReport(metrics ProcessingMetrics) string {
 func (r *Reporter) formatVerboseReport(report ProfileReport) string {
 	var b strings.Builder
 
-	b.WriteString("=== Comprehensive Processing Report ===\n\n")
+	_, _ = b.WriteString("=== Comprehensive Processing Report ===\n\n")
 
 	r.writeSummarySection(&b, report)
 	r.writeFormatBreakdown(&b, report)
@@ -197,21 +197,21 @@ func (r *Reporter) formatVerboseReport(report ProfileReport) string {
 func (r *Reporter) writeSummarySection(b *strings.Builder, report ProfileReport) {
 	metrics := report.Summary
 
-	b.WriteString("SUMMARY:\n")
-	fmt.Fprintf(
+	_, _ = b.WriteString("SUMMARY:\n")
+	_, _ = fmt.Fprintf(
 		b, "  Files: %d total (%d processed, %d skipped, %d errors)\n",
 		metrics.TotalFiles, metrics.ProcessedFiles, metrics.SkippedFiles, metrics.ErrorFiles,
 	)
-	fmt.Fprintf(
+	_, _ = fmt.Fprintf(
 		b, "  Size: %s processed (avg: %s per file)\n",
 		r.formatBytes(metrics.ProcessedSize), r.formatBytes(int64(metrics.AverageFileSize)),
 	)
-	fmt.Fprintf(
+	_, _ = fmt.Fprintf(
 		b, "  Time: %v (%.1f files/sec, %.1f MB/sec)\n",
 		metrics.ProcessingTime.Truncate(time.Millisecond),
 		metrics.FilesPerSecond, metrics.BytesPerSecond/1024/1024,
 	)
-	fmt.Fprintf(b, "  Performance Index: %.1f\n", report.PerformanceIndex)
+	_, _ = fmt.Fprintf(b, "  Performance Index: %.1f\n", report.PerformanceIndex)
 }
 
 // writeFormatBreakdown writes the format breakdown section.
@@ -220,7 +220,7 @@ func (r *Reporter) writeFormatBreakdown(b *strings.Builder, report ProfileReport
 		return
 	}
 
-	b.WriteString("\nFORMAT BREAKDOWN:\n")
+	_, _ = b.WriteString("\nFORMAT BREAKDOWN:\n")
 	formats := make([]string, 0, len(report.FormatBreakdown))
 	for format := range report.FormatBreakdown {
 		formats = append(formats, format)
@@ -229,7 +229,7 @@ func (r *Reporter) writeFormatBreakdown(b *strings.Builder, report ProfileReport
 
 	for _, format := range formats {
 		formatMetrics := report.FormatBreakdown[format]
-		fmt.Fprintf(b, "  %s: %d files\n", format, formatMetrics.Count)
+		_, _ = fmt.Fprintf(b, "  %s: %d files\n", format, formatMetrics.Count)
 	}
 }
 
@@ -239,11 +239,11 @@ func (r *Reporter) writePhaseBreakdown(b *strings.Builder, report ProfileReport)
 		return
 	}
 
-	b.WriteString("\nPHASE BREAKDOWN:\n")
+	_, _ = b.WriteString("\nPHASE BREAKDOWN:\n")
 	phases := []string{PhaseCollection, PhaseProcessing, PhaseWriting, PhaseFinalize}
 	for _, phase := range phases {
 		if phaseMetrics, exists := report.PhaseBreakdown[phase]; exists {
-			fmt.Fprintf(
+			_, _ = fmt.Fprintf(
 				b, "  %s: %v (%.1f%%)\n",
 				cases.Title(language.English).String(phase),
 				phaseMetrics.TotalTime.Truncate(time.Millisecond),
@@ -259,23 +259,23 @@ func (r *Reporter) writeErrorBreakdown(b *strings.Builder, report ProfileReport)
 		return
 	}
 
-	b.WriteString("\nERROR BREAKDOWN:\n")
+	_, _ = b.WriteString("\nERROR BREAKDOWN:\n")
 	errors := r.sortedMapKeys(report.ErrorBreakdown)
 	for _, errorType := range errors {
 		count := report.ErrorBreakdown[errorType]
-		fmt.Fprintf(b, "  %s: %d occurrences\n", errorType, count)
+		_, _ = fmt.Fprintf(b, "  %s: %d occurrences\n", errorType, count)
 	}
 }
 
 // writeResourceUsage writes the resource usage section.
 func (r *Reporter) writeResourceUsage(b *strings.Builder, report ProfileReport) {
 	metrics := report.Summary
-	b.WriteString("\nRESOURCE USAGE:\n")
-	fmt.Fprintf(
+	_, _ = b.WriteString("\nRESOURCE USAGE:\n")
+	_, _ = fmt.Fprintf(
 		b, "  Memory: %dMB current, %dMB peak\n",
 		metrics.CurrentMemoryMB, metrics.PeakMemoryMB,
 	)
-	fmt.Fprintf(
+	_, _ = fmt.Fprintf(
 		b, "  Concurrency: %d current, %d max, %d goroutines\n",
 		metrics.CurrentConcurrency, metrics.MaxConcurrency, metrics.GoroutineCount,
 	)
@@ -288,12 +288,12 @@ func (r *Reporter) writeFileSizeStats(b *strings.Builder, report ProfileReport) 
 		return
 	}
 
-	b.WriteString("\nFILE SIZE STATISTICS:\n")
-	fmt.Fprintf(
+	_, _ = b.WriteString("\nFILE SIZE STATISTICS:\n")
+	_, _ = fmt.Fprintf(
 		b, "  Range: %s - %s\n",
 		r.formatBytes(metrics.SmallestFile), r.formatBytes(metrics.LargestFile),
 	)
-	fmt.Fprintf(b, "  Average: %s\n", r.formatBytes(int64(metrics.AverageFileSize)))
+	_, _ = fmt.Fprintf(b, "  Average: %s\n", r.formatBytes(int64(metrics.AverageFileSize)))
 }
 
 // writeRecommendations writes the recommendations section.
@@ -302,9 +302,9 @@ func (r *Reporter) writeRecommendations(b *strings.Builder, report ProfileReport
 		return
 	}
 
-	b.WriteString("\nRECOMMENDATIONS:\n")
+	_, _ = b.WriteString("\nRECOMMENDATIONS:\n")
 	for i, rec := range report.Recommendations {
-		fmt.Fprintf(b, "  %d. %s\n", i+1, rec)
+		_, _ = fmt.Fprintf(b, "  %d. %s\n", i+1, rec)
 	}
 }
 

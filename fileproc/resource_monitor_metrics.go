@@ -69,7 +69,8 @@ func (rm *ResourceMonitor) LogResourceInfo() {
 	logger := utils.GetLogger()
 	if rm.enabled {
 		logger.Infof("Resource limits enabled: maxFiles=%d, maxTotalSize=%dMB, fileTimeout=%ds, overallTimeout=%ds",
-			rm.maxFiles, rm.maxTotalSize/1024/1024, int(rm.fileProcessingTimeout.Seconds()), int(rm.overallTimeout.Seconds()))
+			rm.maxFiles, rm.maxTotalSize/1024/1024, int(rm.fileProcessingTimeout.Seconds()),
+			int(rm.overallTimeout.Seconds()))
 		logger.Infof("Resource limits: maxConcurrentReads=%d, rateLimitFPS=%d, hardMemoryMB=%d",
 			rm.maxConcurrentReads, rm.rateLimitFilesPerSec, rm.hardMemoryLimitMB)
 		logger.Infof("Resource features: gracefulDegradation=%v, monitoring=%v",

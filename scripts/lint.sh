@@ -3,8 +3,13 @@
 # Track overall exit status
 exit_code=0
 
-echo "Running golangci-lint..."
-if ! golangci-lint run ./...; then
+echo "Running revive..."
+if ! revive -config revive.toml -set_exit_status ./...; then
+  exit_code=1
+fi
+
+echo "Running gosec..."
+if ! gosec -fmt=text -quiet ./...; then
   exit_code=1
 fi
 
