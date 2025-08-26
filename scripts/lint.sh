@@ -4,12 +4,12 @@
 exit_code=0
 
 echo "Running revive..."
-if ! revive -config revive.toml -formatter friendly -set_exit_status ./**/*.go; then
+if ! revive -config revive.toml -formatter friendly -set_exit_status ./...; then
   exit_code=1
 fi
 
 echo "Running gosec..."
-if ! gosec -fmt=text -quiet ./**/*.go; then
+if ! gosec -fmt=text -quiet ./...; then
   exit_code=1
 fi
 

@@ -16,8 +16,10 @@ echo "Installing checkmake..."
 go install github.com/checkmake/checkmake/cmd/checkmake@latest
 echo "Installing shfmt..."
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
-echo "Installing yamllint (Go-based)..."
-go install github.com/excilsploft/yamllint@latest
+echo "Installing yaml-lint (mvdan.cc)…"
+go install mvdan.cc/yaml/cmd/yaml-lint@v2.4.0
+echo "Installing yamlfmt (Google)…"
+go install github.com/google/yamlfmt/cmd/yamlfmt@v0.4.0
 echo "Installing eclint..."
 go install gitlab.com/greut/eclint/cmd/eclint@latest
 echo "All tools installed successfully!"

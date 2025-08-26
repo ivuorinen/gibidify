@@ -88,7 +88,7 @@ check_dependencies() {
 run_gosec() {
   print_status "Running gosec security scanner..."
 
-  if gosec -fmt=json -out=gosec-report.json -stdout -verbose=text ./**/*.go; then
+  if gosec -fmt=json -out=gosec-report.json -stdout -verbose=text ./...; then
     print_success "gosec scan completed successfully"
   else
     print_error "gosec found security issues!"
@@ -103,7 +103,7 @@ run_gosec() {
 run_govulncheck() {
   print_status "Running govulncheck for dependency vulnerabilities..."
 
-  if govulncheck -json ./**/*.go >govulncheck-report.json 2>&1; then
+  if govulncheck -json ./... >govulncheck-report.json 2>&1; then
     print_success "No known vulnerabilities found in dependencies"
   else
     if grep -q '"finding"' govulncheck-report.json 2>/dev/null; then
@@ -120,7 +120,7 @@ run_govulncheck() {
 run_security_lint() {
   print_status "Running comprehensive code quality linting with revive..."
 
-  if revive -config revive.toml -set_exit_status ./**/*.go; then
+  if revive -config revive.toml -set_exit_status ./...; then
     print_success "Revive linting passed"
   else
     print_error "Revive linting found issues!"
