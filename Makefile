@@ -12,27 +12,7 @@ help:
 
 # Install required tools
 install-tools:
-	@echo "Installing golangci-lint..."
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@echo "Installing gofumpt..."
-	@go install mvdan.cc/gofumpt@latest
-	@echo "Installing goimports..."
-	@go install golang.org/x/tools/cmd/goimports@latest
-	@echo "Installing staticcheck..."
-	@go install honnef.co/go/tools/cmd/staticcheck@latest
-	@echo "Installing gosec..."
-	@go install github.com/securego/gosec/v2/cmd/gosec@latest
-	@echo "Installing gocyclo..."
-	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
-	@echo "Installing checkmake..."
-	@go install github.com/checkmake/checkmake/cmd/checkmake@latest
-	@echo "Installing shfmt..."
-	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
-	@echo "Installing yamllint (Go-based)..."
-	@go install github.com/excilsploft/yamllint@latest
-	@echo "Installing eclint..."
-	@go install gitlab.com/greut/eclint/cmd/eclint@latest
-	@echo "All tools installed successfully!"
+	@./scripts/install-tools.sh
 
 # Run linters
 lint:
@@ -50,10 +30,13 @@ lint-fix:
 	@go mod tidy
 	@echo "Running shfmt formatting..."
 	@shfmt -w -i 2 -ci .
-	@echo "Running golangci-lint with --fix..."
-	@golangci-lint run --fix ./...
+	@echo "Running revive linter..."
+	@revive -config revive.toml -set_exit_status ./...
+	@echo "Running gosec security linter..."
+	@gosec -fmt=text -quiet ./...
 	@echo "Auto-fix completed. Running final lint check..."
-	@golangci-lint run ./...
+	@revive -config revive.toml -set_exit_status ./...
+	@gosec -fmt=text -quiet ./...
 	@echo "Running checkmake..."
 	@checkmake --config=.checkmake Makefile
 	@echo "Running yamllint..."
@@ -63,8 +46,10 @@ lint-fix:
 
 # Run linters with verbose output
 lint-verbose:
-	@echo "Running golangci-lint (verbose)..."
-	@golangci-lint run -v ./...
+	@echo "Running revive (verbose)..."
+	@revive -config revive.toml -formatter stylish -set_exit_status ./...
+	@echo "Running gosec (verbose)..."
+	@gosec -fmt=text -verbose=text ./...
 	@echo "Running checkmake (verbose)..."
 	@checkmake --config=.checkmake --format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
 	@echo "Running shfmt check (verbose)..."
@@ -103,7 +88,7 @@ clean:
 .PHONY: ci-lint ci-test
 
 ci-lint:
-	@golangci-lint run --out-format=github-actions ./...
+	@revive -config revive.toml -formatter friendly -set_exit_status ./...
 
 ci-test:
 	@go test -race -coverprofile=coverage.out -json ./... > test-results.json
@@ -145,8 +130,8 @@ security-full:
 	@echo "Running full security analysis..."
 	@./scripts/security-scan.sh
 	@echo "Running additional security checks..."
-	@golangci-lint run --enable-all \
-		--disable=depguard,exhaustruct,ireturn,varnamelen,wrapcheck --timeout=10m
+	@gosec -fmt=json -out=security-report.json ./...
+	@staticcheck -checks=all ./...
 
 vuln-check:
 	@echo "Checking for dependency vulnerabilities..."

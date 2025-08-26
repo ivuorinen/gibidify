@@ -28,12 +28,12 @@ Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 
 ## Linting Standards (MANDATORY)
 
-**30+ Linters**: revive, errcheck, govet, staticcheck, gosec, gocritic, wrapcheck
-**Complexity**: gocognit/gocyclo ≤15, nestif ≤5, dupl ≤150
-**Security**: G101-G404 (credentials, TLS, crypto), bodyclose, misspell
-**Performance**: prealloc, perfsprint, unused vars/params
-**Format**: lll ≤180 chars, EditorConfig (LF, tabs), gofmt/goimports
-**Testing**: thelper, errorlint, 0 tolerance policy
+**Linter**: revive (comprehensive rule set migrated from golangci-lint)
+**Complexity**: cognitive-complexity ≤15, cyclomatic ≤15, max-control-nesting ≤5
+**Security**: unhandled errors, secure coding patterns, credential detection
+**Performance**: optimize-operands-order, string-format, range optimizations
+**Format**: line-length ≤120 chars, EditorConfig (LF, tabs), gofmt/goimports
+**Testing**: error handling best practices, 0 tolerance policy
 
 **CRITICAL**: All rules non-negotiable. `make lint-fix && make lint` must show 0 issues.
 
@@ -56,9 +56,9 @@ Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 
 EditorConfig (LF, tabs), semantic commits, testing required, error wrapping
 
-## .golangci.yml Restrictions
+## revive.toml Restrictions
 
-**AGENTS DO NOT HAVE PERMISSION** to modify `.golangci.yml` configuration unless user explicitly requests it.
+**AGENTS DO NOT HAVE PERMISSION** to modify `revive.toml` configuration unless user explicitly requests it.
 The linting configuration is carefully tuned and should not be altered during normal development.
 
 ## Status

@@ -81,7 +81,9 @@ func validateIgnoreDirectories() []string {
 		if strings.Contains(dir, "/") {
 			validationErrors = append(
 				validationErrors,
-				fmt.Sprintf("ignoreDirectories[%d] (%s) contains path separator - only directory names are allowed", i, dir),
+				fmt.Sprintf(
+					"ignoreDirectories[%d] (%s) contains path separator - only directory names are allowed", i, dir,
+				),
 			)
 		}
 		if strings.HasPrefix(dir, ".") && dir != ".git" && dir != ".vscode" && dir != ".idea" {
@@ -128,7 +130,9 @@ func validateConcurrencySettings() []string {
 
 	maxConcurrency := viper.GetInt("maxConcurrency")
 	if maxConcurrency < 1 {
-		validationErrors = append(validationErrors, fmt.Sprintf("maxConcurrency (%d) must be at least 1", maxConcurrency))
+		validationErrors = append(
+			validationErrors, fmt.Sprintf("maxConcurrency (%d) must be at least 1", maxConcurrency),
+		)
 	}
 	if maxConcurrency > 100 {
 		validationErrors = append(
@@ -481,7 +485,9 @@ func validateTimeoutLimits() []string {
 		if timeout > MaxOverallTimeoutSec {
 			validationErrors = append(
 				validationErrors,
-				fmt.Sprintf("resourceLimits.overallTimeoutSec (%d) exceeds maximum (%d)", timeout, MaxOverallTimeoutSec),
+				fmt.Sprintf(
+					"resourceLimits.overallTimeoutSec (%d) exceeds maximum (%d)", timeout, MaxOverallTimeoutSec,
+				),
 			)
 		}
 	}
@@ -498,13 +504,17 @@ func validateConcurrencyLimits() []string {
 		if maxReads < MinMaxConcurrentReads {
 			validationErrors = append(
 				validationErrors,
-				fmt.Sprintf("resourceLimits.maxConcurrentReads (%d) must be at least %d", maxReads, MinMaxConcurrentReads),
+				fmt.Sprintf(
+					"resourceLimits.maxConcurrentReads (%d) must be at least %d", maxReads, MinMaxConcurrentReads,
+				),
 			)
 		}
 		if maxReads > MaxMaxConcurrentReads {
 			validationErrors = append(
 				validationErrors,
-				fmt.Sprintf("resourceLimits.maxConcurrentReads (%d) exceeds maximum (%d)", maxReads, MaxMaxConcurrentReads),
+				fmt.Sprintf(
+					"resourceLimits.maxConcurrentReads (%d) exceeds maximum (%d)", maxReads, MaxMaxConcurrentReads,
+				),
 			)
 		}
 	}
@@ -514,7 +524,9 @@ func validateConcurrencyLimits() []string {
 		if rateLimit < MinRateLimitFilesPerSec {
 			validationErrors = append(
 				validationErrors,
-				fmt.Sprintf("resourceLimits.rateLimitFilesPerSec (%d) must be at least %d", rateLimit, MinRateLimitFilesPerSec),
+				fmt.Sprintf(
+					"resourceLimits.rateLimitFilesPerSec (%d) must be at least %d", rateLimit, MinRateLimitFilesPerSec,
+				),
 			)
 		}
 		if rateLimit > MaxRateLimitFilesPerSec {

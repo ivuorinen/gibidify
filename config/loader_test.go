@@ -33,7 +33,7 @@ func TestDefaultConfig(t *testing.T) {
 
 	ignoredDirs := config.GetIgnoredDirectories()
 	if len(ignoredDirs) == 0 {
-		t.Errorf("Expected some default ignored directories, got none")
+		t.Error("Expected some default ignored directories, got none")
 	}
 
 	// Restore Viper state

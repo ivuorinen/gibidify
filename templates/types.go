@@ -171,7 +171,8 @@ Generated on {{.Timestamp.Format "January 2, 2006 at 3:04 PM"}}
 		Description: "Space-efficient output with collapsible sections",
 		Format:      "markdown",
 		Header: "# {{.SourcePath}}\n\n<details><summary>📊 Stats ({{.TotalFiles}} files)</summary>\n\n" +
-			"- Processed: {{.ProcessedFiles}}\n- Size: {{.TotalSize}} bytes\n- Time: {{.ProcessingTime}}\n\n</details>\n\n",
+			"- Processed: {{.ProcessedFiles}}\n- Size: {{.TotalSize}} bytes\n" +
+			"- Time: {{.ProcessingTime}}\n\n</details>\n\n",
 		Footer:     "\n---\n*Compressed with gibidify*\n",
 		FileHeader: "<details><summary>📄 {{.RelativePath}} ({{.Size}} bytes)</summary>\n\n```{{.Language}}\n",
 		FileFooter: "```\n\n</details>\n\n",
