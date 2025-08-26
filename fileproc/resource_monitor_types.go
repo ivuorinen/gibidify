@@ -47,6 +47,7 @@ type ResourceMetrics struct {
 	FilesProcessed      int64         `json:"files_processed"`
 	TotalSizeProcessed  int64         `json:"total_size_processed"`
 	ConcurrentReads     int64         `json:"concurrent_reads"`
+	MaxConcurrentReads  int64         `json:"max_concurrent_reads"`
 	ProcessingDuration  time.Duration `json:"processing_duration"`
 	AverageFileSize     float64       `json:"average_file_size"`
 	ProcessingRate      float64       `json:"processing_rate_files_per_sec"`

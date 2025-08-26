@@ -113,6 +113,12 @@ func (rm *ResourceMonitor) handleMemoryLimitExceeded(currentMemory int64) error 
 // logMemoryViolation logs memory limit violation if not already logged.
 func (rm *ResourceMonitor) logMemoryViolation(currentMemory int64) {
 	violationKey := "hard_memory_limit"
+
+	// Ensure map is initialized
+	if rm.violationLogged == nil {
+		rm.violationLogged = make(map[string]bool)
+	}
+
 	if rm.violationLogged[violationKey] {
 		return
 	}

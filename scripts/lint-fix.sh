@@ -1,3 +1,9 @@
+#!/usr/bin/env bash
+
+# Enable strict error handling
+set -euo pipefail
+IFS=$'\n\t'
+
 echo "Running gofumpt..."
 gofumpt -l -w .
 echo "Running goimports..."

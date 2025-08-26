@@ -2,6 +2,7 @@
 package metrics
 
 import (
+	"math"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -19,7 +20,7 @@ func NewCollector() *Collector {
 		formatCounts: make(map[string]int64),
 		errorCounts:  make(map[string]int64),
 		phaseTimings: make(map[string]time.Duration),
-		smallestFile: maxInt64, // Initialize to max value to properly track minimum
+		smallestFile: math.MaxInt64, // Initialize to max value to properly track minimum
 	}
 }
 
@@ -106,7 +107,15 @@ func (c *Collector) RecordPhaseTime(phase string, duration time.Duration) {
 
 // IncrementConcurrency increments the current concurrency counter.
 func (c *Collector) IncrementConcurrency() {
-	atomic.AddInt32(&c.concurrency, 1)
+	newVal := atomic.AddInt32(&c.concurrency, 1)
+
+	// Update peak concurrency if current is higher
+	for {
+		peak := atomic.LoadInt32(&c.peakConcurrency)
+		if newVal <= peak || atomic.CompareAndSwapInt32(&c.peakConcurrency, peak, newVal) {
+			break
+		}
+	}
 }
 
 // DecrementConcurrency decrements the current concurrency counter.
@@ -141,7 +150,7 @@ func (c *Collector) GetCurrentMetrics() ProcessingMetrics {
 	}
 
 	smallestFile := atomic.LoadInt64(&c.smallestFile)
-	if smallestFile == maxInt64 {
+	if smallestFile == math.MaxInt64 {
 		smallestFile = 0 // No files processed yet
 	}
 
@@ -326,7 +335,7 @@ func (c *Collector) Reset() {
 	atomic.StoreInt64(&c.totalSize, 0)
 	atomic.StoreInt64(&c.processedSize, 0)
 	atomic.StoreInt64(&c.largestFile, 0)
-	atomic.StoreInt64(&c.smallestFile, maxInt64)
+	atomic.StoreInt64(&c.smallestFile, math.MaxInt64)
 	atomic.StoreInt32(&c.concurrency, 0)
 
 	c.formatCounts = make(map[string]int64)

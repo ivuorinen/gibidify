@@ -174,6 +174,10 @@ func (p *Processor) recordFileResult(
 	skipReason string,
 	err error,
 ) {
+	if p.metricsCollector == nil {
+		return // No metrics collector, skip recording
+	}
+
 	result := metrics.FileProcessingResult{
 		FilePath:   filePath,
 		FileSize:   fileSize,

@@ -98,7 +98,7 @@ security-full:
 
 vuln-check:
 	@echo "Checking for dependency vulnerabilities..."
-	@go install golang.org/x/vuln/cmd/govulncheck@latest
+	@go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 	@govulncheck ./...
 
 # Update dependencies

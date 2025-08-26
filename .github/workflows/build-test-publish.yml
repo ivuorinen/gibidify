@@ -4,11 +4,14 @@ name: Build, Test, Coverage, and Publish
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   release:
-    types: [created]
+    types:
+      - created
 
 permissions:
   contents: read
@@ -83,8 +86,13 @@ jobs:
 
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
+        goos:
+          - linux
+          - darwin
+          - windows
+        goarch:
+          - amd64
+          - arm64
 
     steps:
       - name: Checkout repository
@@ -150,7 +158,7 @@ jobs:
         run: echo "${{ github.token }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build and push multi-arch Docker image
-        run: |
+        run: |-
           chmod +x gibidify-linux-amd64
           mv gibidify-linux-amd64 gibidify
           docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 \

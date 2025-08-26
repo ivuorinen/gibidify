@@ -5,16 +5,25 @@ repos:
       - id: revive
         name: revive
         entry: revive
-        args: ['-config', 'revive.toml', '-set_exit_status', './...']
+        args:
+          - '-config'
+          - 'revive.toml'
+          - '-set_exit_status'
+          - './...'
         language: golang
-        additional_dependencies: [github.com/mgechev/revive@latest]
+        additional_dependencies:
+          - github.com/mgechev/revive@latest
         files: \.go$
       - id: gosec
         name: gosec
         entry: gosec
-        args: ['-fmt=text', '-quiet', './...']
+        args:
+          - '-fmt=text'
+          - '-quiet'
+          - './...'
         language: golang
-        additional_dependencies: [github.com/securego/gosec/v2/cmd/gosec@latest]
+        additional_dependencies:
+          - github.com/securego/gosec/v2/cmd/gosec@latest
         files: \.go$
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: 3.4.0
