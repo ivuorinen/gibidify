@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 // getNormalizedExtension efficiently extracts and normalizes the file extension with caching.

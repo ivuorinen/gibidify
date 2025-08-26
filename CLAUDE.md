@@ -29,6 +29,7 @@ Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 ## Linting Standards (MANDATORY)
 
 **Linter**: revive (comprehensive rule set migrated from golangci-lint)
+**Command**: `revive -config revive.toml **/*.go` (use globstar pattern to catch all files)
 **Complexity**: cognitive-complexity ≤15, cyclomatic ≤15, max-control-nesting ≤5
 **Security**: unhandled errors, secure coding patterns, credential detection
 **Performance**: optimize-operands-order, string-format, range optimizations
