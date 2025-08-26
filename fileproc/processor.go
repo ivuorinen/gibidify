@@ -31,6 +31,7 @@ type WriteRequest struct {
 	Content  string
 	IsStream bool
 	Reader   io.Reader
+	Size     int64 // File size for streaming files
 }
 
 // FileProcessor handles file processing operations.
@@ -299,6 +300,7 @@ func (p *FileProcessor) processInMemoryWithContext(
 		Path:     relPath,
 		Content:  p.formatContent(relPath, string(content)),
 		IsStream: false,
+		Size:     int64(len(content)),
 	}:
 	}
 }
@@ -327,6 +329,17 @@ func (p *FileProcessor) processStreamingWithContext(
 	default:
 	}
 
+	// Get file info for size
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		utils.LogErrorf(
+			utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIORead,
+				"failed to stat file for streaming").WithFilePath(filePath),
+			"Failed to stat file for streaming: %s", filePath,
+		)
+		return
+	}
+
 	reader := p.createStreamReaderWithContext(ctx, filePath, relPath)
 	if reader == nil {
 		return // Error already logged
@@ -352,6 +365,7 @@ func (p *FileProcessor) processStreamingWithContext(
 		Content:  "", // Empty since content is in Reader
 		IsStream: true,
 		Reader:   reader,
+		Size:     fileInfo.Size(),
 	}:
 	}
 }

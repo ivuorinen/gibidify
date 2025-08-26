@@ -29,6 +29,10 @@ func NewReporter(collector *Collector, verbose, colors bool) *Reporter {
 
 // ReportProgress provides a real-time progress report suitable for CLI output.
 func (r *Reporter) ReportProgress() string {
+	if r == nil || r.collector == nil {
+		return "no metrics available"
+	}
+
 	metrics := r.collector.GetCurrentMetrics()
 
 	if r.verbose {
@@ -40,6 +44,10 @@ func (r *Reporter) ReportProgress() string {
 
 // ReportFinal provides a comprehensive final report.
 func (r *Reporter) ReportFinal() string {
+	if r == nil || r.collector == nil {
+		return ""
+	}
+
 	report := r.collector.GenerateReport()
 
 	if r.verbose {
@@ -346,6 +354,10 @@ func (r *Reporter) sortedMapKeys(m map[string]int64) []string {
 
 // GetQuickStats returns a quick one-line status suitable for progress bars.
 func (r *Reporter) GetQuickStats() string {
+	if r == nil || r.collector == nil {
+		return "0/0 files"
+	}
+
 	metrics := r.collector.GetCurrentMetrics()
 
 	status := fmt.Sprintf("%d/%d files", metrics.ProcessedFiles, metrics.TotalFiles)

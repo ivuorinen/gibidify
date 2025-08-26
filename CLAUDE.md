@@ -3,11 +3,11 @@
 Go CLI aggregating code files into LLM-optimized output.
 Supports markdown/JSON/YAML with concurrent processing.
 
-## Architecture (92 files, 21.5K lines)
+## Architecture
 
-**Core**: `main.go` (37), `cli/` (12), `fileproc/` (39), `config/` (8), `utils/` (10), `testutil/` (9), `cmd/` (1)
+**Core**: `main.go`, `cli/`, `fileproc/`, `config/`, `utils/`, `testutil/`, `cmd/`
 
-**Advanced**: `metrics/` (5), `templates/` (3), `benchmark/` (2)
+**Advanced**: `metrics/`, `templates/`, `benchmark/`
 
 **Modules**: Collection, processing, writers, registry (~63ns cache), resource limits, metrics, templating
 
@@ -29,7 +29,7 @@ Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 ## Linting Standards (MANDATORY)
 
 **Linter**: revive (comprehensive rule set migrated from golangci-lint)
-**Command**: `revive -config revive.toml **/*.go` (use globstar pattern to catch all files)
+**Command**: `revive -config revive.toml ./...`
 **Complexity**: cognitive-complexity ≤15, cyclomatic ≤15, max-control-nesting ≤5
 **Security**: unhandled errors, secure coding patterns, credential detection
 **Performance**: optimize-operands-order, string-format, range optimizations

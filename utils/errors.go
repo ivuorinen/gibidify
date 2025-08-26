@@ -188,7 +188,8 @@ func NewCLIMissingSourceError() *StructuredError {
 	return NewStructuredError(
 		ErrorTypeCLI,
 		CodeCLIMissingSource,
-		"usage: gibidify -source <source_directory> [--destination <output_file>] [--format=json|yaml|markdown]",
+		"usage: gibidify -source <source_directory> [--destination <output_file>] "+
+			"[--format=json|yaml|markdown (default: json)]",
 		"",
 		nil,
 	)
