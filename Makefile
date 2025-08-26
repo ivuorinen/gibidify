@@ -1,10 +1,10 @@
-.PHONY: all help install-tools lint lint-fix lint-verbose test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check update-deps check-all dev-setup
+.PHONY: all help install-tools lint lint-fix test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check update-deps check-all dev-setup
 
 # Default target shows help
 .DEFAULT_GOAL := help
 
 # All target runs full workflow
-all: lint test build
+all: lint lint-fix test build
 
 # Help target
 help:
@@ -20,44 +20,7 @@ lint:
 
 # Run linters with auto-fix
 lint-fix:
-	@echo "Running gofumpt..."
-	@gofumpt -l -w .
-	@echo "Running goimports..."
-	@goimports -w -local github.com/ivuorinen/gibidify .
-	@echo "Running go fmt..."
-	@go fmt ./...
-	@echo "Running go mod tidy..."
-	@go mod tidy
-	@echo "Running shfmt formatting..."
-	@shfmt -w -i 2 -ci .
-	@echo "Running revive linter..."
-	@revive -config revive.toml -formatter friendly -set_exit_status **/*.go
-	@echo "Running gosec security linter..."
-	@gosec -fmt=text -quiet ./...
-	@echo "Auto-fix completed. Running final lint check..."
-	@revive -config revive.toml -formatter friendly -set_exit_status **/*.go
-	@gosec -fmt=text -quiet ./...
-	@echo "Running checkmake..."
-	@checkmake --config=.checkmake Makefile
-	@echo "Running yamllint..."
-	@yamllint -c .yamllint .
-	@echo "Running eclint fix..."
-	@eclint -fix
-
-# Run linters with verbose output
-lint-verbose:
-	@echo "Running revive (verbose)..."
-	@revive -config revive.toml -formatter stylish -set_exit_status **/*.go
-	@echo "Running gosec (verbose)..."
-	@gosec -fmt=text -verbose=text ./...
-	@echo "Running checkmake (verbose)..."
-	@checkmake --config=.checkmake --format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
-	@echo "Running shfmt check (verbose)..."
-	@shfmt -d .
-	@echo "Running yamllint (verbose)..."
-	@yamllint -c .yamllint -f parsable .
-	@echo "Running eclint (verbose)..."
-	@eclint -verbose
+	@./scripts/lint-fix.sh
 
 # Run tests
 test:
@@ -88,7 +51,7 @@ clean:
 .PHONY: ci-lint ci-test
 
 ci-lint:
-	@revive -config revive.toml -formatter friendly -set_exit_status **/*.go
+	@revive -config revive.toml -formatter friendly -set_exit_status ./...
 
 ci-test:
 	@go test -race -coverprofile=coverage.out -json ./... > test-results.json
