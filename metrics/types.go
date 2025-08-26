@@ -64,7 +64,8 @@ type Collector struct {
 	smallestFile   int64 // Using max int64 as initial value to track minimum
 
 	// Concurrency tracking
-	concurrency int32
+	concurrency     int32
+	peakConcurrency int32
 
 	// Format and error tracking with mutex protection
 	formatCounts map[string]int64

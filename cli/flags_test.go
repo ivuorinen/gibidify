@@ -68,6 +68,10 @@ func updateWantFlags(want Flags, tempDir string) Flags {
 func runParseFlagsTest(t *testing.T, args []string, want *Flags, wantErr bool, errContains string) {
 	t.Helper()
 
+	// Capture and restore original os.Args
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
 	resetFlagsState()
 	modifiedArgs, modifiedWant := setupTestArgs(t, args, want)
 	setupCommandLineArgs(modifiedArgs)
@@ -383,6 +387,10 @@ func TestFlags_setDefaultDestination(t *testing.T) {
 }
 
 func TestParseFlagsSingleton(t *testing.T) {
+	// Capture and restore original os.Args
+	origArgs := os.Args
+	defer func() { os.Args = origArgs }()
+
 	resetFlagsState()
 	tempDir := t.TempDir()
 

@@ -56,7 +56,7 @@ Flags:
 - `--no-colors`: disable colored terminal output.
 - `--no-progress`: disable progress bars.
 - `--verbose`: enable verbose output and detailed logging.
-- `--log-level`: set log level (debug, info, warn, error).
+- `--log-level`: set log level (default: warn; accepted values: debug, info, warn, error).
 
 ## Docker
 

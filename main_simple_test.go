@@ -390,9 +390,10 @@ func TestRun_ContextCancellation(t *testing.T) {
 	cancel()
 
 	err := run(ctx)
-	// Context cancellation might or might not cause an error depending on timing
-	// This is acceptable behavior
-	if err != nil {
-		t.Logf("Got error with canceled context (expected): %v", err)
+	// Assert that canceled context causes an error
+	if err == nil {
+		t.Error("Expected error with canceled context, got nil")
+	} else if !errors.Is(err, context.Canceled) && !strings.Contains(err.Error(), "context canceled") {
+		t.Errorf("Expected context.Canceled error, got: %v", err)
 	}
 }
