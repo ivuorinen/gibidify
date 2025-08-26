@@ -279,7 +279,8 @@ func (c *Collector) generateRecommendations(metrics ProcessingMetrics) []string 
 
 	// Processing rate recommendations
 	if metrics.FilesPerSecond < 10 && metrics.ProcessedFiles > 100 {
-		recommendations = append(recommendations, "Processing rate is low (<10 files/sec) - consider optimizing file I/O")
+		recommendations = append(recommendations,
+			"Processing rate is low (<10 files/sec) - consider optimizing file I/O")
 	}
 
 	// Error rate recommendations
@@ -293,7 +294,8 @@ func (c *Collector) generateRecommendations(metrics ProcessingMetrics) []string 
 	// Concurrency recommendations
 	halfMaxConcurrency := utils.SafeIntToInt32WithDefault(metrics.MaxConcurrency/2, 1)
 	if halfMaxConcurrency > 0 && metrics.CurrentConcurrency < halfMaxConcurrency {
-		recommendations = append(recommendations, "Low concurrency utilization - consider increasing concurrent processing")
+		recommendations = append(recommendations,
+			"Low concurrency utilization - consider increasing concurrent processing")
 	}
 
 	// Large file recommendations

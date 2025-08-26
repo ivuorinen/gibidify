@@ -134,7 +134,7 @@ func TestProcessFileWithMonitor(t *testing.T) {
 	wg.Wait()
 
 	if !strings.Contains(result, content) {
-		t.Errorf("Expected content not found in processed result")
+		t.Error("Expected content not found in processed result")
 	}
 }
 
@@ -220,7 +220,7 @@ func createLargeTestFile(t *testing.T) *os.File {
 }
 
 // processFileForStreaming processes a file and returns streaming/inline requests.
-func processFileForStreaming(t *testing.T, filePath string) (*fileproc.WriteRequest, *fileproc.WriteRequest) {
+func processFileForStreaming(t *testing.T, filePath string) (streamingReq, inlineReq *fileproc.WriteRequest) {
 	t.Helper()
 
 	ch := make(chan fileproc.WriteRequest, 1)

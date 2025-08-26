@@ -218,7 +218,7 @@ func TestValidateConcurrency(t *testing.T) {
 func validateExpectedError(t *testing.T, err error, errContains string) {
 	t.Helper()
 	if err == nil {
-		t.Errorf("Expected error but got none")
+		t.Error("Expected error but got none")
 
 		return
 	}

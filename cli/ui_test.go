@@ -455,15 +455,14 @@ func TestIsColorTerminal(t *testing.T) {
 	}
 }
 
-func TestIsInteractiveTerminal(t *testing.T) {
+func TestIsInteractiveTerminal(_ *testing.T) {
 	// This test is limited because we can't easily mock os.Stderr.Stat()
 	// but we can at least verify it doesn't panic and returns a boolean
 	result := isInteractiveTerminal()
 
 	// Result should be a boolean (true or false, both are valid)
-	if result != true && result != false {
-		t.Error("isInteractiveTerminal() should return a boolean")
-	}
+	// result is already a boolean, so this check is always satisfied
+	_ = result
 }
 
 func TestUIManager_printf(t *testing.T) {

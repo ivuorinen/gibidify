@@ -116,6 +116,11 @@ func verifyValidOutput(t *testing.T, data []byte, format string) {
 		if !strings.Contains(content, "```") {
 			t.Error("Expected markdown code fences not found")
 		}
+	default:
+		// Unknown format - basic validation that we have content
+		if len(content) == 0 {
+			t.Errorf("Unexpected format %s with empty content", format)
+		}
 	}
 }
 

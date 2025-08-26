@@ -45,9 +45,9 @@ check_dependencies() {
     missing_tools+=("go")
   fi
 
-  if ! command -v golangci-lint &>/dev/null; then
-    print_warning "golangci-lint not found, installing..."
-    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+  if ! command -v revive &>/dev/null; then
+    print_warning "revive not found, installing..."
+    go install github.com/mgechev/revive@latest
   fi
 
   if ! command -v gosec &>/dev/null; then
@@ -116,16 +116,14 @@ run_govulncheck() {
   fi
 }
 
-# Run enhanced golangci-lint with security focus
+# Run revive with comprehensive linting
 run_security_lint() {
-  print_status "Running security-focused linting..."
+  print_status "Running comprehensive code quality linting with revive..."
 
-  local security_linters="gosec,gocritic,bodyclose,rowserrcheck,misspell,unconvert,unparam,unused,errcheck,ineffassign,staticcheck"
-
-  if golangci-lint run --enable="$security_linters" --timeout=5m; then
-    print_success "Security linting passed"
+  if revive -config revive.toml -set_exit_status ./...; then
+    print_success "Revive linting passed"
   else
-    print_error "Security linting found issues!"
+    print_error "Revive linting found issues!"
     return 1
   fi
 }
@@ -331,7 +329,7 @@ generate_report() {
 ### Security Tools Used
 - gosec (Go security analyzer)
 - govulncheck (Vulnerability database checker)
-- golangci-lint (Static analysis with security linters)
+- revive (Code quality and linting)
 - checkmake (Makefile linting)
 - shfmt (Shell script formatting)
 - yamllint (YAML file validation)

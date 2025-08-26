@@ -235,7 +235,7 @@ func verifyBasicDirectoryStructure(t *testing.T, rootDir string) {
 	if info, err := os.Stat(appDir); err != nil {
 		t.Errorf("App directory should exist: %v", err)
 	} else if !info.IsDir() {
-		t.Errorf("App path should be a directory")
+		t.Error("App path should be a directory")
 	}
 
 	mainFile := filepath.Join(appDir, "main.go")
@@ -261,7 +261,7 @@ func verifyBasicDirectoryStructure(t *testing.T, rootDir string) {
 	if info, err := os.Stat(docsDir); err != nil {
 		t.Errorf("Docs directory should exist: %v", err)
 	} else if !info.IsDir() {
-		t.Errorf("Docs path should be a directory")
+		t.Error("Docs path should be a directory")
 	}
 
 	readmeFile := filepath.Join(docsDir, "README.md")
@@ -281,7 +281,7 @@ func verifyEmptyDirectorySpecs(t *testing.T, rootDir string) {
 	if info, err := os.Stat(rootDir); err != nil {
 		t.Errorf("Root directory should exist: %v", err)
 	} else if !info.IsDir() {
-		t.Errorf("Root path should be a directory")
+		t.Error("Root path should be a directory")
 	}
 
 	entries, err := os.ReadDir(rootDir)
@@ -335,7 +335,7 @@ func runSetupTempDirTest(t *testing.T, dirSpecs []DirSpec, verifyFunc func(t *te
 	if info, err := os.Stat(rootDir); err != nil {
 		t.Fatalf("Root directory should exist: %v", err)
 	} else if !info.IsDir() {
-		t.Fatalf("Root path should be a directory")
+		t.Fatal("Root path should be a directory")
 	}
 
 	verifyFunc(t, rootDir)

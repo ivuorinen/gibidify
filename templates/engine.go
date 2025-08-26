@@ -119,19 +119,19 @@ func (e *Engine) RenderMetadata() (string, error) {
 	var buf bytes.Buffer
 
 	if e.template.Format == "markdown" {
-		buf.WriteString("## Metadata\n\n")
+		_, _ = buf.WriteString("## Metadata\n\n")
 	}
 
 	if e.template.Metadata.IncludeTimestamp {
-		buf.WriteString(fmt.Sprintf("**Generated**: %s\n", e.context.Timestamp.Format("2006-01-02 15:04:05")))
+		_, _ = buf.WriteString(fmt.Sprintf("**Generated**: %s\n", e.context.Timestamp.Format("2006-01-02 15:04:05")))
 	}
 
 	if e.template.Metadata.IncludeSourcePath {
-		buf.WriteString(fmt.Sprintf("**Source**: %s\n", e.context.SourcePath))
+		_, _ = buf.WriteString(fmt.Sprintf("**Source**: %s\n", e.context.SourcePath))
 	}
 
 	if e.template.Metadata.IncludeFileCount {
-		buf.WriteString(
+		_, _ = buf.WriteString(
 			fmt.Sprintf(
 				"**Files**: %d total (%d processed, %d skipped, %d errors)\n",
 				e.context.TotalFiles, e.context.ProcessedFiles, e.context.SkippedFiles, e.context.ErrorFiles,
@@ -140,15 +140,15 @@ func (e *Engine) RenderMetadata() (string, error) {
 	}
 
 	if e.template.Metadata.IncludeTotalSize {
-		buf.WriteString(fmt.Sprintf("**Total Size**: %d bytes\n", e.context.TotalSize))
+		_, _ = buf.WriteString(fmt.Sprintf("**Total Size**: %d bytes\n", e.context.TotalSize))
 	}
 
 	if e.template.Metadata.IncludeProcessingTime {
-		buf.WriteString(fmt.Sprintf("**Processing Time**: %s\n", e.context.ProcessingTime))
+		_, _ = buf.WriteString(fmt.Sprintf("**Processing Time**: %s\n", e.context.ProcessingTime))
 	}
 
 	if e.template.Metadata.IncludeMetrics && e.context.FilesPerSecond > 0 {
-		buf.WriteString(
+		_, _ = buf.WriteString(
 			fmt.Sprintf(
 				"**Performance**: %.1f files/sec, %.1f MB/sec\n",
 				e.context.FilesPerSecond, e.context.BytesPerSecond/1024/1024,
@@ -157,13 +157,13 @@ func (e *Engine) RenderMetadata() (string, error) {
 	}
 
 	if e.template.Metadata.IncludeFileTypes && len(e.context.FileTypes) > 0 {
-		buf.WriteString("**File Types**:\n")
+		_, _ = buf.WriteString("**File Types**:\n")
 		for fileType, count := range e.context.FileTypes {
-			buf.WriteString(fmt.Sprintf("- %s: %d files\n", fileType, count))
+			_, _ = buf.WriteString(fmt.Sprintf("- %s: %d files\n", fileType, count))
 		}
 	}
 
-	buf.WriteString("\n")
+	_, _ = buf.WriteString("\n")
 
 	return buf.String(), nil
 }
@@ -175,7 +175,7 @@ func (e *Engine) RenderTableOfContents(files []FileContext) (string, error) {
 	}
 
 	var buf bytes.Buffer
-	buf.WriteString("## Table of Contents\n\n")
+	_, _ = buf.WriteString("## Table of Contents\n\n")
 
 	for _, file := range files {
 		// Create markdown anchor from file path
@@ -183,10 +183,10 @@ func (e *Engine) RenderTableOfContents(files []FileContext) (string, error) {
 		anchor = strings.ReplaceAll(anchor, ".", "")
 		anchor = strings.ReplaceAll(anchor, " ", "-")
 
-		buf.WriteString(fmt.Sprintf("- [%s](#%s)\n", file.RelativePath, anchor))
+		_, _ = buf.WriteString(fmt.Sprintf("- [%s](#%s)\n", file.RelativePath, anchor))
 	}
 
-	buf.WriteString("\n")
+	_, _ = buf.WriteString("\n")
 
 	return buf.String(), nil
 }
@@ -249,18 +249,18 @@ func (e *Engine) getTemplateFunctions() template.FuncMap {
 }
 
 // formatBytes formats byte counts in human-readable format.
-func (e *Engine) formatBytes(bytes int64) string {
-	if bytes == 0 {
+func (e *Engine) formatBytes(byteCount int64) string {
+	if byteCount == 0 {
 		return "0B"
 	}
 
 	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%dB", bytes)
+	if byteCount < unit {
+		return fmt.Sprintf("%dB", byteCount)
 	}
 
 	exp := 0
-	for n := bytes / unit; n >= unit; n /= unit {
+	for n := byteCount / unit; n >= unit; n /= unit {
 		exp++
 	}
 
@@ -269,7 +269,7 @@ func (e *Engine) formatBytes(bytes int64) string {
 		divisor *= 1024
 	}
 
-	return fmt.Sprintf("%.1f%cB", float64(bytes)/float64(divisor), "KMGTPE"[exp])
+	return fmt.Sprintf("%.1f%cB", float64(byteCount)/float64(divisor), "KMGTPE"[exp])
 }
 
 // wrapLongLines wraps lines that exceed the specified length.
@@ -325,9 +325,9 @@ func (e *Engine) wouldExceedLength(currentLine *strings.Builder, word string, ma
 // addWordToLine adds a word to the current line with appropriate spacing.
 func (e *Engine) addWordToLine(currentLine *strings.Builder, word string) {
 	if currentLine.Len() > 0 {
-		currentLine.WriteString(" ")
+		_, _ = currentLine.WriteString(" ")
 	}
-	currentLine.WriteString(word)
+	_, _ = currentLine.WriteString(word)
 }
 
 // hasAnyMetadata checks if any metadata options are enabled.

@@ -68,10 +68,9 @@ func TestBackpressureManager_ShouldApplyBackpressure(t *testing.T) {
 	shouldApply := bp.ShouldApplyBackpressure(ctx)
 
 	// Since we're using default config, backpressure behavior depends on settings
-	// We just test that the method returns a boolean without error
-	if shouldApply != true && shouldApply != false {
-		t.Error("ShouldApplyBackpressure should return a boolean")
-	}
+	// We just test that the method returns without error
+	// shouldApply is a valid boolean value
+	_ = shouldApply
 }
 
 func TestBackpressureManager_ApplyBackpressure(t *testing.T) {

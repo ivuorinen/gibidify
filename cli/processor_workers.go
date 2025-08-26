@@ -87,8 +87,8 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 
 	// Show real-time stats in verbose mode
 	if p.flags.Verbose && p.metricsCollector != nil {
-		metrics := p.metricsCollector.GetCurrentMetrics()
-		if metrics.ProcessedFiles%10 == 0 && p.metricsReporter != nil {
+		currentMetrics := p.metricsCollector.GetCurrentMetrics()
+		if currentMetrics.ProcessedFiles%10 == 0 && p.metricsReporter != nil {
 			logger := utils.GetLogger()
 			logger.Info(p.metricsReporter.ReportProgress())
 		}

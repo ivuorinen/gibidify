@@ -60,7 +60,9 @@ func (p *Processor) validateFileCollection(files []string) error {
 				return utils.NewStructuredError(
 					utils.ErrorTypeValidation,
 					utils.CodeResourceLimitTotalSize,
-					fmt.Sprintf("total file size (%d bytes) would exceed maximum limit (%d bytes)", totalSize, maxTotalSize),
+					fmt.Sprintf(
+						"total file size (%d bytes) would exceed maximum limit (%d bytes)", totalSize, maxTotalSize,
+					),
 					"",
 					map[string]any{
 						"total_size":     totalSize,

@@ -120,7 +120,7 @@ func verifyFileType(t *testing.T, info os.FileInfo) {
 	t.Helper()
 
 	if !info.Mode().IsRegular() {
-		t.Errorf("Created path is not a regular file")
+		t.Error("Created path is not a regular file")
 	}
 }
 
@@ -183,7 +183,7 @@ func TestCreateTempOutputFile(t *testing.T) {
 
 				// Verify it's a regular file
 				if !info.Mode().IsRegular() {
-					t.Errorf("Created path is not a regular file")
+					t.Error("Created path is not a regular file")
 				}
 
 				// Verify we can write to it
@@ -254,7 +254,7 @@ func runCreateTestDirectoryTest(t *testing.T, parent, dir string) {
 }
 
 // prepareNestedDirectoryPath prepares parent and directory paths for nested directories.
-func prepareNestedDirectoryPath(t *testing.T, parent, dir string) (string, string) {
+func prepareNestedDirectoryPath(t *testing.T, parent, dir string) (parentPath, fullPath string) {
 	t.Helper()
 
 	if strings.Contains(dir, "/") {
@@ -296,7 +296,7 @@ func verifyIsDirectory(t *testing.T, info os.FileInfo) {
 	t.Helper()
 
 	if !info.IsDir() {
-		t.Errorf("Created path is not a directory")
+		t.Error("Created path is not a directory")
 	}
 }
 

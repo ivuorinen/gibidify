@@ -52,7 +52,7 @@ func (p *Processor) logFinalStats() {
 	// Display final metrics report
 	if p.metricsReporter != nil {
 		finalReport := p.metricsReporter.ReportFinal()
-		fmt.Print(finalReport)
+		_, _ = fmt.Print(finalReport)
 	}
 
 	// Log for structured logging if verbose
