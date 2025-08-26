@@ -4,12 +4,12 @@
 exit_code=0
 
 echo "Running revive..."
-if ! revive -config revive.toml -set_exit_status ./...; then
+if ! revive -config revive.toml -formatter friendly -set_exit_status ./**/*.go; then
   exit_code=1
 fi
 
 echo "Running gosec..."
-if ! gosec -fmt=text -quiet ./...; then
+if ! gosec -fmt=text -quiet ./**/*.go; then
   exit_code=1
 fi
 
@@ -24,7 +24,7 @@ if ! shfmt -d .; then
 fi
 
 echo "Running yamllint..."
-if ! yamllint -c .yamllint .; then
+if ! yamllint -c .yamllint .github/workflows/*.yml ./*.yaml .yamllint; then
   exit_code=1
 fi
 

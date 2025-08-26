@@ -31,11 +31,11 @@ lint-fix:
 	@echo "Running shfmt formatting..."
 	@shfmt -w -i 2 -ci .
 	@echo "Running revive linter..."
-	@revive -config revive.toml -set_exit_status ./...
+	@revive -config revive.toml -formatter friendly -set_exit_status **/*.go
 	@echo "Running gosec security linter..."
 	@gosec -fmt=text -quiet ./...
 	@echo "Auto-fix completed. Running final lint check..."
-	@revive -config revive.toml -set_exit_status ./...
+	@revive -config revive.toml -formatter friendly -set_exit_status **/*.go
 	@gosec -fmt=text -quiet ./...
 	@echo "Running checkmake..."
 	@checkmake --config=.checkmake Makefile
@@ -47,7 +47,7 @@ lint-fix:
 # Run linters with verbose output
 lint-verbose:
 	@echo "Running revive (verbose)..."
-	@revive -config revive.toml -formatter stylish -set_exit_status ./...
+	@revive -config revive.toml -formatter stylish -set_exit_status **/*.go
 	@echo "Running gosec (verbose)..."
 	@gosec -fmt=text -verbose=text ./...
 	@echo "Running checkmake (verbose)..."
@@ -88,7 +88,7 @@ clean:
 .PHONY: ci-lint ci-test
 
 ci-lint:
-	@revive -config revive.toml -formatter friendly -set_exit_status ./...
+	@revive -config revive.toml -formatter friendly -set_exit_status **/*.go
 
 ci-test:
 	@go test -race -coverprofile=coverage.out -json ./... > test-results.json

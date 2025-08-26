@@ -1,3 +1,4 @@
+// Package metrics provides performance monitoring and reporting capabilities.
 package metrics
 
 import (
