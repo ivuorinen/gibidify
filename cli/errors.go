@@ -1,3 +1,4 @@
+// Package cli provides the command-line interface and processing logic for gibidify.
 package cli
 
 import (
@@ -26,8 +27,10 @@ func (ef *ErrorFormatter) FormatError(err error) {
 	}
 
 	// Handle structured errors
-	if structErr, ok := err.(*utils.StructuredError); ok {
+	structErr := &utils.StructuredError{}
+	if errors.As(err, &structErr) {
 		ef.formatStructuredError(structErr)
+
 		return
 	}
 
@@ -154,7 +157,7 @@ func (ef *ErrorFormatter) provideIOSuggestions(err *utils.StructuredError) {
 	}
 }
 
-// Helper methods for specific suggestions
+// Helper methods for specific suggestions.
 func (ef *ErrorFormatter) suggestFileAccess(filePath string) {
 	ef.ui.printf("  • Check if the path exists: %s\n", filePath)
 	ef.ui.printf("  • Verify read permissions\n")
@@ -177,20 +180,25 @@ func (ef *ErrorFormatter) suggestPathResolution(filePath string) {
 
 func (ef *ErrorFormatter) suggestFileNotFound(filePath string) {
 	ef.ui.printf("  • Check if the file/directory exists: %s\n", filePath)
-	if filePath != "" {
-		dir := filepath.Dir(filePath)
-		if entries, err := os.ReadDir(dir); err == nil {
-			ef.ui.printf("  • Similar files in %s:\n", dir)
-			count := 0
-			for _, entry := range entries {
-				if count >= 3 {
-					break
-				}
-				if strings.Contains(entry.Name(), filepath.Base(filePath)) {
-					ef.ui.printf("    - %s\n", entry.Name())
-					count++
-				}
-			}
+	if filePath == "" {
+		return
+	}
+
+	dir := filepath.Dir(filePath)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return
+	}
+
+	ef.ui.printf("  • Similar files in %s:\n", dir)
+	count := 0
+	for _, entry := range entries {
+		if count >= 3 {
+			break
+		}
+		if strings.Contains(entry.Name(), filepath.Base(filePath)) {
+			ef.ui.printf("    - %s\n", entry.Name())
+			count++
 		}
 	}
 }
@@ -234,16 +242,16 @@ func (ef *ErrorFormatter) provideGenericSuggestions(err error) {
 
 // CLI-specific error types
 
-// CLIMissingSourceError represents a missing source directory error.
-type CLIMissingSourceError struct{}
+// MissingSourceError represents a missing source directory error.
+type MissingSourceError struct{}
 
-func (e CLIMissingSourceError) Error() string {
+func (e MissingSourceError) Error() string {
 	return "source directory is required"
 }
 
-// NewCLIMissingSourceError creates a new CLI missing source error with suggestions.
-func NewCLIMissingSourceError() error {
-	return &CLIMissingSourceError{}
+// NewMissingSourceError creates a new CLI missing source error with suggestions.
+func NewMissingSourceError() error {
+	return &MissingSourceError{}
 }
 
 // IsUserError checks if an error is a user input error that should be handled gracefully.
@@ -253,13 +261,14 @@ func IsUserError(err error) bool {
 	}
 
 	// Check for specific user error types
-	var cliErr *CLIMissingSourceError
+	var cliErr *MissingSourceError
 	if errors.As(err, &cliErr) {
 		return true
 	}
 
 	// Check for structured errors that are user-facing
-	if structErr, ok := err.(*utils.StructuredError); ok {
+	structErr := &utils.StructuredError{}
+	if errors.As(err, &structErr) {
 		return structErr.Type == utils.ErrorTypeValidation ||
 			structErr.Code == utils.CodeValidationFormat ||
 			structErr.Code == utils.CodeValidationSize

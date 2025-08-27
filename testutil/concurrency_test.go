@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// Test thread safety of functions that might be called concurrently
+// Test thread safety of functions that might be called concurrently.
 func TestConcurrentOperations(t *testing.T) {
 	tempDir := t.TempDir()
 	done := make(chan bool)
@@ -34,7 +34,7 @@ func TestConcurrentOperations(t *testing.T) {
 	}
 }
 
-// Benchmarks
+// Benchmarks.
 func BenchmarkCreateTestFile(b *testing.B) {
 	tempDir := b.TempDir()
 	content := []byte("benchmark content")

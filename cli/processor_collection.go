@@ -1,10 +1,9 @@
+// Package cli provides the command-line interface and processing logic for gibidify.
 package cli
 
 import (
 	"fmt"
 	"os"
-
-	"github.com/sirupsen/logrus"
 
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/fileproc"
@@ -15,9 +14,17 @@ import (
 func (p *Processor) collectFiles() ([]string, error) {
 	files, err := fileproc.CollectFiles(p.flags.SourceDir)
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "error collecting files")
+		return nil, utils.WrapError(
+			err,
+			utils.ErrorTypeProcessing,
+			utils.CodeProcessingCollection,
+			"error collecting files",
+		)
 	}
-	logrus.Infof("Found %d files to process", len(files))
+
+	logger := utils.GetLogger()
+	logger.Infof("Found %d files to process", len(files))
+
 	return files, nil
 }
 
@@ -35,7 +42,7 @@ func (p *Processor) validateFileCollection(files []string) error {
 			utils.CodeResourceLimitFiles,
 			fmt.Sprintf("file count (%d) exceeds maximum limit (%d)", len(files), maxFiles),
 			"",
-			map[string]interface{}{
+			map[string]any{
 				"file_count": len(files),
 				"max_files":  maxFiles,
 			},
@@ -54,9 +61,11 @@ func (p *Processor) validateFileCollection(files []string) error {
 				return utils.NewStructuredError(
 					utils.ErrorTypeValidation,
 					utils.CodeResourceLimitTotalSize,
-					fmt.Sprintf("total file size (%d bytes) would exceed maximum limit (%d bytes)", totalSize, maxTotalSize),
+					fmt.Sprintf(
+						"total file size (%d bytes) would exceed maximum limit (%d bytes)", totalSize, maxTotalSize,
+					),
 					"",
-					map[string]interface{}{
+					map[string]any{
 						"total_size":     totalSize,
 						"max_total_size": maxTotalSize,
 						"files_checked":  len(files),
@@ -68,10 +77,12 @@ func (p *Processor) validateFileCollection(files []string) error {
 		}
 	}
 
+	logger := utils.GetLogger()
 	if oversizedFiles > 0 {
-		logrus.Warnf("Could not stat %d files during pre-validation", oversizedFiles)
+		logger.Warnf("Could not stat %d files during pre-validation", oversizedFiles)
 	}
 
-	logrus.Infof("Pre-validation passed: %d files, %d MB total", len(files), totalSize/1024/1024)
+	logger.Infof("Pre-validation passed: %d files, %d MB total", len(files), totalSize/1024/1024)
+
 	return nil
 }

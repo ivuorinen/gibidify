@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
@@ -5,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/ivuorinen/gibidify/utils"
 )
 
 // RecordFileProcessed records that a file has been successfully processed.
@@ -55,7 +56,7 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 		ProcessingDuration:  duration,
 		AverageFileSize:     avgFileSize,
 		ProcessingRate:      processingRate,
-		MemoryUsageMB:       int64(m.Alloc) / 1024 / 1024,
+		MemoryUsageMB:       utils.BytesToMB(m.Alloc),
 		MaxMemoryUsageMB:    int64(rm.hardMemoryLimitMB),
 		ViolationsDetected:  violations,
 		DegradationActive:   rm.degradationActive,
@@ -66,14 +67,16 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 
 // LogResourceInfo logs current resource limit configuration.
 func (rm *ResourceMonitor) LogResourceInfo() {
+	logger := utils.GetLogger()
 	if rm.enabled {
-		logrus.Infof("Resource limits enabled: maxFiles=%d, maxTotalSize=%dMB, fileTimeout=%ds, overallTimeout=%ds",
-			rm.maxFiles, rm.maxTotalSize/1024/1024, int(rm.fileProcessingTimeout.Seconds()), int(rm.overallTimeout.Seconds()))
-		logrus.Infof("Resource limits: maxConcurrentReads=%d, rateLimitFPS=%d, hardMemoryMB=%d",
+		logger.Infof("Resource limits enabled: maxFiles=%d, maxTotalSize=%dMB, fileTimeout=%ds, overallTimeout=%ds",
+			rm.maxFiles, rm.maxTotalSize/1024/1024, int(rm.fileProcessingTimeout.Seconds()),
+			int(rm.overallTimeout.Seconds()))
+		logger.Infof("Resource limits: maxConcurrentReads=%d, rateLimitFPS=%d, hardMemoryMB=%d",
 			rm.maxConcurrentReads, rm.rateLimitFilesPerSec, rm.hardMemoryLimitMB)
-		logrus.Infof("Resource features: gracefulDegradation=%v, monitoring=%v",
+		logger.Infof("Resource features: gracefulDegradation=%v, monitoring=%v",
 			rm.enableGracefulDegr, rm.enableResourceMon)
 	} else {
-		logrus.Info("Resource limits disabled")
+		logger.Info("Resource limits disabled")
 	}
 }

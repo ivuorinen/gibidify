@@ -1,84 +1,333 @@
-# gibidify configuration example
-# Place this file in one of these locations:
+---
+# gibidify Configuration Example
+# =============================
+# This file demonstrates all available configuration options with their defaults
+# and validation ranges. Copy this file to one of the following locations:
+#
 # - $XDG_CONFIG_HOME/gibidify/config.yaml
 # - $HOME/.config/gibidify/config.yaml
 # - Current directory (if no gibidify.yaml output file exists)
 
-# File size limit in bytes (default: 5MB)
+# =============================================================================
+# BASIC FILE PROCESSING SETTINGS
+# =============================================================================
+
+# Maximum size for individual files in bytes
+# Default: 5242880 (5MB), Min: 1024 (1KB), Max: 104857600 (100MB)
 fileSizeLimit: 5242880
 
-# Directories to ignore during scanning
+# Directories to ignore during file system traversal
+# These are sensible defaults for most projects
 ignoreDirectories:
-  - vendor
-  - node_modules
-  - .git
-  - dist
-  - build
-  - target
-  - bower_components
-  - cache
-  - tmp
-  - .next
-  - .nuxt
+  - vendor # Go vendor directory
+  - node_modules # Node.js dependencies
+  - .git # Git repository data
+  - dist # Distribution/build output
+  - build # Build artifacts
+  - target # Maven/Rust build directory
+  - bower_components # Bower dependencies
+  - cache # Various cache directories
+  - tmp # Temporary files
+  - .next # Next.js build directory
+  - .nuxt # Nuxt.js build directory
+  - .vscode # VS Code settings
+  - .idea # IntelliJ IDEA settings
+  - __pycache__ # Python cache
+  - .pytest_cache # Pytest cache
 
-# FileType registry configuration
+# Maximum number of worker goroutines for concurrent processing
+# Default: number of CPU cores, Min: 1, Max: 100
+# maxConcurrency: 8
+
+# Supported output formats for validation
+# Default: ["json", "yaml", "markdown"]
+# supportedFormats:
+#   - json
+#   - yaml
+#   - markdown
+
+# File patterns to include (glob patterns)
+# Default: empty (all files), useful for filtering specific file types
+# filePatterns:
+#   - "*.go"
+#   - "*.py"
+#   - "*.js"
+#   - "*.ts"
+#   - "*.java"
+#   - "*.c"
+#   - "*.cpp"
+
+# =============================================================================
+# FILE TYPE DETECTION AND CUSTOMIZATION
+# =============================================================================
+
 fileTypes:
-  # Enable/disable file type detection entirely (default: true)
+  # Enable/disable file type detection entirely
+  # Default: true
   enabled: true
 
-  # Add custom image extensions
+  # Add custom image extensions (beyond built-in: .png, .jpg, .jpeg, .gif, .svg, .ico, .bmp, .tiff, .webp)
   customImageExtensions:
-    - .webp
-    - .avif
-    - .heic
-    - .jxl
+    - .avif # AV1 Image File Format
+    - .heic # High Efficiency Image Container
+    - .jxl # JPEG XL
+    - .webp # WebP (if not already included)
 
-  # Add custom binary extensions
+  # Add custom binary extensions (beyond built-in: .exe, .dll, .so, .dylib, .a, .lib, .obj, .o)
   customBinaryExtensions:
-    - .custom
-    - .proprietary
-    - .blob
+    - .custom # Custom binary format
+    - .proprietary # Proprietary format
+    - .blob # Binary large object
 
-  # Add custom language mappings
+  # Add custom language mappings (extension -> language name)
   customLanguages:
-    .zig: zig
-    .odin: odin
-    .v: vlang
-    .grain: grain
-    .gleam: gleam
-    .roc: roc
-    .janet: janet
-    .fennel: fennel
-    .wast: wast
-    .wat: wat
+    .zig: zig # Zig language
+    .odin: odin # Odin language
+    .v: vlang # V language
+    .grain: grain # Grain language
+    .gleam: gleam # Gleam language
+    .roc: roc # Roc language
+    .janet: janet # Janet language
+    .fennel: fennel # Fennel language
+    .wast: wast # WebAssembly text format
+    .wat: wat # WebAssembly text format
 
   # Disable specific default image extensions
   disabledImageExtensions:
-    - .bmp  # Disable bitmap support
-    - .tif  # Disable TIFF support
+    - .bmp # Disable bitmap support
+    - .tiff # Disable TIFF support
 
   # Disable specific default binary extensions
   disabledBinaryExtensions:
-    - .exe  # Don't treat executables as binary
-    - .dll  # Don't treat DLL files as binary
+    - .exe # Don't treat executables as binary
+    - .dll # Don't treat DLL files as binary
 
   # Disable specific default language extensions
   disabledLanguageExtensions:
-    - .bat  # Don't detect batch files
-    - .cmd  # Don't detect command files
+    - .bat # Don't detect batch files
+    - .cmd # Don't detect command files
 
-# Maximum concurrency (optional)
-maxConcurrency: 16
+# =============================================================================
+# BACKPRESSURE AND MEMORY MANAGEMENT
+# =============================================================================
 
-# Supported output formats (optional validation)
-supportedFormats:
-  - json
-  - yaml
-  - markdown
+backpressure:
+  # Enable backpressure management for memory optimization
+  # Default: true
+  enabled: true
 
-# File patterns for filtering (optional)
-filePatterns:
-  - "*.go"
-  - "*.py"
-  - "*.js"
-  - "*.ts"
+  # Maximum number of files to buffer in the processing pipeline
+  # Default: 1000, helps prevent memory exhaustion with many small files
+  maxPendingFiles: 1000
+
+  # Maximum number of write operations to buffer
+  # Default: 100, controls write throughput vs memory usage
+  maxPendingWrites: 100
+
+  # Soft memory usage limit in bytes before triggering backpressure
+  # Default: 104857600 (100MB)
+  maxMemoryUsage: 104857600
+
+  # Check memory usage every N files processed
+  # Default: 1000, lower values = more frequent checks but higher overhead
+  memoryCheckInterval: 1000
+
+# =============================================================================
+# RESOURCE LIMITS AND SECURITY
+# =============================================================================
+
+resourceLimits:
+  # Enable resource limits for DoS protection
+  # Default: true
+  enabled: true
+
+  # Maximum number of files to process
+  # Default: 10000, Min: 1, Max: 1000000
+  maxFiles: 10000
+
+  # Maximum total size of all files combined in bytes
+  # Default: 1073741824 (1GB), Min: 1048576 (1MB), Max: 107374182400 (100GB)
+  maxTotalSize: 1073741824
+
+  # Timeout for processing individual files in seconds
+  # Default: 30, Min: 1, Max: 300 (5 minutes)
+  fileProcessingTimeoutSec: 30
+
+  # Overall timeout for the entire operation in seconds
+  # Default: 3600 (1 hour), Min: 10, Max: 86400 (24 hours)
+  overallTimeoutSec: 3600
+
+  # Maximum concurrent file reading operations
+  # Default: 10, Min: 1, Max: 100
+  maxConcurrentReads: 10
+
+  # Rate limit for file processing (files per second)
+  # Default: 0 (disabled), Min: 0, Max: 10000
+  rateLimitFilesPerSec: 0
+
+  # Hard memory limit in MB - terminates processing if exceeded
+  # Default: 512, Min: 64, Max: 8192 (8GB)
+  hardMemoryLimitMB: 512
+
+  # Enable graceful degradation under resource pressure
+  # Default: true - reduces concurrency and buffers when under pressure
+  enableGracefulDegradation: true
+
+  # Enable detailed resource monitoring and metrics
+  # Default: true - tracks memory, timing, and processing statistics
+  enableResourceMonitoring: true
+
+# =============================================================================
+# OUTPUT FORMATTING AND TEMPLATES
+# =============================================================================
+
+output:
+  # Template selection: "" (default), "minimal", "detailed", "compact", or "custom"
+  # Default: "" (uses built-in default template)
+  template: ""
+
+  # Metadata inclusion options
+  metadata:
+    # Include processing statistics in output
+    # Default: false
+    includeStats: false
+
+    # Include timestamp when processing was done
+    # Default: false
+    includeTimestamp: false
+
+    # Include total number of files processed
+    # Default: false
+    includeFileCount: false
+
+    # Include source directory path
+    # Default: false
+    includeSourcePath: false
+
+    # Include detected file types summary
+    # Default: false
+    includeFileTypes: false
+
+    # Include processing time information
+    # Default: false
+    includeProcessingTime: false
+
+    # Include total size of processed files
+    # Default: false
+    includeTotalSize: false
+
+    # Include detailed processing metrics
+    # Default: false
+    includeMetrics: false
+
+  # Markdown-specific formatting options
+  markdown:
+    # Wrap file content in code blocks
+    # Default: false
+    useCodeBlocks: false
+
+    # Include language identifier in code blocks
+    # Default: false
+    includeLanguage: false
+
+    # Header level for file sections (1-6)
+    # Default: 0 (uses template default, typically 2)
+    headerLevel: 0
+
+    # Generate table of contents
+    # Default: false
+    tableOfContents: false
+
+    # Use collapsible sections for large files
+    # Default: false
+    useCollapsible: false
+
+    # Enable syntax highlighting hints
+    # Default: false
+    syntaxHighlighting: false
+
+    # Include line numbers in code blocks
+    # Default: false
+    lineNumbers: false
+
+    # Automatically fold files longer than maxLineLength
+    # Default: false
+    foldLongFiles: false
+
+    # Maximum line length before wrapping/folding
+    # Default: 0 (no limit)
+    maxLineLength: 0
+
+    # Custom CSS to include in markdown output
+    # Default: "" (no custom CSS)
+    customCSS: ""
+
+  # Custom template overrides (only used when template is "custom")
+  custom:
+    # Custom header template (supports Go template syntax)
+    header: ""
+
+    # Custom footer template
+    footer: ""
+
+    # Custom file header template (prepended to each file)
+    fileHeader: ""
+
+    # Custom file footer template (appended to each file)
+    fileFooter: ""
+
+  # Custom template variables accessible in all templates
+  variables:
+    # Example variables - customize as needed
+    project_name: "My Project"
+    author: "Developer Name"
+    version: "1.0.0"
+    description: "Generated code aggregation"
+    # Add any custom key-value pairs here
+
+# =============================================================================
+# EXAMPLES OF COMMON CONFIGURATIONS
+# =============================================================================
+
+# Example 1: Minimal configuration for quick code review
+# fileSizeLimit: 1048576  # 1MB limit for faster processing
+# maxConcurrency: 4       # Lower concurrency for stability
+# ignoreDirectories: [".git", "node_modules", "vendor"]
+# output:
+#   template: "minimal"
+#   metadata:
+#     includeStats: true
+
+# Example 2: High-performance configuration for large codebases
+# fileSizeLimit: 10485760     # 10MB limit
+# maxConcurrency: 16          # High concurrency
+# backpressure:
+#   maxPendingFiles: 5000     # Larger buffers
+#   maxMemoryUsage: 536870912 # 512MB memory
+# resourceLimits:
+#   maxFiles: 100000          # Process more files
+#   maxTotalSize: 10737418240 # 10GB total size
+
+# Example 3: Security-focused configuration
+# resourceLimits:
+#   maxFiles: 1000            # Strict file limit
+#   maxTotalSize: 104857600   # 100MB total limit
+#   fileProcessingTimeoutSec: 10  # Short timeout
+#   overallTimeoutSec: 300    # 5-minute overall limit
+#   hardMemoryLimitMB: 256    # Lower memory limit
+#   rateLimitFilesPerSec: 50  # Rate limiting enabled
+
+# Example 4: Documentation-friendly output
+# output:
+#   template: "detailed"
+#   metadata:
+#     includeStats: true
+#     includeTimestamp: true
+#     includeFileCount: true
+#     includeSourcePath: true
+#   markdown:
+#     useCodeBlocks: true
+#     includeLanguage: true
+#     headerLevel: 2
+#     tableOfContents: true
+#     syntaxHighlighting: true
