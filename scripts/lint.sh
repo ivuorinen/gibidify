@@ -8,6 +8,7 @@ cd "$PROJECT_ROOT" || {
   exit 1
 }
 
+# shellcheck source=scripts/install-tools.sh
 source "$SCRIPT_DIR/install-tools.sh"
 
 check_dependencies
