@@ -4,6 +4,18 @@
 set -euo pipefail
 IFS=$'\n\t'
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$PROJECT_ROOT" || {
+  echo "Failed to change directory to $PROJECT_ROOT"
+  exit 1
+}
+
+source "$SCRIPT_DIR/install-tools.sh"
+
+check_dependencies
+
 echo "Running gofumpt..."
 gofumpt -l -w .
 echo "Running goimports..."

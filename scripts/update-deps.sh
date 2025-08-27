@@ -1,26 +1,28 @@
-#!/bin/bash
-
+#!/usr/env/env bash
 set -euo pipefail
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+cd "$PROJECT_ROOT" || {
+  echo "Failed to change directory to $PROJECT_ROOT"
+  exit 1
+}
+
+source "$SCRIPT_DIR/install-tools.sh"
 
 # Track overall exit status
 exit_code=0
 
-echo -e "${BLUE}=== Updating Go Dependencies ===${NC}"
+print_status "=== Updating Go Dependencies ==="
 
 # Function to handle rollback if needed
 rollback() {
   if [[ -f go.mod.backup && -f go.sum.backup ]]; then
-    echo -e "${YELLOW}Rolling back changes due to errors...${NC}"
+    print_warning "Rolling back changes due to errors..."
     mv go.mod.backup go.mod
     mv go.sum.backup go.sum
-    echo -e "${GREEN}Rollback completed${NC}"
+    print_success "Rollback completed"
   fi
 }
 
@@ -37,74 +39,74 @@ cleanup() {
 # Trap to ensure cleanup on exit
 trap cleanup EXIT
 
-echo "Creating backup of go.mod and go.sum..."
+print_status "Creating backup of go.mod and go.sum..."
 cp go.mod go.mod.backup
 cp go.sum go.sum.backup
 
-echo "Checking current module status..."
+print_status "Checking current module status..."
 if ! go mod verify; then
-  echo -e "${RED}Current module verification failed${NC}"
+  print_error "Current module verification failed"
   exit_code=1
   exit $exit_code
 fi
 
-echo "Updating dependencies with 'go get -u'..."
+print_status "Updating dependencies with 'go get -u'..."
 if ! go get -u ./...; then
-  echo -e "${RED}Failed to update dependencies${NC}"
+  print_error "Failed to update dependencies"
   rollback
   exit_code=1
   exit $exit_code
 fi
 
-echo "Running 'go mod tidy'..."
+print_status "Running 'go mod tidy'..."
 if ! go mod tidy; then
-  echo -e "${RED}Failed to tidy module dependencies${NC}"
+  print_error "Failed to tidy module dependencies"
   rollback
   exit_code=1
   exit $exit_code
 fi
 
-echo "Verifying updated dependencies..."
+print_status "Verifying updated dependencies..."
 if ! go mod verify; then
-  echo -e "${RED}Module verification failed after updates${NC}"
+  print_error "Module verification failed after updates"
   rollback
   exit_code=1
   exit $exit_code
 fi
 
-echo "Running vulnerability check..."
+print_status "Running vulnerability check..."
 if command -v govulncheck >/dev/null 2>&1; then
   if ! govulncheck ./...; then
-    echo -e "${YELLOW}Vulnerability check failed - review output above${NC}"
-    echo -e "${YELLOW}Consider updating specific vulnerable packages or pinning versions${NC}"
+    print_warning "Vulnerability check failed - review output above"
+    print_warning "Consider updating specific vulnerable packages or pinning versions"
     # Don't fail the script for vulnerabilities, just warn
   fi
 else
-  echo -e "${YELLOW}govulncheck not found - install with: go install golang.org/x/vuln/cmd/govulncheck@latest${NC}"
+  print_warning "govulncheck not found - install with: go install golang.org/x/vuln/cmd/govulncheck@latest"
 fi
 
-echo "Running basic build test..."
+print_status "Running basic build test..."
 if ! go build ./...; then
-  echo -e "${RED}Build failed after dependency updates${NC}"
+  print_error "Build failed after dependency updates"
   rollback
   exit_code=1
   exit $exit_code
 fi
 
-echo "Running quick test to ensure functionality..."
+print_status "Running quick test to ensure functionality..."
 if ! go test -short ./...; then
-  echo -e "${RED}Tests failed after dependency updates${NC}"
+  print_error "Tests failed after dependency updates"
   rollback
   exit_code=1
   exit $exit_code
 fi
 
 if [[ $exit_code -eq 0 ]]; then
-  echo -e "${GREEN}Dependencies updated successfully!${NC}"
-  echo -e "${GREEN}Review the changes with 'git diff' before committing${NC}"
+  print_success "Dependencies updated successfully!"
+  print_success "Review the changes with 'git diff' before committing"
   cleanup
 else
-  echo -e "${RED}Dependency update failed${NC}"
+  print_error "Dependency update failed"
 fi
 
 exit $exit_code
