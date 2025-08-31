@@ -1,8 +1,6 @@
 module github.com/ivuorinen/gibidify
 
-go 1.24
-
-toolchain go1.24.6
+go 1.25
 
 require (
 	github.com/fatih/color v1.18.0
