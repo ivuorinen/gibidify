@@ -519,3 +519,175 @@ func TestErrorFormatterIntegration(t *testing.T) {
 		}
 	}
 }
+
+// TestErrorFormatter_SuggestPathResolution tests the suggestPathResolution function.
+func TestErrorFormatter_SuggestPathResolution(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		expectedOutput []string
+	}{
+		{
+			name:     "with file path",
+			filePath: "relative/path/file.txt",
+			expectedOutput: []string{
+				"Use an absolute path instead of relative",
+				"Try:",
+			},
+		},
+		{
+			name:     "empty file path",
+			filePath: "",
+			expectedOutput: []string{
+				"Use an absolute path instead of relative",
+			},
+		},
+		{
+			name:     "current directory reference",
+			filePath: "./file.txt",
+			expectedOutput: []string{
+				"Use an absolute path instead of relative",
+				"Try:",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Capture output
+			output := &bytes.Buffer{}
+			ui := &UIManager{output: output}
+			formatter := NewErrorFormatter(ui)
+
+			// Call the method
+			formatter.suggestPathResolution(tt.filePath)
+
+			// Check output
+			outputStr := output.String()
+			for _, expected := range tt.expectedOutput {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf("suggestPathResolution output missing: %q\nFull output: %q", expected, outputStr)
+				}
+			}
+		})
+	}
+}
+
+// TestErrorFormatter_SuggestFileSystemGeneral tests the suggestFileSystemGeneral function.
+func TestErrorFormatter_SuggestFileSystemGeneral(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		expectedOutput []string
+	}{
+		{
+			name:     "with file path",
+			filePath: "/path/to/file.txt",
+			expectedOutput: []string{
+				"Check file/directory permissions",
+				"Verify the path is correct",
+				"Path: /path/to/file.txt",
+			},
+		},
+		{
+			name:     "empty file path",
+			filePath: "",
+			expectedOutput: []string{
+				"Check file/directory permissions",
+				"Verify the path is correct",
+			},
+		},
+		{
+			name:     "relative path",
+			filePath: "../parent/file.txt",
+			expectedOutput: []string{
+				"Check file/directory permissions",
+				"Verify the path is correct",
+				"Path: ../parent/file.txt",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Capture output
+			output := &bytes.Buffer{}
+			ui := &UIManager{output: output}
+			formatter := NewErrorFormatter(ui)
+
+			// Call the method
+			formatter.suggestFileSystemGeneral(tt.filePath)
+
+			// Check output
+			outputStr := output.String()
+			for _, expected := range tt.expectedOutput {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf("suggestFileSystemGeneral output missing: %q\nFull output: %q", expected, outputStr)
+				}
+			}
+
+			// When no file path is provided, should not contain "Path:" line
+			if tt.filePath == "" && strings.Contains(outputStr, "Path:") {
+				t.Error("suggestFileSystemGeneral should not include Path line when filePath is empty")
+			}
+		})
+	}
+}
+
+// TestErrorFormatter_SuggestionFunctions_Integration tests the integration of suggestion functions.
+func TestErrorFormatter_SuggestionFunctions_Integration(t *testing.T) {
+	// Test that suggestion functions work as part of the full error formatting workflow
+	tests := []struct {
+		name                string
+		err                 *utils.StructuredError
+		expectedSuggestions []string
+	}{
+		{
+			name: "filesystem path resolution error",
+			err: &utils.StructuredError{
+				Type:     utils.ErrorTypeFileSystem,
+				Code:     utils.CodeFSPathResolution,
+				Message:  "path resolution failed",
+				FilePath: "relative/path",
+			},
+			expectedSuggestions: []string{
+				"Use an absolute path instead of relative",
+				"Try:",
+			},
+		},
+		{
+			name: "filesystem unknown error",
+			err: &utils.StructuredError{
+				Type:     utils.ErrorTypeFileSystem,
+				Code:     "UNKNOWN_FS_ERROR", // This will trigger default case
+				Message:  "unknown filesystem error",
+				FilePath: "/some/path",
+			},
+			expectedSuggestions: []string{
+				"Check file/directory permissions",
+				"Verify the path is correct",
+				"Path: /some/path",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Capture output
+			output := &bytes.Buffer{}
+			ui := &UIManager{output: output}
+			formatter := NewErrorFormatter(ui)
+
+			// Format the error (which should include suggestions)
+			formatter.FormatError(tt.err)
+
+			// Check that expected suggestions are present
+			outputStr := output.String()
+			for _, expected := range tt.expectedSuggestions {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf("Integrated suggestion missing: %q\nFull output: %q", expected, outputStr)
+				}
+			}
+		})
+	}
+}

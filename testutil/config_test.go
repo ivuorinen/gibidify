@@ -82,7 +82,7 @@ func TestSetupCLIArgs(t *testing.T) {
 			prefix:      "PREFIX",
 			suffix:      "SUFFIX",
 			concurrency: 4,
-			wantLen:     11,
+			wantLen:     12,
 		},
 		{
 			name:        "empty strings",
@@ -91,7 +91,7 @@ func TestSetupCLIArgs(t *testing.T) {
 			prefix:      "",
 			suffix:      "",
 			concurrency: 1,
-			wantLen:     11,
+			wantLen:     12,
 		},
 		{
 			name:        "special characters in args",
@@ -100,7 +100,7 @@ func TestSetupCLIArgs(t *testing.T) {
 			prefix:      "Prefix with\nnewline",
 			suffix:      "Suffix with\ttab",
 			concurrency: 8,
-			wantLen:     11,
+			wantLen:     12,
 		},
 	}
 
@@ -140,5 +140,10 @@ func verifySetupCLIArgs(t *testing.T, srcDir, outFile, prefix, suffix string, co
 	}
 	if os.Args[10] != string(rune(concurrency+'0')) {
 		t.Errorf("Concurrency = %s, want %d", os.Args[10], concurrency)
+	}
+
+	// Verify the -no-ui flag is present
+	if os.Args[11] != "-no-ui" {
+		t.Errorf("NoUI flag = %s, want -no-ui", os.Args[11])
 	}
 }

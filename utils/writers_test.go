@@ -2,11 +2,13 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Mock test objects - local to avoid import cycles.
@@ -785,4 +787,244 @@ Line 3 with unicode: 世界`
 	if !strings.Contains(yamlOutput, `"Line 2 with special chars: {}[]"`) {
 		t.Error("YAML output should contain quoted special characters line")
 	}
+}
+
+// TestCheckContextCancellation tests the CheckContextCancellation function.
+func TestCheckContextCancellation(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupContext  func() context.Context
+		operation     string
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "active context",
+			setupContext: func() context.Context {
+				return context.Background()
+			},
+			operation:   "test operation",
+			expectError: false,
+		},
+		{
+			name: "canceled context",
+			setupContext: func() context.Context {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel() // Cancel immediately
+				return ctx
+			},
+			operation:     "test operation",
+			expectError:   true,
+			errorContains: "test operation canceled",
+		},
+		{
+			name: "timeout context",
+			setupContext: func() context.Context {
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+				defer cancel()
+				// Wait for timeout
+				time.Sleep(1 * time.Millisecond)
+				return ctx
+			},
+			operation:     "timeout operation",
+			expectError:   true,
+			errorContains: "timeout operation canceled",
+		},
+		{
+			name: "context with deadline exceeded",
+			setupContext: func() context.Context {
+				ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1*time.Hour))
+				defer cancel()
+				return ctx
+			},
+			operation:     "deadline operation",
+			expectError:   true,
+			errorContains: "deadline operation canceled",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := tt.setupContext()
+			err := CheckContextCancellation(ctx, tt.operation)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error for %s, but got none", tt.name)
+				} else if !strings.Contains(err.Error(), tt.errorContains) {
+					t.Errorf("Error %q should contain %q", err.Error(), tt.errorContains)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error for %s: %v", tt.name, err)
+				}
+			}
+		})
+	}
+}
+
+// TestWithContextCheck tests the WithContextCheck function.
+func TestWithContextCheck(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupContext  func() context.Context
+		operation     string
+		fn            func() error
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name: "active context with successful operation",
+			setupContext: func() context.Context {
+				return context.Background()
+			},
+			operation: "successful operation",
+			fn: func() error {
+				return nil
+			},
+			expectError: false,
+		},
+		{
+			name: "active context with failing operation",
+			setupContext: func() context.Context {
+				return context.Background()
+			},
+			operation: "failing operation",
+			fn: func() error {
+				return errors.New("operation failed")
+			},
+			expectError:   true,
+			errorContains: "operation failed",
+		},
+		{
+			name: "canceled context before operation",
+			setupContext: func() context.Context {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel() // Cancel immediately
+				return ctx
+			},
+			operation: "canceled operation",
+			fn: func() error {
+				t.Error("Function should not be called with canceled context")
+				return nil
+			},
+			expectError:   true,
+			errorContains: "canceled operation canceled",
+		},
+		{
+			name: "timeout context before operation",
+			setupContext: func() context.Context {
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+				defer cancel()
+				// Wait for timeout
+				time.Sleep(1 * time.Millisecond)
+				return ctx
+			},
+			operation: "timeout operation",
+			fn: func() error {
+				t.Error("Function should not be called with timed out context")
+				return nil
+			},
+			expectError:   true,
+			errorContains: "timeout operation canceled",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := tt.setupContext()
+			err := WithContextCheck(ctx, tt.operation, tt.fn)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("Expected error for %s, but got none", tt.name)
+				} else if !strings.Contains(err.Error(), tt.errorContains) {
+					t.Errorf("Error %q should contain %q", err.Error(), tt.errorContains)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error for %s: %v", tt.name, err)
+				}
+			}
+		})
+	}
+}
+
+// TestContextCancellationIntegration tests integration scenarios.
+func TestContextCancellationIntegration(t *testing.T) {
+	t.Run("multiple operations with context check", func(t *testing.T) {
+		ctx := context.Background()
+
+		// First operation should succeed
+		err := WithContextCheck(ctx, "operation 1", func() error {
+			return nil
+		})
+		if err != nil {
+			t.Errorf("First operation failed: %v", err)
+		}
+
+		// Second operation should also succeed
+		err = WithContextCheck(ctx, "operation 2", func() error {
+			return nil
+		})
+		if err != nil {
+			t.Errorf("Second operation failed: %v", err)
+		}
+	})
+
+	t.Run("chained context checks", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		// First check should pass
+		err := CheckContextCancellation(ctx, "first check")
+		if err != nil {
+			t.Errorf("First check should pass: %v", err)
+		}
+
+		// Cancel context
+		cancel()
+
+		// Second check should fail
+		err = CheckContextCancellation(ctx, "second check")
+		if err == nil {
+			t.Error("Second check should fail after cancellation")
+		}
+
+		// Third operation should also fail
+		err = WithContextCheck(ctx, "third operation", func() error {
+			t.Error("Function should not be called")
+			return nil
+		})
+		if err == nil {
+			t.Error("Third operation should fail after cancellation")
+		}
+	})
+
+	t.Run("context cancellation propagation", func(t *testing.T) {
+		// Test that context cancellation properly propagates through nested calls
+		parentCtx, parentCancel := context.WithCancel(context.Background())
+		childCtx, childCancel := context.WithCancel(parentCtx)
+
+		defer parentCancel()
+		defer childCancel()
+
+		// Both contexts should be active initially
+		err := CheckContextCancellation(parentCtx, "parent")
+		if err != nil {
+			t.Errorf("Parent context should be active: %v", err)
+		}
+
+		err = CheckContextCancellation(childCtx, "child")
+		if err != nil {
+			t.Errorf("Child context should be active: %v", err)
+		}
+
+		// Cancel parent - child should also be canceled
+		parentCancel()
+
+		err = CheckContextCancellation(childCtx, "child after parent cancel")
+		if err == nil {
+			t.Error("Child context should be canceled when parent is canceled")
+		}
+	})
 }
