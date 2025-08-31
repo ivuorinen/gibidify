@@ -39,4 +39,4 @@ checkmake --config=.checkmake Makefile
 echo "Running yamlfmt..."
 yamlfmt -conf .yamlfmt.yml -gitignore_excludes -dstar ./**/*.{yaml,yml}
 echo "Running eclint fix..."
-eclint -fix
+eclint fix

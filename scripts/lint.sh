@@ -44,7 +44,7 @@ if ! yamllint -c .yamllint .github/workflows/*.yml ./*.yaml .yamllint; then
 fi
 
 echo "Running eclint..."
-if ! eclint; then
+if ! eclint check; then
   exit_code=1
 fi
 
