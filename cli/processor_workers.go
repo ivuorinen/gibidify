@@ -1,4 +1,3 @@
-// Package cli provides the command-line interface and processing logic for gibidify.
 package cli
 
 import (
@@ -50,6 +49,10 @@ func (p *Processor) worker(
 
 // processFile processes a single file with resource monitoring and metrics collection.
 func (p *Processor) processFile(ctx context.Context, filePath string, writeCh chan fileproc.WriteRequest) {
+	// Create file processing context with timeout
+	fileCtx, fileCancel := p.resourceMonitor.CreateFileProcessingContext(ctx)
+	defer fileCancel()
+
 	// Track concurrency
 	if p.metricsCollector != nil {
 		p.metricsCollector.IncrementConcurrency()
@@ -78,7 +81,7 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 	}
 
 	// Use the resource monitor-aware processing with metrics tracking
-	fileSize, format, success, processErr := p.processFileWithMetrics(ctx, filePath, writeCh, absRoot)
+	fileSize, format, success, processErr := p.processFileWithMetrics(fileCtx, filePath, writeCh, absRoot)
 
 	// Record the processing result (skipped=false, skipReason="" since processFileWithMetrics never skips)
 	p.recordFileResult(filePath, fileSize, format, success, false, "", processErr)
