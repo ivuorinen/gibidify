@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 // FileData represents a single file's path and content.
@@ -24,5 +25,6 @@ type FormatWriter interface {
 // detectLanguage tries to infer the code block language from the file extension.
 func detectLanguage(filePath string) string {
 	registry := GetDefaultRegistry()
+
 	return registry.GetLanguage(filePath)
 }

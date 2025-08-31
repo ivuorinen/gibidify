@@ -1,3 +1,4 @@
+// Package config handles application configuration management.
 package config
 
 const (
@@ -8,7 +9,7 @@ const (
 	// MaxFileSizeLimit is the maximum allowed file size limit (100MB).
 	MaxFileSizeLimit = 104857600
 
-	// Resource Limit Constants
+	// Resource Limit Constants.
 
 	// DefaultMaxFiles is the default maximum number of files to process.
 	DefaultMaxFiles = 10000

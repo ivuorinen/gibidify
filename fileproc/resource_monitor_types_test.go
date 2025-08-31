@@ -34,7 +34,7 @@ func TestResourceMonitor_NewResourceMonitor(t *testing.T) {
 	}
 
 	if rm.fileProcessingTimeout != time.Duration(config.DefaultFileProcessingTimeoutSec)*time.Second {
-		t.Errorf("Expected fileProcessingTimeout to be %v, got %v", 
+		t.Errorf("Expected fileProcessingTimeout to be %v, got %v",
 			time.Duration(config.DefaultFileProcessingTimeoutSec)*time.Second, rm.fileProcessingTimeout)
 	}
 
@@ -71,4 +71,78 @@ func TestResourceMonitor_DisabledResourceLimits(t *testing.T) {
 	if err != nil {
 		t.Errorf("Expected no error when rate limiting disabled, got %v", err)
 	}
+}
+
+// TestResourceMonitor_StateQueries tests state query functions.
+func TestResourceMonitor_StateQueries(t *testing.T) {
+	testutil.ResetViperConfig(t, "")
+
+	rm := NewResourceMonitor()
+	defer rm.Close()
+
+	// Test IsEmergencyStopActive - should be false initially
+	if rm.IsEmergencyStopActive() {
+		t.Error("Expected emergency stop to be inactive initially")
+	}
+
+	// Test IsDegradationActive - should be false initially
+	if rm.IsDegradationActive() {
+		t.Error("Expected degradation mode to be inactive initially")
+	}
+}
+
+// TestResourceMonitor_IsEmergencyStopActive tests the IsEmergencyStopActive method.
+func TestResourceMonitor_IsEmergencyStopActive(t *testing.T) {
+	testutil.ResetViperConfig(t, "")
+
+	rm := NewResourceMonitor()
+	defer rm.Close()
+
+	// Test initial state
+	active := rm.IsEmergencyStopActive()
+	if active {
+		t.Error("Expected emergency stop to be inactive initially")
+	}
+
+	// The method should return a consistent value on multiple calls
+	for i := 0; i < 5; i++ {
+		if rm.IsEmergencyStopActive() != active {
+			t.Error("IsEmergencyStopActive should return consistent values")
+		}
+	}
+}
+
+// TestResourceMonitor_IsDegradationActive tests the IsDegradationActive method.
+func TestResourceMonitor_IsDegradationActive(t *testing.T) {
+	testutil.ResetViperConfig(t, "")
+
+	rm := NewResourceMonitor()
+	defer rm.Close()
+
+	// Test initial state
+	active := rm.IsDegradationActive()
+	if active {
+		t.Error("Expected degradation mode to be inactive initially")
+	}
+
+	// The method should return a consistent value on multiple calls
+	for i := 0; i < 5; i++ {
+		if rm.IsDegradationActive() != active {
+			t.Error("IsDegradationActive should return consistent values")
+		}
+	}
+}
+
+// TestResourceMonitor_Close tests the Close method.
+func TestResourceMonitor_Close(t *testing.T) {
+	testutil.ResetViperConfig(t, "")
+
+	rm := NewResourceMonitor()
+
+	// Close should not panic
+	rm.Close()
+
+	// Multiple closes should be safe
+	rm.Close()
+	rm.Close()
 }
