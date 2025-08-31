@@ -26,6 +26,7 @@
 package testutil
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"os"
@@ -60,6 +61,117 @@ func SuppressLogs(t *testing.T) func() {
 	return func() {
 		logger.SetOutput(os.Stderr)
 	}
+}
+
+// OutputRestoreFunc represents a function that restores output after suppression.
+type OutputRestoreFunc func()
+
+// SuppressAllOutput suppresses both stdout and stderr during testing.
+// This captures all output including UI messages, progress bars, and direct prints.
+// Returns a function that should be called to restore original output.
+func SuppressAllOutput(t *testing.T) OutputRestoreFunc {
+	t.Helper()
+
+	// Save original stdout and stderr
+	originalStdout := os.Stdout
+	originalStderr := os.Stderr
+
+	// Suppress logger output as well
+	logger := utils.GetLogger()
+	logger.SetOutput(io.Discard)
+
+	// Open /dev/null for safe redirection
+	devNull, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatalf("Failed to open devnull: %v", err)
+	}
+
+	// Redirect both stdout and stderr to /dev/null
+	os.Stdout = devNull
+	os.Stderr = devNull
+
+	// Return restore function
+	return func() {
+		// Close devNull first
+		if devNull != nil {
+			_ = devNull.Close() // Ignore close errors in cleanup
+		}
+
+		// Restore original outputs
+		os.Stdout = originalStdout
+		os.Stderr = originalStderr
+		logger.SetOutput(originalStderr)
+	}
+}
+
+// CaptureOutput captures both stdout and stderr during test execution.
+// Returns the captured output as strings and a restore function.
+func CaptureOutput(t *testing.T) (getStdout func() string, getStderr func() string, restore OutputRestoreFunc) {
+	t.Helper()
+
+	// Save original outputs
+	originalStdout := os.Stdout
+	originalStderr := os.Stderr
+
+	// Create pipes for stdout
+	stdoutReader, stdoutWriter, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create stdout pipe: %v", err)
+	}
+
+	// Create pipes for stderr
+	stderrReader, stderrWriter, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("Failed to create stderr pipe: %v", err)
+	}
+
+	// Redirect outputs
+	os.Stdout = stdoutWriter
+	os.Stderr = stderrWriter
+
+	// Suppress logger output to stderr
+	logger := utils.GetLogger()
+	logger.SetOutput(stderrWriter)
+
+	// Buffers to collect output
+	var stdoutBuf, stderrBuf bytes.Buffer
+
+	// Start goroutines to read from pipes
+	stdoutDone := make(chan struct{})
+	stderrDone := make(chan struct{})
+
+	go func() {
+		defer close(stdoutDone)
+		_, _ = io.Copy(&stdoutBuf, stdoutReader) // Ignore errors during shutdown
+	}()
+
+	go func() {
+		defer close(stderrDone)
+		_, _ = io.Copy(&stderrBuf, stderrReader) // Ignore errors during shutdown
+	}()
+
+	return func() string {
+			return stdoutBuf.String()
+		}, func() string {
+			return stderrBuf.String()
+		}, func() {
+			// Close writers first to signal EOF
+			_ = stdoutWriter.Close() // Ignore close errors in cleanup
+			_ = stderrWriter.Close() // Ignore close errors in cleanup
+
+			// Wait for readers to finish
+			<-stdoutDone
+			<-stderrDone
+
+			// Close readers
+			_ = stdoutReader.Close() // Ignore close errors in cleanup
+			_ = stderrReader.Close() // Ignore close errors in cleanup
+
+			// Restore original outputs
+			os.Stdout = originalStdout
+			os.Stderr = originalStderr
+			logger.SetOutput(originalStderr)
+		}
 }
 
 // CreateTestFile creates a test file with the given content and returns its path.
@@ -143,6 +255,7 @@ func SetupCLIArgs(srcDir, outFilePath, prefix, suffix string, concurrency int) {
 		"-prefix", prefix,
 		"-suffix", suffix,
 		"-concurrency", strconv.Itoa(concurrency),
+		"-no-ui", // Suppress UI output during tests
 	}
 }
 

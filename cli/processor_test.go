@@ -428,6 +428,7 @@ func runProcessorIntegrationTest(
 		Destination: outputPath,
 		NoColors:    true, // Disable colors for consistent testing
 		NoProgress:  true, // Disable progress for consistent testing
+		NoUI:        true, // Disable all UI output for testing
 	}
 
 	processor := NewProcessor(flags)
@@ -478,6 +479,10 @@ func validateProcessingResult(t *testing.T, err error, outputPath, format string
 
 // TestProcessor_Process_Integration tests the complete processing workflow.
 func TestProcessor_Process_Integration(t *testing.T) {
+	// Suppress all output for cleaner test output
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
+
 	tests := []struct {
 		name        string
 		setupFiles  func(dir string) []string
@@ -546,6 +551,10 @@ func TestProcessor_Process_Integration(t *testing.T) {
 
 // TestProcessor_Process_ContextCancellation tests context cancellation handling.
 func TestProcessor_Process_ContextCancellation(t *testing.T) {
+	// Suppress all output for cleaner test output
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
+
 	testutil.ResetViperConfig(t, "")
 
 	// Create test files
@@ -565,6 +574,7 @@ func TestProcessor_Process_ContextCancellation(t *testing.T) {
 		Destination: outputPath,
 		NoColors:    true,
 		NoProgress:  true,
+		NoUI:        true, // Disable all UI output for testing
 	}
 
 	processor := NewProcessor(flags)
@@ -583,6 +593,10 @@ func TestProcessor_Process_ContextCancellation(t *testing.T) {
 
 // TestProcessor_Process_ResourceLimits tests processing with resource limits.
 func TestProcessor_Process_ResourceLimits(t *testing.T) {
+	// Suppress all output for cleaner test output
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
+
 	tests := []struct {
 		name        string
 		setupConfig func()
@@ -624,6 +638,7 @@ func TestProcessor_Process_ResourceLimits(t *testing.T) {
 					Destination: outputPath,
 					NoColors:    true,
 					NoProgress:  true,
+					NoUI:        true, // Disable all UI output for testing
 				}
 
 				processor := NewProcessor(flags)
@@ -650,6 +665,10 @@ func TestProcessor_Process_ResourceLimits(t *testing.T) {
 
 // TestProcessor_logFinalStats tests final statistics logging.
 func TestProcessor_logFinalStats(t *testing.T) {
+	// Suppress all output for cleaner test output
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
+
 	testutil.ResetViperConfig(t, "")
 
 	flags := &Flags{
@@ -657,6 +676,7 @@ func TestProcessor_logFinalStats(t *testing.T) {
 		Format:      "markdown",
 		Concurrency: 1,
 		Destination: filepath.Join(t.TempDir(), "output.md"),
+		NoUI:        true, // Disable all UI output for testing
 	}
 
 	processor := NewProcessor(flags)

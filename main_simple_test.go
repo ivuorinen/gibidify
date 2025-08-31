@@ -25,7 +25,8 @@ func TestRun_FlagParsingErrors(t *testing.T) {
 			flag.CommandLine = oldFlag
 		}()
 
-		// Create fresh flag set
+		// Reset CLI flags state and create fresh flag set
+		cli.ResetFlags()
 		flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
 		os.Args = []string{"test", "-nonexistent-flag", "value"}
 
@@ -48,7 +49,8 @@ func TestRun_FlagParsingErrors(t *testing.T) {
 			flag.CommandLine = oldFlag
 		}()
 
-		// Create fresh flag set
+		// Reset CLI flags state and create fresh flag set
+		cli.ResetFlags()
 		flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
 
 		// Create temporary files for the test
@@ -63,7 +65,7 @@ func TestRun_FlagParsingErrors(t *testing.T) {
 			}
 		}()
 
-		os.Args = []string{"test", "-source", srcDir, "-destination", outPath, "-format", "invalid"}
+		os.Args = []string{"test", "-source", srcDir, "-destination", outPath, "-format", "invalid", "-no-ui"}
 
 		err := run(context.Background())
 		if err == nil {
@@ -87,7 +89,8 @@ func TestRun_ProcessingErrors(t *testing.T) {
 			flag.CommandLine = oldFlag
 		}()
 
-		// Create fresh flag set
+		// Reset CLI flags state and create fresh flag set
+		cli.ResetFlags()
 		flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
 
 		outFile, outPath := testutil.CreateTempOutputFile(t, "test.md")
@@ -100,7 +103,7 @@ func TestRun_ProcessingErrors(t *testing.T) {
 
 		// Create a temporary directory and immediately remove it to ensure it doesn't exist
 		nonExistentDir := filepath.Join(t.TempDir(), "nonexistent", "path")
-		os.Args = []string{"test", "-source", nonExistentDir, "-destination", outPath}
+		os.Args = []string{"test", "-source", nonExistentDir, "-destination", outPath, "-no-ui"}
 
 		err := run(context.Background())
 		if err == nil {
@@ -122,7 +125,8 @@ func TestRun_ProcessingErrors(t *testing.T) {
 			flag.CommandLine = oldFlag
 		}()
 
-		// Create fresh flag set
+		// Reset CLI flags state and create fresh flag set
+		cli.ResetFlags()
 		flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
 
 		outFile, outPath := testutil.CreateTempOutputFile(t, "test.md")
@@ -133,7 +137,7 @@ func TestRun_ProcessingErrors(t *testing.T) {
 			}
 		}()
 
-		os.Args = []string{"test", "-destination", outPath}
+		os.Args = []string{"test", "-destination", outPath, "-no-ui"}
 
 		err := run(context.Background())
 		if err == nil {
@@ -149,9 +153,9 @@ func TestRun_ProcessingErrors(t *testing.T) {
 
 // TestRun_MarkdownExecution tests successful markdown execution.
 func TestRun_MarkdownExecution(t *testing.T) {
-	// Suppress logs for cleaner test output
-	restoreLogs := testutil.SuppressLogs(t)
-	defer restoreLogs()
+	// Suppress all output for cleaner test output
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
 
 	// Save original state
 	oldArgs := os.Args
@@ -180,7 +184,7 @@ func TestRun_MarkdownExecution(t *testing.T) {
 		}
 	}()
 
-	os.Args = []string{"test", "-source", srcDir, "-destination", outPath, "-format", "markdown"}
+	os.Args = []string{"test", "-source", srcDir, "-destination", outPath, "-format", "markdown", "-no-ui"}
 
 	err := run(context.Background())
 	if err != nil {
@@ -195,9 +199,9 @@ func TestRun_MarkdownExecution(t *testing.T) {
 
 // TestRun_JSONExecution tests successful JSON execution.
 func TestRun_JSONExecution(t *testing.T) {
-	// Suppress logs for cleaner test output
-	restoreLogs := testutil.SuppressLogs(t)
-	defer restoreLogs()
+	// Suppress all output for cleaner test output
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
 
 	// Save original state
 	oldArgs := os.Args
@@ -224,7 +228,7 @@ func TestRun_JSONExecution(t *testing.T) {
 	}()
 
 	// Set CLI args with fresh paths
-	os.Args = []string{"test", "-source", srcDir, "-destination", outPath, "-format", "json"}
+	os.Args = []string{"test", "-source", srcDir, "-destination", outPath, "-format", "json", "-no-ui"}
 
 	err := run(context.Background())
 	if err != nil {
@@ -265,9 +269,9 @@ func TestRun_ErrorWrapping(t *testing.T) {
 
 // TestRun_ConfigurationCalls tests that config loading is called.
 func TestRun_ConfigurationCalls(t *testing.T) {
-	// Suppress logs for cleaner test output
-	restoreLogs := testutil.SuppressLogs(t)
-	defer restoreLogs()
+	// Suppress all output for cleaner test output
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
 
 	// Save original state
 	oldArgs := os.Args
@@ -293,7 +297,7 @@ func TestRun_ConfigurationCalls(t *testing.T) {
 		}
 	}()
 
-	os.Args = []string{"test", "-source", srcDir, "-destination", outPath}
+	os.Args = []string{"test", "-source", srcDir, "-destination", outPath, "-no-ui"}
 
 	err := run(context.Background())
 	if err != nil {
@@ -355,9 +359,9 @@ func TestErrorClassification(t *testing.T) {
 
 // TestRun_ContextCancellation tests context cancellation handling.
 func TestRun_ContextCancellation(t *testing.T) {
-	// Suppress logs for cleaner test output
-	restoreLogs := testutil.SuppressLogs(t)
-	defer restoreLogs()
+	// Suppress all output for cleaner test output
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
 
 	// Save original state
 	oldArgs := os.Args
@@ -383,7 +387,7 @@ func TestRun_ContextCancellation(t *testing.T) {
 		}
 	}()
 
-	os.Args = []string{"test", "-source", srcDir, "-destination", outPath}
+	os.Args = []string{"test", "-source", srcDir, "-destination", outPath, "-no-ui"}
 
 	// Create pre-canceled context
 	ctx, cancel := context.WithCancel(context.Background())
