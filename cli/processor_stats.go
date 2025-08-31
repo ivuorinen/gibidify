@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/utils"
 )
@@ -49,10 +47,17 @@ func (p *Processor) logFinalStats() {
 		p.metricsCollector.Finish()
 	}
 
-	// Display final metrics report
+	// Display final metrics report via UI manager
 	if p.metricsReporter != nil {
 		finalReport := p.metricsReporter.ReportFinal()
-		_, _ = fmt.Print(finalReport)
+		if finalReport != "" {
+			// Use UI manager to respect NoUI flag - remove trailing newline if present
+			reportText := finalReport
+			if len(reportText) > 0 && reportText[len(reportText)-1] == '\n' {
+				reportText = reportText[:len(reportText)-1]
+			}
+			p.ui.PrintInfo("%s", reportText)
+		}
 	}
 
 	// Log for structured logging if verbose

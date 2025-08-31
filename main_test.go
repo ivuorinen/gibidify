@@ -28,8 +28,8 @@ func resetFlagState() {
 // TestIntegrationFullCLI simulates a full run of the CLI application using adaptive concurrency.
 func TestIntegrationFullCLI(t *testing.T) {
 	// Suppress logs for cleaner test output
-	restoreLogs := testutil.SuppressLogs(t)
-	defer restoreLogs()
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
 
 	resetFlagState()
 	srcDir := setupTestFiles(t)
@@ -87,8 +87,8 @@ func verifyOutput(t *testing.T, outFilePath string) {
 // TestIntegrationCancellation verifies that the application correctly cancels processing when the context times out.
 func TestIntegrationCancellation(t *testing.T) {
 	// Suppress logs for cleaner test output
-	restoreLogs := testutil.SuppressLogs(t)
-	defer restoreLogs()
+	restore := testutil.SuppressAllOutput(t)
+	defer restore()
 
 	resetFlagState()
 	// Create a temporary source directory with many files to simulate a long-running process.
@@ -112,10 +112,10 @@ func TestIntegrationCancellation(t *testing.T) {
 	// Set up CLI arguments.
 	testutil.SetupCLIArgs(srcDir, outFilePath, "PREFIX", "SUFFIX", 2)
 
-	// Create a context with a very short timeout to force cancellation.
+	// Create a context with a short timeout to force cancellation.
 	ctx, cancel := context.WithTimeout(
 		t.Context(),
-		1*time.Millisecond,
+		5*time.Millisecond,
 	)
 	defer cancel()
 
@@ -249,7 +249,7 @@ func BenchmarkRun(b *testing.B) {
 	}()
 
 	// Set up arguments
-	os.Args = []string{"gibidify", "-source", srcDir, "-destination", outFilePath}
+	os.Args = []string{"gibidify", "-source", srcDir, "-destination", outFilePath, "-no-ui"}
 
 	ctx := context.Background()
 
@@ -301,7 +301,7 @@ func BenchmarkRun_LargeFiles(b *testing.B) {
 	}()
 
 	// Set up arguments
-	os.Args = []string{"gibidify", "-source", srcDir, "-destination", outFilePath}
+	os.Args = []string{"gibidify", "-source", srcDir, "-destination", outFilePath, "-no-ui"}
 
 	ctx := context.Background()
 

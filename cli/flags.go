@@ -21,6 +21,7 @@ type Flags struct {
 	Format      string
 	NoColors    bool
 	NoProgress  bool
+	NoUI        bool
 	Verbose     bool
 	LogLevel    string
 }
@@ -56,6 +57,7 @@ func ParseFlags() (*Flags, error) {
 		"Number of concurrent workers (default: number of CPU cores)")
 	flag.BoolVar(&flags.NoColors, "no-colors", false, "Disable colored output")
 	flag.BoolVar(&flags.NoProgress, "no-progress", false, "Disable progress bars")
+	flag.BoolVar(&flags.NoUI, "no-ui", false, "Disable all UI output (implies no-colors and no-progress)")
 	flag.BoolVar(&flags.Verbose, "verbose", false, "Enable verbose output")
 	flag.StringVar(&flags.LogLevel, "log-level", "warn", "Set log level (debug, info, warn, error)")
 
