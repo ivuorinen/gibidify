@@ -8,13 +8,13 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/testutil"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // assertStructuredError verifies that an error is a StructuredError with the expected code.
 func assertStructuredError(t *testing.T, err error, expectedCode string) {
 	t.Helper()
-	structErr := &utils.StructuredError{}
+	structErr := &shared.StructuredError{}
 	ok := errors.As(err, &structErr)
 	if !ok {
 		t.Errorf("Expected StructuredError, got %T", err)
@@ -27,9 +27,9 @@ func assertStructuredError(t *testing.T, err error, expectedCode string) {
 func validateMemoryLimitError(t *testing.T, err error) {
 	t.Helper()
 
-	structErr := &utils.StructuredError{}
+	structErr := &shared.StructuredError{}
 	if errors.As(err, &structErr) {
-		if structErr.Code != utils.CodeResourceLimitMemory {
+		if structErr.Code != shared.CodeResourceLimitMemory {
 			t.Errorf("Expected memory limit error code, got %s", structErr.Code)
 		}
 	} else {
@@ -68,7 +68,7 @@ func TestResourceMonitor_FileCountLimit(t *testing.T) {
 	}
 
 	// Verify it's the correct error type
-	assertStructuredError(t, err, utils.CodeResourceLimitFiles)
+	assertStructuredError(t, err, shared.CodeResourceLimitFiles)
 }
 
 func TestResourceMonitor_TotalSizeLimit(t *testing.T) {
@@ -102,7 +102,7 @@ func TestResourceMonitor_TotalSizeLimit(t *testing.T) {
 	}
 
 	// Verify it's the correct error type
-	assertStructuredError(t, err, utils.CodeResourceLimitTotalSize)
+	assertStructuredError(t, err, shared.CodeResourceLimitTotalSize)
 }
 
 // TestResourceMonitor_MemoryLimitExceeded tests memory limit violation scenarios.

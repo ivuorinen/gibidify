@@ -25,14 +25,14 @@ func verifySingleDirectoryFiles(t *testing.T, rootDir string, _ []string) {
 		t.Errorf("main.go content = %q, want 'package main'", content)
 	}
 
-	utilsFile := filepath.Join(srcDir, "utils.go")
+	utilsFile := filepath.Join(srcDir, "shared.go")
 	content, err = os.ReadFile(utilsFile)
 	if err != nil {
-		t.Errorf("Failed to read utils.go: %v", err)
+		t.Errorf("Failed to read shared.go: %v", err)
 	}
 	expectedUtils := "package main\n\nfunc Helper() {}"
 	if string(content) != expectedUtils {
-		t.Errorf("utils.go content = %q, want %q", content, expectedUtils)
+		t.Errorf("shared.go content = %q, want %q", content, expectedUtils)
 	}
 }
 
@@ -139,7 +139,7 @@ func TestCreateTestDirectoryStructure(t *testing.T) {
 					Path: "src",
 					Files: []FileSpec{
 						{Name: "main.go", Content: "package main"},
-						{Name: "utils.go", Content: "package main\n\nfunc Helper() {}"},
+						{Name: "shared.go", Content: "package main\n\nfunc Helper() {}"},
 					},
 				},
 			},
@@ -453,7 +453,7 @@ func BenchmarkDirectoryCreation(b *testing.B) {
 					Path: "src",
 					Files: []FileSpec{
 						{Name: "main.go", Content: "package main"},
-						{Name: "utils.go", Content: "package main\n\nfunc Helper() {}"},
+						{Name: "shared.go", Content: "package main\n\nfunc Helper() {}"},
 					},
 				},
 				{

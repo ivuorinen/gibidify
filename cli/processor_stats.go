@@ -2,12 +2,12 @@ package cli
 
 import (
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // logFinalStats logs the final back-pressure, resource monitoring, and comprehensive processing statistics.
 func (p *Processor) logFinalStats() {
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 
 	// Log back-pressure stats
 	backpressureStats := p.backpressure.GetStats()

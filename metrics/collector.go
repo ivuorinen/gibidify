@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // NewCollector creates a new metrics collector.
@@ -185,8 +185,8 @@ func (c *Collector) GetCurrentMetrics() ProcessingMetrics {
 		ProcessingTime:     processingTime,
 		FilesPerSecond:     filesPerSec,
 		BytesPerSecond:     bytesPerSec,
-		PeakMemoryMB:       utils.BytesToMB(m.Sys),
-		CurrentMemoryMB:    utils.BytesToMB(m.Alloc),
+		PeakMemoryMB:       shared.BytesToMB(m.Sys),
+		CurrentMemoryMB:    shared.BytesToMB(m.Alloc),
 		GoroutineCount:     runtime.NumGoroutine(),
 		FormatCounts:       formatCounts,
 		ErrorCounts:        errorCounts,
@@ -302,7 +302,7 @@ func (c *Collector) generateRecommendations(metrics ProcessingMetrics) []string 
 	}
 
 	// Concurrency recommendations
-	halfMaxConcurrency := utils.SafeIntToInt32WithDefault(metrics.MaxConcurrency/2, 1)
+	halfMaxConcurrency := shared.SafeIntToInt32WithDefault(metrics.MaxConcurrency/2, 1)
 	if halfMaxConcurrency > 0 && metrics.CurrentConcurrency < halfMaxConcurrency {
 		recommendations = append(recommendations,
 			"Low concurrency utilization - consider increasing concurrent processing")

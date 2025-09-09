@@ -8,7 +8,7 @@ import (
 	"runtime"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // Flags holds CLI flags values.
@@ -84,7 +84,7 @@ func (f *Flags) validate() error {
 	}
 
 	// Validate source path for security
-	if err := utils.ValidateSourcePath(f.SourceDir); err != nil {
+	if err := shared.ValidateSourcePath(f.SourceDir); err != nil {
 		return fmt.Errorf("validating source path: %w", err)
 	}
 
@@ -99,7 +99,7 @@ func (f *Flags) validate() error {
 	}
 
 	// Validate log level
-	if !utils.ValidateLogLevel(f.LogLevel) {
+	if !shared.ValidateLogLevel(f.LogLevel) {
 		return fmt.Errorf("invalid log level: %s (must be: debug, info, warn, error)", f.LogLevel)
 	}
 
@@ -109,16 +109,16 @@ func (f *Flags) validate() error {
 // setDefaultDestination sets the default destination if not provided.
 func (f *Flags) setDefaultDestination() error {
 	if f.Destination == "" {
-		absRoot, err := utils.GetAbsolutePath(f.SourceDir)
+		absRoot, err := shared.GetAbsolutePath(f.SourceDir)
 		if err != nil {
 			return fmt.Errorf("getting absolute path: %w", err)
 		}
-		baseName := utils.GetBaseName(absRoot)
+		baseName := shared.GetBaseName(absRoot)
 		f.Destination = baseName + "." + f.Format
 	}
 
 	// Validate destination path for security
-	if err := utils.ValidateDestinationPath(f.Destination); err != nil {
+	if err := shared.ValidateDestinationPath(f.Destination); err != nil {
 		return fmt.Errorf("validating destination path: %w", err)
 	}
 

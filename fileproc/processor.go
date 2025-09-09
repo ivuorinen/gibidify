@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 const (
@@ -65,7 +65,7 @@ func ProcessFile(filePath string, outCh chan<- WriteRequest, rootPath string) {
 	processor := NewFileProcessor(rootPath)
 	ctx := context.Background()
 	if err := processor.ProcessWithContext(ctx, filePath, outCh); err != nil {
-		utils.LogErrorf(err, "Failed to process file: %s", filePath)
+		shared.LogErrorf(err, "Failed to process file: %s", filePath)
 	}
 }
 
@@ -86,7 +86,7 @@ func ProcessFileWithMonitor(
 func (p *FileProcessor) Process(filePath string, outCh chan<- WriteRequest) {
 	ctx := context.Background()
 	if err := p.ProcessWithContext(ctx, filePath, outCh); err != nil {
-		utils.LogErrorf(err, "Failed to process file: %s", filePath)
+		shared.LogErrorf(err, "Failed to process file: %s", filePath)
 	}
 }
 
@@ -99,14 +99,14 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 	// Wait for rate limiting
 	if err := p.resourceMonitor.WaitForRateLimit(fileCtx); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			structErr := utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitTimeout,
+			structErr := shared.NewStructuredError(
+				shared.ErrorTypeValidation,
+				shared.CodeResourceLimitTimeout,
 				"file processing timeout during rate limiting",
 				filePath,
 				nil,
 			)
-			utils.LogErrorf(structErr, "File processing timeout during rate limiting: %s", filePath)
+			shared.LogErrorf(structErr, "File processing timeout during rate limiting: %s", filePath)
 
 			return structErr
 		}
@@ -123,14 +123,14 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 	// Acquire read slot for concurrent processing
 	if err := p.resourceMonitor.AcquireReadSlot(fileCtx); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			structErr := utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitTimeout,
+			structErr := shared.NewStructuredError(
+				shared.ErrorTypeValidation,
+				shared.CodeResourceLimitTimeout,
 				"file processing timeout waiting for read slot",
 				filePath,
 				nil,
 			)
-			utils.LogErrorf(structErr, "File processing timeout waiting for read slot: %s", filePath)
+			shared.LogErrorf(structErr, "File processing timeout waiting for read slot: %s", filePath)
 
 			return structErr
 		}
@@ -141,7 +141,7 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 
 	// Check hard memory limits before processing
 	if err := p.resourceMonitor.CheckHardMemoryLimit(); err != nil {
-		utils.LogErrorf(err, "Hard memory limit check failed for file: %s", filePath)
+		shared.LogErrorf(err, "Hard memory limit check failed for file: %s", filePath)
 
 		return err
 	}
@@ -154,7 +154,7 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 	defer func() {
 		// Record successful processing
 		p.resourceMonitor.RecordFileProcessed(fileInfo.Size())
-		logger := utils.GetLogger()
+		logger := shared.GetLogger()
 		logger.Debugf("File processed in %v: %s", time.Since(processStart), filePath)
 	}()
 
@@ -171,19 +171,19 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 // validateFileWithLimits checks if the file can be processed with resource limits.
 func (p *FileProcessor) validateFileWithLimits(ctx context.Context, filePath string) (os.FileInfo, error) {
 	// Check context cancellation
-	if err := utils.CheckContextCancellation(ctx, "file validation"); err != nil {
+	if err := shared.CheckContextCancellation(ctx, "file validation"); err != nil {
 		return nil, fmt.Errorf("context check during file validation: %w", err)
 	}
 
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		structErr := utils.WrapError(
+		structErr := shared.WrapError(
 			err,
-			utils.ErrorTypeFileSystem,
-			utils.CodeFSAccess,
+			shared.ErrorTypeFileSystem,
+			shared.CodeFSAccess,
 			"failed to stat file",
 		).WithFilePath(filePath)
-		utils.LogErrorf(structErr, "Failed to stat file %s", filePath)
+		shared.LogErrorf(structErr, "Failed to stat file %s", filePath)
 
 		return nil, fmt.Errorf("stat file: %w", err)
 	}
@@ -194,21 +194,21 @@ func (p *FileProcessor) validateFileWithLimits(ctx context.Context, filePath str
 			"file_size":  fileInfo.Size(),
 			"size_limit": p.sizeLimit,
 		}
-		structErr := utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationSize,
+		structErr := shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeValidationSize,
 			fmt.Sprintf("file size (%d bytes) exceeds limit (%d bytes)", fileInfo.Size(), p.sizeLimit),
 			filePath,
 			c,
 		)
-		utils.LogErrorf(structErr, "Skipping large file %s", filePath)
+		shared.LogErrorf(structErr, "Skipping large file %s", filePath)
 
 		return nil, structErr
 	}
 
 	// Check resource limits
 	if err := p.resourceMonitor.ValidateFileProcessing(filePath, fileInfo.Size()); err != nil {
-		utils.LogErrorf(err, "Resource limit validation failed for file: %s", filePath)
+		shared.LogErrorf(err, "Resource limit validation failed for file: %s", filePath)
 
 		return nil, err
 	}
@@ -235,10 +235,10 @@ func (p *FileProcessor) processInMemoryWithContext(
 	// Check context before reading
 	select {
 	case <-ctx.Done():
-		utils.LogErrorf(
-			utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitTimeout,
+		shared.LogErrorf(
+			shared.NewStructuredError(
+				shared.ErrorTypeValidation,
+				shared.CodeResourceLimitTimeout,
 				"file processing canceled",
 				filePath,
 				nil,
@@ -252,13 +252,13 @@ func (p *FileProcessor) processInMemoryWithContext(
 
 	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated by walker
 	if err != nil {
-		structErr := utils.WrapError(
+		structErr := shared.WrapError(
 			err,
-			utils.ErrorTypeProcessing,
-			utils.CodeProcessingFileRead,
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingFileRead,
 			"failed to read file",
 		).WithFilePath(filePath)
-		utils.LogErrorf(structErr, "Failed to read file %s", filePath)
+		shared.LogErrorf(structErr, "Failed to read file %s", filePath)
 
 		return
 	}
@@ -266,10 +266,10 @@ func (p *FileProcessor) processInMemoryWithContext(
 	// Check context again after reading
 	select {
 	case <-ctx.Done():
-		utils.LogErrorf(
-			utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitTimeout,
+		shared.LogErrorf(
+			shared.NewStructuredError(
+				shared.ErrorTypeValidation,
+				shared.CodeResourceLimitTimeout,
 				"file processing canceled after read",
 				filePath,
 				nil,
@@ -284,10 +284,10 @@ func (p *FileProcessor) processInMemoryWithContext(
 	// Try to send the result, but respect context cancellation
 	select {
 	case <-ctx.Done():
-		utils.LogErrorf(
-			utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitTimeout,
+		shared.LogErrorf(
+			shared.NewStructuredError(
+				shared.ErrorTypeValidation,
+				shared.CodeResourceLimitTimeout,
 				"file processing canceled before output",
 				filePath,
 				nil,
@@ -314,10 +314,10 @@ func (p *FileProcessor) processStreamingWithContext(
 	// Check context before creating reader
 	select {
 	case <-ctx.Done():
-		utils.LogErrorf(
-			utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitTimeout,
+		shared.LogErrorf(
+			shared.NewStructuredError(
+				shared.ErrorTypeValidation,
+				shared.CodeResourceLimitTimeout,
 				"streaming processing canceled",
 				filePath,
 				nil,
@@ -332,8 +332,8 @@ func (p *FileProcessor) processStreamingWithContext(
 	// Get file info for size
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		utils.LogErrorf(
-			utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIORead,
+		shared.LogErrorf(
+			shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIORead,
 				"failed to stat file for streaming").WithFilePath(filePath),
 			"Failed to stat file for streaming: %s", filePath,
 		)
@@ -348,10 +348,10 @@ func (p *FileProcessor) processStreamingWithContext(
 	// Try to send the result, but respect context cancellation
 	select {
 	case <-ctx.Done():
-		utils.LogErrorf(
-			utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitTimeout,
+		shared.LogErrorf(
+			shared.NewStructuredError(
+				shared.ErrorTypeValidation,
+				shared.CodeResourceLimitTimeout,
 				"streaming processing canceled before output",
 				filePath,
 				nil,
@@ -381,13 +381,13 @@ func (p *FileProcessor) createStreamReaderWithContext(ctx context.Context, fileP
 
 	file, err := os.Open(filePath) // #nosec G304 - filePath is validated by walker
 	if err != nil {
-		structErr := utils.WrapError(
+		structErr := shared.WrapError(
 			err,
-			utils.ErrorTypeProcessing,
-			utils.CodeProcessingFileRead,
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingFileRead,
 			"failed to open file for streaming",
 		).WithFilePath(filePath)
-		utils.LogErrorf(structErr, "Failed to open file for streaming %s", filePath)
+		shared.LogErrorf(structErr, "Failed to open file for streaming %s", filePath)
 
 		return nil
 	}
@@ -431,7 +431,7 @@ func (r *headerFileReader) Read(p []byte) (n int, err error) {
 		return n, err //nolint:wrapcheck // EOF must not be wrapped
 	}
 	if err != nil {
-		return n, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIORead, "failed to read from header file reader")
+		return n, shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIORead, "failed to read from header file reader")
 	}
 
 	return n, nil
@@ -443,7 +443,7 @@ func (r *headerFileReader) closeFile() {
 	defer r.mu.Unlock()
 	if !r.closed && r.file != nil {
 		if err := r.file.Close(); err != nil {
-			utils.LogError("Failed to close file", err)
+			shared.LogError("Failed to close file", err)
 		}
 		r.closed = true
 	}

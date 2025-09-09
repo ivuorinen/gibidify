@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gibidify/testutil"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // Test constants to avoid goconst linting issues.
@@ -551,10 +551,10 @@ func TestErrorPropagation(t *testing.T) {
 		err := runBenchmarks()
 		testutil.AssertExpectedError(t, err, "runBenchmarks with invalid type")
 
-		var validationErr *utils.StructuredError
+		var validationErr *shared.StructuredError
 		if !errors.As(err, &validationErr) {
 			t.Errorf("Expected StructuredError, got %T", err)
-		} else if validationErr.Code != utils.CodeValidationFormat {
+		} else if validationErr.Code != shared.CodeValidationFormat {
 			t.Errorf("Expected validation format error code, got %v", validationErr.Code)
 		}
 	})
