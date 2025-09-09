@@ -1,5 +1,5 @@
-// Package utils provides common utility functions.
-package utils
+// Package shared provides common utility functions.
+package shared
 
 import (
 	"errors"

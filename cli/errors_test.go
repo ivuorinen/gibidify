@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 func TestNewErrorFormatter(t *testing.T) {
@@ -38,9 +38,9 @@ func TestErrorFormatter_FormatError(t *testing.T) {
 		},
 		{
 			name: "structured error with context",
-			err: &utils.StructuredError{
-				Type:     utils.ErrorTypeFileSystem,
-				Code:     utils.CodeFSAccess,
+			err: &shared.StructuredError{
+				Type:     shared.ErrorTypeFileSystem,
+				Code:     shared.CodeFSAccess,
 				Message:  "cannot access file",
 				FilePath: "/test/path",
 				Context: map[string]any{
@@ -61,9 +61,9 @@ func TestErrorFormatter_FormatError(t *testing.T) {
 		},
 		{
 			name: "validation error",
-			err: &utils.StructuredError{
-				Type:    utils.ErrorTypeValidation,
-				Code:    utils.CodeValidationFormat,
+			err: &shared.StructuredError{
+				Type:    shared.ErrorTypeValidation,
+				Code:    shared.CodeValidationFormat,
 				Message: "invalid output format",
 			},
 			expectedOutput: []string{
@@ -75,9 +75,9 @@ func TestErrorFormatter_FormatError(t *testing.T) {
 		},
 		{
 			name: "processing error",
-			err: &utils.StructuredError{
-				Type:    utils.ErrorTypeProcessing,
-				Code:    utils.CodeProcessingCollection,
+			err: &shared.StructuredError{
+				Type:    shared.ErrorTypeProcessing,
+				Code:    shared.CodeProcessingCollection,
 				Message: "failed to collect files",
 			},
 			expectedOutput: []string{
@@ -89,9 +89,9 @@ func TestErrorFormatter_FormatError(t *testing.T) {
 		},
 		{
 			name: "I/O error",
-			err: &utils.StructuredError{
-				Type:    utils.ErrorTypeIO,
-				Code:    utils.CodeIOFileCreate,
+			err: &shared.StructuredError{
+				Type:    shared.ErrorTypeIO,
+				Code:    shared.CodeIOFileCreate,
 				Message: "cannot create output file",
 			},
 			expectedOutput: []string{
@@ -301,45 +301,45 @@ func TestErrorFormatter_provideSuggestions(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		err               *utils.StructuredError
+		err               *shared.StructuredError
 		expectSuggestions []string
 	}{
 		{
 			name: "filesystem error",
-			err: &utils.StructuredError{
-				Type: utils.ErrorTypeFileSystem,
-				Code: utils.CodeFSAccess,
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeFileSystem,
+				Code: shared.CodeFSAccess,
 			},
 			expectSuggestions: []string{"Suggestions:", "Check if the path exists"},
 		},
 		{
 			name: "validation error",
-			err: &utils.StructuredError{
-				Type: utils.ErrorTypeValidation,
-				Code: utils.CodeValidationFormat,
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeValidation,
+				Code: shared.CodeValidationFormat,
 			},
 			expectSuggestions: []string{"Suggestions:", "Use a supported format"},
 		},
 		{
 			name: "processing error",
-			err: &utils.StructuredError{
-				Type: utils.ErrorTypeProcessing,
-				Code: utils.CodeProcessingCollection,
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeProcessing,
+				Code: shared.CodeProcessingCollection,
 			},
 			expectSuggestions: []string{"Suggestions:", "Check if the source directory exists"},
 		},
 		{
 			name: "I/O error",
-			err: &utils.StructuredError{
-				Type: utils.ErrorTypeIO,
-				Code: utils.CodeIOWrite,
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeIO,
+				Code: shared.CodeIOWrite,
 			},
 			expectSuggestions: []string{"Suggestions:", "Check available disk space"},
 		},
 		{
 			name: "unknown error type",
-			err: &utils.StructuredError{
-				Type: utils.ErrorTypeUnknown,
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeUnknown,
 			},
 			expectSuggestions: []string{"Check your command line arguments"},
 		},
@@ -399,29 +399,29 @@ func TestIsUserError(t *testing.T) {
 		},
 		{
 			name: "validation structured error",
-			err: &utils.StructuredError{
-				Type: utils.ErrorTypeValidation,
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeValidation,
 			},
 			expected: true,
 		},
 		{
 			name: "validation format structured error",
-			err: &utils.StructuredError{
-				Code: utils.CodeValidationFormat,
+			err: &shared.StructuredError{
+				Code: shared.CodeValidationFormat,
 			},
 			expected: true,
 		},
 		{
 			name: "validation size structured error",
-			err: &utils.StructuredError{
-				Code: utils.CodeValidationSize,
+			err: &shared.StructuredError{
+				Code: shared.CodeValidationSize,
 			},
 			expected: true,
 		},
 		{
 			name: "non-validation structured error",
-			err: &utils.StructuredError{
-				Type: utils.ErrorTypeFileSystem,
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeFileSystem,
 			},
 			expected: false,
 		},
@@ -487,9 +487,9 @@ func TestErrorFormatterIntegration(t *testing.T) {
 	formatter := NewErrorFormatter(ui)
 
 	// Test a complete workflow with a complex structured error
-	structuredErr := &utils.StructuredError{
-		Type:     utils.ErrorTypeFileSystem,
-		Code:     utils.CodeFSNotFound,
+	structuredErr := &shared.StructuredError{
+		Type:     shared.ErrorTypeFileSystem,
+		Code:     shared.CodeFSNotFound,
 		Message:  "source directory not found",
 		FilePath: "/missing/directory",
 		Context: map[string]any{
@@ -639,14 +639,14 @@ func TestErrorFormatter_SuggestionFunctions_Integration(t *testing.T) {
 	// Test that suggestion functions work as part of the full error formatting workflow
 	tests := []struct {
 		name                string
-		err                 *utils.StructuredError
+		err                 *shared.StructuredError
 		expectedSuggestions []string
 	}{
 		{
 			name: "filesystem path resolution error",
-			err: &utils.StructuredError{
-				Type:     utils.ErrorTypeFileSystem,
-				Code:     utils.CodeFSPathResolution,
+			err: &shared.StructuredError{
+				Type:     shared.ErrorTypeFileSystem,
+				Code:     shared.CodeFSPathResolution,
 				Message:  "path resolution failed",
 				FilePath: "relative/path",
 			},
@@ -657,8 +657,8 @@ func TestErrorFormatter_SuggestionFunctions_Integration(t *testing.T) {
 		},
 		{
 			name: "filesystem unknown error",
-			err: &utils.StructuredError{
-				Type:     utils.ErrorTypeFileSystem,
+			err: &shared.StructuredError{
+				Type:     shared.ErrorTypeFileSystem,
 				Code:     "UNKNOWN_FS_ERROR", // This will trigger default case
 				Message:  "unknown filesystem error",
 				FilePath: "/some/path",

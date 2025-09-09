@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // RecordFileProcessed records that a file has been successfully processed.
@@ -56,7 +56,7 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 		ProcessingDuration:  duration,
 		AverageFileSize:     avgFileSize,
 		ProcessingRate:      processingRate,
-		MemoryUsageMB:       utils.BytesToMB(m.Alloc),
+		MemoryUsageMB:       shared.BytesToMB(m.Alloc),
 		MaxMemoryUsageMB:    int64(rm.hardMemoryLimitMB),
 		ViolationsDetected:  violations,
 		DegradationActive:   rm.degradationActive,
@@ -67,7 +67,7 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 
 // LogResourceInfo logs current resource limit configuration.
 func (rm *ResourceMonitor) LogResourceInfo() {
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	if rm.enabled {
 		logger.Infof("Resource limits enabled: maxFiles=%d, maxTotalSize=%dMB, fileTimeout=%ds, overallTimeout=%ds",
 			rm.maxFiles, rm.maxTotalSize/1024/1024, int(rm.fileProcessingTimeout.Seconds()),

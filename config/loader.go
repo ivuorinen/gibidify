@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // LoadConfig reads configuration from a YAML file.
@@ -19,11 +19,11 @@ func LoadConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 
 	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
 		// Validate XDG_CONFIG_HOME for path traversal attempts
-		if err := utils.ValidateConfigPath(xdgConfig); err != nil {
+		if err := shared.ValidateConfigPath(xdgConfig); err != nil {
 			logger.Warnf("Invalid XDG_CONFIG_HOME path, using default config: %v", err)
 		} else {
 			configPath := filepath.Join(xdgConfig, "gibidify")

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // YAMLWriter handles YAML format output with streaming support.
@@ -25,10 +25,10 @@ func (w *YAMLWriter) Start(prefix, suffix string) error {
 	if _, err := fmt.Fprintf(
 		w.outFile,
 		"prefix: %s\nsuffix: %s\nfiles:\n",
-		utils.EscapeForYAML(prefix),
-		utils.EscapeForYAML(suffix),
+		shared.EscapeForYAML(prefix),
+		shared.EscapeForYAML(suffix),
 	); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write YAML header")
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write YAML header")
 	}
 
 	return nil
@@ -50,7 +50,7 @@ func (w *YAMLWriter) Close() error {
 
 // writeStreaming writes a large file as YAML in streaming chunks.
 func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
-	defer utils.SafeCloseReader(req.Reader, req.Path)
+	defer shared.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
@@ -58,24 +58,24 @@ func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
 	if _, err := fmt.Fprintf(
 		w.outFile,
 		"  - path: %s\n    language: %s\n    content: |\n",
-		utils.EscapeForYAML(req.Path),
+		shared.EscapeForYAML(req.Path),
 		language,
 	); err != nil {
-		return utils.WrapError(
+		return shared.WrapError(
 			err,
-			utils.ErrorTypeIO,
-			utils.CodeIOWrite,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
 			"failed to write YAML file start",
 		).WithFilePath(req.Path)
 	}
 
 	// Stream content with YAML indentation
-	if err := utils.StreamLines(
+	if err := shared.StreamLines(
 		req.Reader, w.outFile, req.Path, func(line string) string {
 			return "      " + line
 		},
 	); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "streaming YAML content")
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "streaming YAML content")
 	}
 
 	return nil
@@ -94,13 +94,13 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	if _, err := fmt.Fprintf(
 		w.outFile,
 		"  - path: %s\n    language: %s\n    content: |\n",
-		utils.EscapeForYAML(fileData.Path),
+		shared.EscapeForYAML(fileData.Path),
 		fileData.Language,
 	); err != nil {
-		return utils.WrapError(
+		return shared.WrapError(
 			err,
-			utils.ErrorTypeIO,
-			utils.CodeIOWrite,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
 			"failed to write YAML entry start",
 		).WithFilePath(req.Path)
 	}
@@ -109,10 +109,10 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	lines := strings.Split(fileData.Content, "\n")
 	for _, line := range lines {
 		if _, err := fmt.Fprintf(w.outFile, "      %s\n", line); err != nil {
-			return utils.WrapError(
+			return shared.WrapError(
 				err,
-				utils.ErrorTypeIO,
-				utils.CodeIOWrite,
+				shared.ErrorTypeIO,
+				shared.CodeIOWrite,
 				"failed to write YAML content line",
 			).WithFilePath(req.Path)
 		}
@@ -129,7 +129,7 @@ func startYAMLWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- 
 
 	// Start writing
 	if err := writer.Start(prefix, suffix); err != nil {
-		utils.LogError("Failed to write YAML header", err)
+		shared.LogError("Failed to write YAML header", err)
 
 		return
 	}
@@ -137,12 +137,12 @@ func startYAMLWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- 
 	// Process files
 	for req := range writeCh {
 		if err := writer.WriteFile(req); err != nil {
-			utils.LogError("Failed to write YAML file", err)
+			shared.LogError("Failed to write YAML file", err)
 		}
 	}
 
 	// Close writer
 	if err := writer.Close(); err != nil {
-		utils.LogError("Failed to write YAML end", err)
+		shared.LogError("Failed to write YAML end", err)
 	}
 }

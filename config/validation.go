@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // ValidateConfig validates the loaded configuration.
@@ -21,9 +21,9 @@ func ValidateConfig() error {
 	validationErrors = append(validationErrors, validateResourceLimitSettings()...)
 
 	if len(validationErrors) > 0 {
-		return utils.NewStructuredError(
-			utils.ErrorTypeConfiguration,
-			utils.CodeConfigValidation,
+		return shared.NewStructuredError(
+			shared.ErrorTypeConfiguration,
+			shared.CodeConfigValidation,
 			"configuration validation failed: "+strings.Join(validationErrors, "; "),
 			"",
 			map[string]any{"validation_errors": validationErrors},
@@ -574,9 +574,9 @@ func validateMemoryLimits() []string {
 func ValidateFileSize(size int64) error {
 	limit := GetFileSizeLimit()
 	if size > limit {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationSize,
+		return shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeValidationSize,
 			fmt.Sprintf("file size (%d bytes) exceeds limit (%d bytes)", size, limit),
 			"",
 			map[string]any{"file_size": size, "size_limit": limit},
@@ -589,9 +589,9 @@ func ValidateFileSize(size int64) error {
 // ValidateOutputFormat checks if an output format is valid.
 func ValidateOutputFormat(format string) error {
 	if !IsValidFormat(format) {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationFormat,
+		return shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeValidationFormat,
 			fmt.Sprintf("unsupported output format: %s (supported: json, yaml, markdown)", format),
 			"",
 			map[string]any{"format": format},
@@ -604,9 +604,9 @@ func ValidateOutputFormat(format string) error {
 // ValidateConcurrency checks if a concurrency level is valid.
 func ValidateConcurrency(concurrency int) error {
 	if concurrency < 1 {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationFormat,
+		return shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeValidationFormat,
 			fmt.Sprintf("concurrency (%d) must be at least 1", concurrency),
 			"",
 			map[string]any{"concurrency": concurrency},
@@ -616,9 +616,9 @@ func ValidateConcurrency(concurrency int) error {
 	if viper.IsSet("maxConcurrency") {
 		maxConcurrency := GetMaxConcurrency()
 		if concurrency > maxConcurrency {
-			return utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeValidationFormat,
+			return shared.NewStructuredError(
+				shared.ErrorTypeValidation,
+				shared.CodeValidationFormat,
 				fmt.Sprintf("concurrency (%d) exceeds maximum (%d)", concurrency, maxConcurrency),
 				"",
 				map[string]any{"concurrency": concurrency, "max_concurrency": maxConcurrency},

@@ -133,11 +133,7 @@ enableAllRules = true
 # ============================================================================
 
 [rule.var-naming]
-	arguments = [
-		["ID", "URL", "API", "HTTP", "JSON", "XML", "UI", "URI", "SQL", "SSH", "EOF", "LHS", "RHS", "TTL", "OK", "UUID"],
-		["VM"],
-		[{ skipPackageNameChecks = true }]
-	]
+	arguments = [["ID", "URL", "API", "HTTP", "JSON", "XML", "UI", "URI", "SQL", "SSH", "EOF", "LHS", "RHS", "TTL", "OK", "UUID", "VM"]]
 
 [rule.exported]
 

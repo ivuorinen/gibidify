@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/ivuorinen/gibidify/benchmark"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 var (
@@ -55,7 +55,7 @@ func runBenchmarks() error {
 	case "format":
 		return runFormatBenchmark()
 	default:
-		return utils.NewValidationError(utils.CodeValidationFormat, "invalid benchmark type: "+*benchmarkType)
+		return shared.NewValidationError(shared.CodeValidationFormat, "invalid benchmark type: "+*benchmarkType)
 	}
 }
 
@@ -63,10 +63,10 @@ func runCollectionBenchmark() error {
 	_, _ = fmt.Println("Running file collection benchmark...")
 	result, err := benchmark.FileCollectionBenchmark(*sourceDir, *numFiles)
 	if err != nil {
-		return utils.WrapError(
+		return shared.WrapError(
 			err,
-			utils.ErrorTypeProcessing,
-			utils.CodeProcessingCollection,
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingCollection,
 			"file collection benchmark failed",
 		)
 	}
@@ -79,10 +79,10 @@ func runProcessingBenchmark() error {
 	_, _ = fmt.Printf("Running file processing benchmark (format: %s, concurrency: %d)...\n", *format, *concurrency)
 	result, err := benchmark.FileProcessingBenchmark(*sourceDir, *format, *concurrency)
 	if err != nil {
-		return utils.WrapError(
+		return shared.WrapError(
 			err,
-			utils.ErrorTypeProcessing,
-			utils.CodeProcessingCollection,
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingCollection,
 			"file processing benchmark failed",
 		)
 	}
@@ -94,16 +94,17 @@ func runProcessingBenchmark() error {
 func runConcurrencyBenchmark() error {
 	concurrencyLevels, err := parseConcurrencyList(*concurrencyList)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeValidation, utils.CodeValidationFormat, "invalid concurrency list")
+		return shared.WrapError(
+			err, shared.ErrorTypeValidation, shared.CodeValidationFormat, "invalid concurrency list")
 	}
 
 	_, _ = fmt.Printf("Running concurrency benchmark (format: %s, levels: %v)...\n", *format, concurrencyLevels)
 	suite, err := benchmark.ConcurrencyBenchmark(*sourceDir, *format, concurrencyLevels)
 	if err != nil {
-		return utils.WrapError(
+		return shared.WrapError(
 			err,
-			utils.ErrorTypeProcessing,
-			utils.CodeProcessingCollection,
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingCollection,
 			"concurrency benchmark failed",
 		)
 	}
@@ -117,8 +118,8 @@ func runFormatBenchmark() error {
 	_, _ = fmt.Printf("Running format benchmark (formats: %v)...\n", formats)
 	suite, err := benchmark.FormatBenchmark(*sourceDir, formats)
 	if err != nil {
-		return utils.WrapError(
-			err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "format benchmark failed",
+		return shared.WrapError(
+			err, shared.ErrorTypeProcessing, shared.CodeProcessingCollection, "format benchmark failed",
 		)
 	}
 	benchmark.PrintSuite(suite)
@@ -142,24 +143,24 @@ func parseConcurrencyList(list string) ([]int, error) {
 		part = strings.TrimSpace(part)
 		var level int
 		if _, err := fmt.Sscanf(part, "%d", &level); err != nil {
-			return nil, utils.WrapErrorf(
+			return nil, shared.WrapErrorf(
 				err,
-				utils.ErrorTypeValidation,
-				utils.CodeValidationFormat,
+				shared.ErrorTypeValidation,
+				shared.CodeValidationFormat,
 				"invalid concurrency level: %s",
 				part,
 			)
 		}
 		if level <= 0 {
-			return nil, utils.NewValidationError(
-				utils.CodeValidationFormat, "concurrency level must be positive: "+part,
+			return nil, shared.NewValidationError(
+				shared.CodeValidationFormat, "concurrency level must be positive: "+part,
 			)
 		}
 		levels = append(levels, level)
 	}
 
 	if len(levels) == 0 {
-		return nil, utils.NewValidationError(utils.CodeValidationFormat, "no valid concurrency levels found")
+		return nil, shared.NewValidationError(shared.CodeValidationFormat, "no valid concurrency levels found")
 	}
 
 	return levels, nil

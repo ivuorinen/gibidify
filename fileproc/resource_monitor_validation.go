@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // ValidateFileProcessing checks if a file can be processed based on resource limits.
@@ -20,9 +20,9 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 
 	// Check if emergency stop is active
 	if rm.emergencyStopRequested {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitMemory,
+		return shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeResourceLimitMemory,
 			"processing stopped due to emergency memory condition",
 			filePath,
 			map[string]any{
@@ -34,9 +34,9 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 	// Check file count limit
 	currentFiles := atomic.LoadInt64(&rm.filesProcessed)
 	if int(currentFiles) >= rm.maxFiles {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitFiles,
+		return shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeResourceLimitFiles,
 			"maximum file count limit exceeded",
 			filePath,
 			map[string]any{
@@ -49,9 +49,9 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 	// Check total size limit
 	currentTotalSize := atomic.LoadInt64(&rm.totalSizeProcessed)
 	if currentTotalSize+fileSize > rm.maxTotalSize {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitTotalSize,
+		return shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeResourceLimitTotalSize,
 			"maximum total size limit would be exceeded",
 			filePath,
 			map[string]any{
@@ -64,9 +64,9 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 
 	// Check overall timeout
 	if time.Since(rm.startTime) > rm.overallTimeout {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitTimeout,
+		return shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeResourceLimitTimeout,
 			"overall processing timeout exceeded",
 			filePath,
 			map[string]any{
@@ -87,7 +87,7 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := utils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
+	currentMemory := shared.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	if currentMemory <= rm.hardMemoryLimitBytes {
 		return nil
@@ -123,7 +123,7 @@ func (rm *ResourceMonitor) logMemoryViolation(currentMemory int64) {
 		return
 	}
 
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	logger.Errorf("Hard memory limit exceeded: %dMB > %dMB",
 		currentMemory/1024/1024, rm.hardMemoryLimitMB)
 	rm.violationLogged[violationKey] = true
@@ -137,7 +137,7 @@ func (rm *ResourceMonitor) tryGracefulRecovery(_ int64) error {
 	// Check again after GC
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	newMemory := utils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
+	newMemory := shared.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	if newMemory > rm.hardMemoryLimitBytes {
 		// Still over limit, activate emergency stop
@@ -148,7 +148,7 @@ func (rm *ResourceMonitor) tryGracefulRecovery(_ int64) error {
 
 	// Memory freed by GC, continue with degradation
 	rm.degradationActive = true
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	logger.Info("Memory freed by garbage collection, continuing with degradation mode")
 
 	return nil
@@ -169,9 +169,9 @@ func (rm *ResourceMonitor) createHardMemoryLimitError(currentMemory int64, emerg
 		context["emergency_stop"] = true
 	}
 
-	return utils.NewStructuredError(
-		utils.ErrorTypeValidation,
-		utils.CodeResourceLimitMemory,
+	return shared.NewStructuredError(
+		shared.ErrorTypeValidation,
+		shared.CodeResourceLimitMemory,
 		message,
 		"",
 		context,

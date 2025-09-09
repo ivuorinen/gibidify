@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // ErrorFormatter handles CLI-friendly error formatting with suggestions.
@@ -26,7 +26,7 @@ func (ef *ErrorFormatter) FormatError(err error) {
 	}
 
 	// Handle structured errors
-	structErr := &utils.StructuredError{}
+	structErr := &shared.StructuredError{}
 	if errors.As(err, &structErr) {
 		ef.formatStructuredError(structErr)
 
@@ -38,12 +38,12 @@ func (ef *ErrorFormatter) FormatError(err error) {
 }
 
 // formatStructuredError formats a structured error with context and suggestions.
-func (ef *ErrorFormatter) formatStructuredError(err *utils.StructuredError) {
+func (ef *ErrorFormatter) formatStructuredError(err *shared.StructuredError) {
 	// Print main error
 	ef.ui.PrintError("Error: %s", err.Message)
 
 	// Print error type and code
-	if err.Type != utils.ErrorTypeUnknown || err.Code != "" {
+	if err.Type != shared.ErrorTypeUnknown || err.Code != "" {
 		ef.ui.PrintInfo("Type: %s, Code: %s", err.Type.String(), err.Code)
 	}
 
@@ -71,15 +71,15 @@ func (ef *ErrorFormatter) formatGenericError(err error) {
 }
 
 // provideSuggestions provides helpful suggestions based on the error.
-func (ef *ErrorFormatter) provideSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideSuggestions(err *shared.StructuredError) {
 	switch err.Type {
-	case utils.ErrorTypeFileSystem:
+	case shared.ErrorTypeFileSystem:
 		ef.provideFileSystemSuggestions(err)
-	case utils.ErrorTypeValidation:
+	case shared.ErrorTypeValidation:
 		ef.provideValidationSuggestions(err)
-	case utils.ErrorTypeProcessing:
+	case shared.ErrorTypeProcessing:
 		ef.provideProcessingSuggestions(err)
-	case utils.ErrorTypeIO:
+	case shared.ErrorTypeIO:
 		ef.provideIOSuggestions(err)
 	default:
 		ef.provideDefaultSuggestions()
@@ -87,17 +87,17 @@ func (ef *ErrorFormatter) provideSuggestions(err *utils.StructuredError) {
 }
 
 // provideFileSystemSuggestions provides suggestions for file system errors.
-func (ef *ErrorFormatter) provideFileSystemSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideFileSystemSuggestions(err *shared.StructuredError) {
 	filePath := err.FilePath
 
 	ef.ui.PrintWarning("Suggestions:")
 
 	switch err.Code {
-	case utils.CodeFSAccess:
+	case shared.CodeFSAccess:
 		ef.suggestFileAccess(filePath)
-	case utils.CodeFSPathResolution:
+	case shared.CodeFSPathResolution:
 		ef.suggestPathResolution(filePath)
-	case utils.CodeFSNotFound:
+	case shared.CodeFSNotFound:
 		ef.suggestFileNotFound(filePath)
 	default:
 		ef.suggestFileSystemGeneral(filePath)
@@ -105,14 +105,14 @@ func (ef *ErrorFormatter) provideFileSystemSuggestions(err *utils.StructuredErro
 }
 
 // provideValidationSuggestions provides suggestions for validation errors.
-func (ef *ErrorFormatter) provideValidationSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideValidationSuggestions(err *shared.StructuredError) {
 	ef.ui.PrintWarning("Suggestions:")
 
 	switch err.Code {
-	case utils.CodeValidationFormat:
+	case shared.CodeValidationFormat:
 		ef.ui.printf("  • Use a supported format: markdown, json, yaml\n")
 		ef.ui.printf("  • Example: -format markdown\n")
-	case utils.CodeValidationSize:
+	case shared.CodeValidationSize:
 		ef.ui.printf("  • Increase file size limit in config.yaml\n")
 		ef.ui.printf("  • Use smaller files or exclude large files\n")
 	default:
@@ -122,14 +122,14 @@ func (ef *ErrorFormatter) provideValidationSuggestions(err *utils.StructuredErro
 }
 
 // provideProcessingSuggestions provides suggestions for processing errors.
-func (ef *ErrorFormatter) provideProcessingSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideProcessingSuggestions(err *shared.StructuredError) {
 	ef.ui.PrintWarning("Suggestions:")
 
 	switch err.Code {
-	case utils.CodeProcessingCollection:
+	case shared.CodeProcessingCollection:
 		ef.ui.printf("  • Check if the source directory exists and is readable\n")
 		ef.ui.printf("  • Verify directory permissions\n")
-	case utils.CodeProcessingFileRead:
+	case shared.CodeProcessingFileRead:
 		ef.ui.printf("  • Check file permissions\n")
 		ef.ui.printf("  • Verify the file is not corrupted\n")
 	default:
@@ -139,15 +139,15 @@ func (ef *ErrorFormatter) provideProcessingSuggestions(err *utils.StructuredErro
 }
 
 // provideIOSuggestions provides suggestions for I/O errors.
-func (ef *ErrorFormatter) provideIOSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideIOSuggestions(err *shared.StructuredError) {
 	ef.ui.PrintWarning("Suggestions:")
 
 	switch err.Code {
-	case utils.CodeIOFileCreate:
+	case shared.CodeIOFileCreate:
 		ef.ui.printf("  • Check if the destination directory exists\n")
 		ef.ui.printf("  • Verify write permissions for the output file\n")
 		ef.ui.printf("  • Ensure sufficient disk space\n")
-	case utils.CodeIOWrite:
+	case shared.CodeIOWrite:
 		ef.ui.printf("  • Check available disk space\n")
 		ef.ui.printf("  • Verify write permissions\n")
 	default:
@@ -266,11 +266,11 @@ func IsUserError(err error) bool {
 	}
 
 	// Check for structured errors that are user-facing
-	structErr := &utils.StructuredError{}
+	structErr := &shared.StructuredError{}
 	if errors.As(err, &structErr) {
-		return structErr.Type == utils.ErrorTypeValidation ||
-			structErr.Code == utils.CodeValidationFormat ||
-			structErr.Code == utils.CodeValidationSize
+		return structErr.Type == shared.ErrorTypeValidation ||
+			structErr.Code == shared.CodeValidationFormat ||
+			structErr.Code == shared.CodeValidationSize
 	}
 
 	// Check error message patterns

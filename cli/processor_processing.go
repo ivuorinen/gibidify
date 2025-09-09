@@ -8,7 +8,7 @@ import (
 
 	"github.com/ivuorinen/gibidify/fileproc"
 	"github.com/ivuorinen/gibidify/metrics"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // Process executes the main file processing workflow.
@@ -66,7 +66,7 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 		return err
 	}
 	defer func() {
-		utils.LogError("Error closing output file", outFile.Close())
+		shared.LogError("Error closing output file", outFile.Close())
 	}()
 
 	// Initialize back-pressure and channels
@@ -116,10 +116,10 @@ func (p *Processor) createOutputFile() (*os.File, error) {
 	// Destination path has been validated in CLI flags validation for path traversal attempts
 	outFile, err := os.Create(p.flags.Destination) // #nosec G304 - destination is validated in flags.validate()
 	if err != nil {
-		return nil, utils.WrapError(
+		return nil, shared.WrapError(
 			err,
-			utils.ErrorTypeIO,
-			utils.CodeIOFileCreate,
+			shared.ErrorTypeIO,
+			shared.CodeIOFileCreate,
 			"failed to create output file",
 		).WithFilePath(p.flags.Destination)
 	}

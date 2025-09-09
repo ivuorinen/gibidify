@@ -9,7 +9,7 @@ import (
 
 	"github.com/ivuorinen/gibidify/cli"
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 			os.Exit(1)
 		}
 		// System errors still go to logger for debugging
-		logger := utils.GetLogger()
+		logger := shared.GetLogger()
 		logger.Errorf("System error: %v", err)
 		ui.PrintError("An unexpected error occurred. Please check the logs.")
 		os.Exit(2)
@@ -41,8 +41,8 @@ func run(ctx context.Context) error {
 	}
 
 	// Initialize logger with provided log level
-	logger := utils.GetLogger()
-	logger.SetLevel(utils.ParseLogLevel(flags.LogLevel))
+	logger := shared.GetLogger()
+	logger.SetLevel(shared.ParseLogLevel(flags.LogLevel))
 
 	// Load configuration
 	config.LoadConfig()

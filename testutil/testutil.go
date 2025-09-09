@@ -38,7 +38,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 const (
@@ -52,7 +52,7 @@ const (
 // Returns a function that should be called to restore the original log output.
 func SuppressLogs(t *testing.T) func() {
 	t.Helper()
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 
 	// Capture original output by temporarily setting it to discard
 	logger.SetOutput(io.Discard)
@@ -77,7 +77,7 @@ func SuppressAllOutput(t *testing.T) OutputRestoreFunc {
 	originalStderr := os.Stderr
 
 	// Suppress logger output as well
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	logger.SetOutput(io.Discard)
 
 	// Open /dev/null for safe redirection
@@ -130,7 +130,7 @@ func CaptureOutput(t *testing.T) (getStdout func() string, getStderr func() stri
 	os.Stderr = stderrWriter
 
 	// Suppress logger output to stderr
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	logger.SetOutput(stderrWriter)
 
 	// Buffers to collect output

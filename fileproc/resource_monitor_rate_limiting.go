@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // WaitForRateLimit waits for rate limiting if enabled.
@@ -21,7 +21,7 @@ func (rm *ResourceMonitor) WaitForRateLimit(ctx context.Context) error {
 	case <-rm.rateLimitChan:
 		return nil
 	case <-time.After(time.Second): // Fallback timeout
-		logger := utils.GetLogger()
+		logger := shared.GetLogger()
 		logger.Warn("Rate limiting timeout exceeded, continuing without rate limit")
 
 		return nil

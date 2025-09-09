@@ -10,7 +10,7 @@ import (
 
 	"github.com/ivuorinen/gibidify/fileproc"
 	"github.com/ivuorinen/gibidify/metrics"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // startWorkers starts the worker goroutines.
@@ -61,7 +61,7 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 
 	// Check for emergency stop
 	if p.resourceMonitor != nil && p.resourceMonitor.IsEmergencyStopActive() {
-		logger := utils.GetLogger()
+		logger := shared.GetLogger()
 		logger.Warnf("Emergency stop active, skipping file: %s", filePath)
 
 		// Record skipped file
@@ -70,9 +70,9 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 		return
 	}
 
-	absRoot, err := utils.GetAbsolutePath(p.flags.SourceDir)
+	absRoot, err := shared.GetAbsolutePath(p.flags.SourceDir)
 	if err != nil {
-		utils.LogError("Failed to get absolute path", err)
+		shared.LogError("Failed to get absolute path", err)
 
 		// Record error
 		p.recordFileResult(filePath, 0, "", false, false, "", err)
@@ -93,7 +93,7 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 	if p.flags.Verbose && p.metricsCollector != nil {
 		currentMetrics := p.metricsCollector.GetCurrentMetrics()
 		if currentMetrics.ProcessedFiles%10 == 0 && p.metricsReporter != nil {
-			logger := utils.GetLogger()
+			logger := shared.GetLogger()
 			logger.Info(p.metricsReporter.ReportProgress())
 		}
 	}
@@ -112,14 +112,14 @@ func (p *Processor) sendFiles(ctx context.Context, files []string, fileCh chan s
 		// Wait for channel space if needed
 		p.backpressure.WaitForChannelSpace(ctx, fileCh, nil)
 
-		if err := utils.CheckContextCancellation(ctx, "file processing worker"); err != nil {
+		if err := shared.CheckContextCancellation(ctx, "file processing worker"); err != nil {
 			return fmt.Errorf("context check failed: %w", err)
 		}
 
 		select {
 		case fileCh <- fp:
 		case <-ctx.Done():
-			if err := utils.CheckContextCancellation(ctx, "file processing worker"); err != nil {
+			if err := shared.CheckContextCancellation(ctx, "file processing worker"); err != nil {
 				return fmt.Errorf("context cancellation during channel send: %w", err)
 			}
 

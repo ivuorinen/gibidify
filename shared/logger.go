@@ -1,5 +1,5 @@
-// Package utils provides logging utilities for gibidify.
-package utils
+// Package shared provides logging utilities for gibidify.
+package shared
 
 import (
 	"io"

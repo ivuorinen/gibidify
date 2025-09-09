@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // BackpressureManager manages memory usage and applies back-pressure when needed.
@@ -42,7 +42,7 @@ func (bp *BackpressureManager) CreateChannels() (chan string, chan WriteRequest)
 	var fileCh chan string
 	var writeCh chan WriteRequest
 
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	if bp.enabled {
 		// Use buffered channels with configured limits
 		fileCh = make(chan string, bp.maxPendingFiles)
@@ -80,7 +80,7 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(ctx context.Context) bool
 	// Get current memory usage
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := utils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
+	currentMemory := shared.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
@@ -88,7 +88,7 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(ctx context.Context) bool
 	bp.lastMemoryCheck = time.Now()
 
 	// Check if we're over the memory limit
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	if currentMemory > bp.maxMemoryUsage {
 		if !bp.memoryWarningLogged {
 			logger.Warnf(
@@ -130,7 +130,7 @@ func (bp *BackpressureManager) ApplyBackpressure(ctx context.Context) {
 	// Log memory usage after GC
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	logger.Debugf("Applied back-pressure: memory after GC = %d bytes", m.Alloc)
 }
 
@@ -145,7 +145,7 @@ func (bp *BackpressureManager) GetStats() BackpressureStats {
 	return BackpressureStats{
 		Enabled:             bp.enabled,
 		FilesProcessed:      atomic.LoadInt64(&bp.filesProcessed),
-		CurrentMemoryUsage:  utils.SafeUint64ToInt64WithDefault(m.Alloc, 0),
+		CurrentMemoryUsage:  shared.SafeUint64ToInt64WithDefault(m.Alloc, 0),
 		MaxMemoryUsage:      bp.maxMemoryUsage,
 		MemoryWarningActive: bp.memoryWarningLogged,
 		LastMemoryCheck:     bp.lastMemoryCheck,
@@ -172,7 +172,7 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 		return
 	}
 
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	// Check if file channel is getting full (>90% capacity)
 	fileCap := cap(fileCh)
 	if fileCap > 0 && len(fileCh) > fileCap*9/10 {
@@ -202,7 +202,7 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 
 // LogBackpressureInfo logs back-pressure configuration and status.
 func (bp *BackpressureManager) LogBackpressureInfo() {
-	logger := utils.GetLogger()
+	logger := shared.GetLogger()
 	if bp.enabled {
 		logger.Infof(
 			"Back-pressure enabled: maxMemory=%dMB, fileBuffer=%d, writeBuffer=%d, checkInterval=%d",

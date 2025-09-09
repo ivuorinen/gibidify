@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // TestValidateConfig tests the configuration validation functionality.
@@ -227,17 +227,17 @@ func validateExpectedError(t *testing.T, err error, errContains string) {
 	}
 
 	// Check that it's a structured error
-	var structErr *utils.StructuredError
+	var structErr *shared.StructuredError
 	if !errorAs(err, &structErr) {
 		t.Errorf("Expected structured error, got %T", err)
 
 		return
 	}
-	if structErr.Type != utils.ErrorTypeConfiguration {
-		t.Errorf("Expected error type %v, got %v", utils.ErrorTypeConfiguration, structErr.Type)
+	if structErr.Type != shared.ErrorTypeConfiguration {
+		t.Errorf("Expected error type %v, got %v", shared.ErrorTypeConfiguration, structErr.Type)
 	}
-	if structErr.Code != utils.CodeConfigValidation {
-		t.Errorf("Expected error code %v, got %v", utils.CodeConfigValidation, structErr.Code)
+	if structErr.Code != shared.CodeConfigValidation {
+		t.Errorf("Expected error code %v, got %v", shared.CodeConfigValidation, structErr.Code)
 	}
 }
 
@@ -245,9 +245,9 @@ func errorAs(err error, target any) bool {
 	if err == nil {
 		return false
 	}
-	structErr := &utils.StructuredError{}
+	structErr := &shared.StructuredError{}
 	if errors.As(err, &structErr) {
-		if ptr, ok := target.(**utils.StructuredError); ok {
+		if ptr, ok := target.(**shared.StructuredError); ok {
 			*ptr = structErr
 
 			return true
