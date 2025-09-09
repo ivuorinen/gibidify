@@ -1,6 +1,7 @@
 # Revive configuration for gibidify project
 # https://revive.run/
 # Migrated from golangci-lint v2.4.0 configuration
+# NOTE: For comprehensive security scanning, also run: gosec ./...
 
 # Global configuration
 ignoreGeneratedHeader = true
@@ -54,8 +55,10 @@ enableAllRules = true
 # BUG PREVENTION (from bodyclose, dupl, gochecknoinits, goconst, gocritic, gosec, misspell, unparam, usestdlibvars)
 # ============================================================================
 
-# Security rules (from gosec)
+# Security rules (from gosec and additional security checks)
 [rule.file-header]
+[rule.datarace]
+[rule.unchecked-type-assertion]
 
 # Code duplication (from dupl - threshold: 150)
 [rule.duplicated-imports]
