@@ -14,3 +14,4 @@ output.yaml
 gosec-report.json
 govulncheck-report.json
 security-report.md
+gosec*.log
