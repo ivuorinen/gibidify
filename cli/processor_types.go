@@ -1,3 +1,4 @@
+// Package cli provides command-line interface functionality for gibidify.
 package cli
 
 import (

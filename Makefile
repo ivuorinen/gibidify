@@ -89,7 +89,7 @@ security:
 	@echo "Running comprehensive security scan..."
 	@./scripts/security-scan.sh
 
-security-full:
+security-full: install-tools
 	@echo "Running full security analysis..."
 	@./scripts/security-scan.sh
 	@echo "Running additional security checks..."

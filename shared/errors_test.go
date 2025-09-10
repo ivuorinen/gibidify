@@ -767,7 +767,7 @@ func validatePredefinedError(t *testing.T, err *StructuredError, expectedType Er
 		t.Errorf("Expected Type %v, got %v", expectedType, err.Type)
 	}
 
-	if name != "NewCLIMissingSourceError" {
+	if name != "NewMissingSourceError" {
 		if err.Code != code {
 			t.Errorf("Expected Code %q, got %q", code, err.Code)
 		}
@@ -784,8 +784,8 @@ func TestPredefinedErrorConstructors(t *testing.T) {
 		expectedType ErrorType
 	}{
 		{
-			name:         "NewCLIMissingSourceError",
-			constructor:  func(_, _ string) *StructuredError { return NewCLIMissingSourceError() },
+			name:         "NewMissingSourceError",
+			constructor:  func(_, _ string) *StructuredError { return NewMissingSourceError() },
 			expectedType: ErrorTypeCLI,
 		},
 		{
@@ -817,8 +817,8 @@ func TestPredefinedErrorConstructors(t *testing.T) {
 				message := "test message"
 
 				var err *StructuredError
-				if tt.name == "NewCLIMissingSourceError" {
-					err = NewCLIMissingSourceError()
+				if tt.name == "NewMissingSourceError" {
+					err = NewMissingSourceError()
 				} else {
 					err = tt.constructor(code, message)
 				}

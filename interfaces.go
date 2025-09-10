@@ -1,8 +1,11 @@
+// Package main provides core interfaces for the gibidify application.
 package main
 
 import (
 	"context"
 	"io"
+
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // ProcessorInterface defines the interface for file processors.
@@ -149,40 +152,7 @@ type ConfigLoaderInterface interface {
 
 // LoggerInterface defines the interface for logging operations.
 // This abstracts logging for better testing and different log backends.
-type LoggerInterface interface {
-	// SetLevel sets the logging level.
-	SetLevel(level LogLevel)
-
-	// Debug logs a debug message.
-	Debug(msg string)
-
-	// Info logs an informational message.
-	Info(msg string)
-
-	// Warn logs a warning message.
-	Warn(msg string)
-
-	// Error logs an error message.
-	Error(msg string)
-
-	// Debugf logs a formatted debug message.
-	Debugf(format string, args ...any)
-
-	// Infof logs a formatted informational message.
-	Infof(format string, args ...any)
-
-	// Warnf logs a formatted warning message.
-	Warnf(format string, args ...any)
-
-	// Errorf logs a formatted error message.
-	Errorf(format string, args ...any)
-
-	// SetOutput sets the output destination for log messages.
-	SetOutput(w io.Writer)
-
-	// GetOutput returns the current output destination.
-	GetOutput() io.Writer
-}
+type LoggerInterface = shared.Logger
 
 // These types are referenced by the interfaces but need to be defined
 // elsewhere in the codebase. They are included here for documentation.
