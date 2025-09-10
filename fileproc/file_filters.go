@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
@@ -40,6 +41,7 @@ func (f *FileFilter) shouldSkipDirectory(entry os.DirEntry) bool {
 			return true
 		}
 	}
+
 	return false
 }
 

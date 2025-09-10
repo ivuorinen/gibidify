@@ -1,15 +1,25 @@
+---
 repos:
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v1.64.8
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+    rev: 3.4.0
     hooks:
-      - id: golangci-lint
-        args: ["--timeout=5m"]
+      - id: editorconfig-checker
+        alias: ec
+
   - repo: https://github.com/tekwizely/pre-commit-golang
-    rev: v1.0.0-rc.1
+    rev: v1.0.0-rc.2
     hooks:
       - id: go-build-mod
         alias: build
       - id: go-mod-tidy
         alias: tidy
+      - id: go-revive
+        alias: revive
+      - id: go-vet-mod
+        alias: vet
+      - id: go-staticcheck-mod
+        alias: static
       - id: go-fmt
         alias: fmt
+      - id: go-sec-mod
+        alias: sec

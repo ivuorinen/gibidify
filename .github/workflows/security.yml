@@ -1,13 +1,18 @@
+---
 name: Security Scan
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   schedule:
     # Run security scan weekly on Sundays at 00:00 UTC
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
 
 permissions:
   security-events: write
@@ -21,15 +26,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          token: ${{ github.token }}
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
         with:
-          go-version: '1.23'
+          go-version-file: "go.mod"
 
       - name: Cache Go modules
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
         with:
           path: |
             ~/.cache/go-build
@@ -42,10 +50,10 @@ jobs:
       - name: Run gosec Security Scanner
         uses: securego/gosec@c9453023c4e81ebdb6dde29e22d9cd5e2285fb16 # v2.22.8
         with:
-          args: '-fmt sarif -out gosec-results.sarif ./...'
+          args: "-fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload gosec results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@df559355d593797519d70b90fc8edd5db049e7a2 # v3
+        uses: github/codeql-action/upload-sarif@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
         if: always()
         with:
           sarif_file: gosec-results.sarif
@@ -53,7 +61,7 @@ jobs:
       # Dependency Vulnerability Scanning
       - name: Run govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           govulncheck -json ./... > govulncheck-results.json || true
 
       - name: Parse govulncheck results
@@ -68,28 +76,27 @@ jobs:
           fi
 
       # Additional Security Linting
-      - name: Run security-focused golangci-lint
+      - name: Run security-focused revive linting
         run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          golangci-lint run --enable=gosec,gocritic,bodyclose,rowserrcheck,misspell,unconvert,unparam,unused \
-            --timeout=5m
+          go install github.com/mgechev/revive@v1.11.0
+          revive -config revive.toml -set_exit_status ./...
 
       # Makefile Linting
       - name: Run checkmake on Makefile
         run: |
-          go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+          go install github.com/checkmake/checkmake@v0.2.2
           checkmake --config=.checkmake Makefile
 
       # Shell Script Formatting Check
       - name: Check shell script formatting
         run: |
-          go install mvdan.cc/sh/v3/cmd/shfmt@latest
+          go install mvdan.cc/sh/v3/cmd/shfmt@v3.12.0
           shfmt -d .
 
       # YAML Linting
       - name: Run YAML linting
         run: |
-          go install github.com/excilsploft/yamllint@latest
+          python3 -m pip install 'yamllint==1.37.1'
           yamllint -c .yamllint .
 
       # Secrets Detection (basic patterns)
@@ -118,21 +125,21 @@ jobs:
       # SAST with CodeQL (if available)
       - name: Initialize CodeQL
         if: github.event_name != 'schedule'
-        uses: github/codeql-action/init@df559355d593797519d70b90fc8edd5db049e7a2 # v3
+        uses: github/codeql-action/init@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
         with:
           languages: go
 
       - name: Autobuild
         if: github.event_name != 'schedule'
-        uses: github/codeql-action/autobuild@df559355d593797519d70b90fc8edd5db049e7a2 # v3
+        uses: github/codeql-action/autobuild@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
 
       - name: Perform CodeQL Analysis
         if: github.event_name != 'schedule'
-        uses: github/codeql-action/analyze@df559355d593797519d70b90fc8edd5db049e7a2 # v3
+        uses: github/codeql-action/analyze@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
 
       # Upload artifacts for review
       - name: Upload security scan results
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: security-scan-results

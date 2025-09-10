@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
@@ -41,6 +42,7 @@ func tryLoadIgnoreFile(dir, fileName string) *ignoreRule {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -51,6 +53,7 @@ func matchesIgnoreRules(fullPath string, rules []ignoreRule) bool {
 			return true
 		}
 	}
+
 	return false
 }
 

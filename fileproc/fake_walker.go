@@ -12,5 +12,6 @@ func (fw FakeWalker) Walk(_ string) ([]string, error) {
 	if fw.Err != nil {
 		return nil, fw.Err
 	}
+
 	return fw.Files, nil
 }

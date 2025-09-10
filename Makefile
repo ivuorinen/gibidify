@@ -1,36 +1,18 @@
-.PHONY: help install-tools lint lint-fix lint-verbose test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check check-all dev-setup
+.PHONY: all help install-tools lint lint-fix test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check update-deps check-all dev-setup
 
 # Default target shows help
 .DEFAULT_GOAL := help
 
 # All target runs full workflow
-all: lint test build
+all: lint lint-fix test build
 
-# Help target  
+# Help target
 help:
 	@cat scripts/help.txt
 
 # Install required tools
 install-tools:
-	@echo "Installing golangci-lint..."
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@echo "Installing gofumpt..."
-	@go install mvdan.cc/gofumpt@latest
-	@echo "Installing goimports..."
-	@go install golang.org/x/tools/cmd/goimports@latest
-	@echo "Installing staticcheck..."
-	@go install honnef.co/go/tools/cmd/staticcheck@latest
-	@echo "Installing gosec..."
-	@go install github.com/securego/gosec/v2/cmd/gosec@latest
-	@echo "Installing gocyclo..."
-	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
-	@echo "Installing checkmake..."
-	@go install github.com/mrtazz/checkmake/cmd/checkmake@latest
-	@echo "Installing shfmt..."
-	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
-	@echo "Installing yamllint (Go-based)..."
-	@go install github.com/excilsploft/yamllint@latest
-	@echo "All tools installed successfully!"
+	@./scripts/install-tools.sh
 
 # Run linters
 lint:
@@ -38,35 +20,7 @@ lint:
 
 # Run linters with auto-fix
 lint-fix:
-	@echo "Running gofumpt..."
-	@gofumpt -l -w .
-	@echo "Running goimports..."
-	@goimports -w -local github.com/ivuorinen/gibidify .
-	@echo "Running go fmt..."
-	@go fmt ./...
-	@echo "Running go mod tidy..."
-	@go mod tidy
-	@echo "Running shfmt formatting..."
-	@shfmt -w -i 2 -ci .
-	@echo "Running golangci-lint with --fix..."
-	@golangci-lint run --fix ./...
-	@echo "Auto-fix completed. Running final lint check..."
-	@golangci-lint run ./...
-	@echo "Running checkmake..."
-	@checkmake --config=.checkmake Makefile
-	@echo "Running yamllint..."
-	@yamllint -c .yamllint .
-
-# Run linters with verbose output
-lint-verbose:
-	@echo "Running golangci-lint (verbose)..."
-	@golangci-lint run -v ./...
-	@echo "Running checkmake (verbose)..."
-	@checkmake --config=.checkmake --format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
-	@echo "Running shfmt check (verbose)..."
-	@shfmt -d .
-	@echo "Running yamllint (verbose)..."
-	@yamllint -c .yamllint -f parsable .
+	@./scripts/lint-fix.sh
 
 # Run tests
 test:
@@ -97,7 +51,7 @@ clean:
 .PHONY: ci-lint ci-test
 
 ci-lint:
-	@golangci-lint run --out-format=github-actions ./...
+	@revive -config revive.toml -formatter friendly -set_exit_status ./...
 
 ci-test:
 	@go test -race -coverprofile=coverage.out -json ./... > test-results.json
@@ -135,13 +89,19 @@ security:
 	@echo "Running comprehensive security scan..."
 	@./scripts/security-scan.sh
 
-security-full:
+security-full: install-tools
 	@echo "Running full security analysis..."
 	@./scripts/security-scan.sh
 	@echo "Running additional security checks..."
-	@golangci-lint run --enable-all --disable=depguard,exhaustruct,ireturn,varnamelen,wrapcheck --timeout=10m
+	@gosec -fmt=json -out=security-report.json ./...
+	@staticcheck -checks=all ./...
 
 vuln-check:
 	@echo "Checking for dependency vulnerabilities..."
-	@go install golang.org/x/vuln/cmd/govulncheck@latest
+	@go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 	@govulncheck ./...
+
+# Update dependencies
+update-deps:
+	@echo "Updating Go dependencies..."
+	@./scripts/update-deps.sh
