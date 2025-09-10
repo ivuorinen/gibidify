@@ -61,7 +61,7 @@ jobs:
       # Dependency Vulnerability Scanning
       - name: Run govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           govulncheck -json ./... > govulncheck-results.json || true
 
       - name: Parse govulncheck results
@@ -96,7 +96,7 @@ jobs:
       # YAML Linting
       - name: Run YAML linting
         run: |
-          go install mvdan.cc/yaml/cmd/yaml-lint@v2.4.0
+          python3 -m pip install 'yamllint==1.37.1'
           yamllint -c .yamllint .
 
       # Secrets Detection (basic patterns)

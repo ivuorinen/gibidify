@@ -61,7 +61,7 @@ check_dependencies() {
 
   if ! command -v govulncheck &>/dev/null; then
     print_warning "govulncheck not found, installing..."
-    go install golang.org/x/vuln/cmd/govulncheck@v1.1.3
+    go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
   fi
 
   # Linting tools
@@ -78,7 +78,7 @@ check_dependencies() {
 
   if ! command -v checkmake &>/dev/null; then
     print_warning "checkmake not found, installing..."
-    go install github.com/checkmake/checkmake/cmd/checkmake@latest
+    go install github.com/checkmake/checkmake/cmd/checkmake@v0.2.2
   fi
 
   if ! command -v eclint &>/dev/null; then

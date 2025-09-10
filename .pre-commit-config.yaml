@@ -1,35 +1,11 @@
 ---
 repos:
-  - repo: local
-    hooks:
-      - id: revive
-        name: revive
-        entry: revive
-        args:
-          - "-config"
-          - "revive.toml"
-          - "-set_exit_status"
-          - "./..."
-        language: golang
-        additional_dependencies:
-          - github.com/mgechev/revive@v1.11.0
-        files: \.go$
-      - id: gosec
-        name: gosec
-        entry: gosec
-        args:
-          - "-fmt=text"
-          - "-quiet"
-          - "./..."
-        language: golang
-        additional_dependencies:
-          - github.com/securego/gosec/v2/cmd/gosec@v2.22.8
-        files: \.go$
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: 3.4.0
     hooks:
       - id: editorconfig-checker
         alias: ec
+
   - repo: https://github.com/tekwizely/pre-commit-golang
     rev: v1.0.0-rc.2
     hooks:
@@ -37,5 +13,13 @@ repos:
         alias: build
       - id: go-mod-tidy
         alias: tidy
+      - id: go-revive
+        alias: revive
+      - id: go-vet-mod
+        alias: vet
+      - id: go-staticcheck-mod
+        alias: static
       - id: go-fmt
         alias: fmt
+      - id: go-sec-mod
+        alias: sec

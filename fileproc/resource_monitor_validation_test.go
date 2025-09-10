@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/ivuorinen/gibidify/testutil"
 	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 // assertStructuredError verifies that an error is a StructuredError with the expected code.

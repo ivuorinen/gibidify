@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/ivuorinen/gibidify/testutil"
 	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 // Test constants to avoid goconst linting issues.

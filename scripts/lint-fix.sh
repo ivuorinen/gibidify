@@ -3,6 +3,7 @@
 # Enable strict error handling
 set -euo pipefail
 IFS=$'\n\t'
+shopt -s globstar nullglob
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
