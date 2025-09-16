@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
@@ -31,12 +32,14 @@ type ResourceMonitor struct {
 	// Rate limiting
 	rateLimiter   *time.Ticker
 	rateLimitChan chan struct{}
+	done          chan struct{} // Signal to stop goroutines
 
 	// Synchronization
 	mu                     sync.RWMutex
 	violationLogged        map[string]bool
 	degradationActive      bool
 	emergencyStopRequested bool
+	closed                 bool
 }
 
 // ResourceMetrics holds comprehensive resource usage metrics.
@@ -44,6 +47,7 @@ type ResourceMetrics struct {
 	FilesProcessed      int64         `json:"files_processed"`
 	TotalSizeProcessed  int64         `json:"total_size_processed"`
 	ConcurrentReads     int64         `json:"concurrent_reads"`
+	MaxConcurrentReads  int64         `json:"max_concurrent_reads"`
 	ProcessingDuration  time.Duration `json:"processing_duration"`
 	AverageFileSize     float64       `json:"average_file_size"`
 	ProcessingRate      float64       `json:"processing_rate_files_per_sec"`
@@ -57,12 +61,12 @@ type ResourceMetrics struct {
 
 // ResourceViolation represents a detected resource limit violation.
 type ResourceViolation struct {
-	Type      string                 `json:"type"`
-	Message   string                 `json:"message"`
-	Current   interface{}            `json:"current"`
-	Limit     interface{}            `json:"limit"`
-	Timestamp time.Time              `json:"timestamp"`
-	Context   map[string]interface{} `json:"context"`
+	Type      string         `json:"type"`
+	Message   string         `json:"message"`
+	Current   any            `json:"current"`
+	Limit     any            `json:"limit"`
+	Timestamp time.Time      `json:"timestamp"`
+	Context   map[string]any `json:"context"`
 }
 
 // NewResourceMonitor creates a new resource monitor with configuration.
@@ -82,6 +86,7 @@ func NewResourceMonitor() *ResourceMonitor {
 		lastRateLimitCheck:    time.Now(),
 		violationLogged:       make(map[string]bool),
 		hardMemoryLimitBytes:  int64(config.GetHardMemoryLimitMB()) * 1024 * 1024,
+		done:                  make(chan struct{}),
 	}
 
 	// Initialize rate limiter if rate limiting is enabled
@@ -100,7 +105,7 @@ func NewResourceMonitor() *ResourceMonitor {
 		}
 	rateLimitFull:
 
-		// Start rate limiter refill goroutine  
+		// Start rate limiter refill goroutine
 		go rm.rateLimiterRefill()
 	}
 

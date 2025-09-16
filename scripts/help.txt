@@ -1,8 +1,7 @@
 Available targets:
-  install-tools  - Install required linting and development tools
+  install-tools - Install required linting and development tools
   lint          - Run all linters (Go, Makefile, shell, YAML)
   lint-fix      - Run linters with auto-fix enabled
-  lint-verbose  - Run linters with verbose output
   test          - Run tests
   coverage      - Run tests with coverage
   build         - Build the application

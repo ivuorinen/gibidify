@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 // getImageExtensions returns the default image file extensions.

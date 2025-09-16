@@ -1,9 +1,13 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import "strings"
 
 // ApplyCustomExtensions applies custom extensions from configuration.
-func (r *FileTypeRegistry) ApplyCustomExtensions(customImages, customBinary []string, customLanguages map[string]string) {
+func (r *FileTypeRegistry) ApplyCustomExtensions(
+	customImages, customBinary []string,
+	customLanguages map[string]string,
+) {
 	// Add custom image extensions
 	r.addExtensions(customImages, r.AddImageExtension)
 

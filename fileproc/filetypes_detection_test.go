@@ -6,7 +6,15 @@ import (
 
 // TestFileTypeRegistry_LanguageDetection tests the language detection functionality.
 func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
-	registry := GetDefaultRegistry()
+	// Create a fresh registry instance for testing to avoid global state pollution
+	registry := &FileTypeRegistry{
+		imageExts:    getImageExtensions(),
+		binaryExts:   getBinaryExtensions(),
+		languageMap:  getLanguageMap(),
+		extCache:     make(map[string]string, 1000),
+		resultCache:  make(map[string]FileTypeResult, 500),
+		maxCacheSize: 500,
+	}
 
 	tests := []struct {
 		filename string
@@ -94,7 +102,15 @@ func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
 
 // TestFileTypeRegistry_ImageDetection tests the image detection functionality.
 func TestFileTypeRegistry_ImageDetection(t *testing.T) {
-	registry := GetDefaultRegistry()
+	// Create a fresh registry instance for testing to avoid global state pollution
+	registry := &FileTypeRegistry{
+		imageExts:    getImageExtensions(),
+		binaryExts:   getBinaryExtensions(),
+		languageMap:  getLanguageMap(),
+		extCache:     make(map[string]string, 1000),
+		resultCache:  make(map[string]FileTypeResult, 500),
+		maxCacheSize: 500,
+	}
 
 	tests := []struct {
 		filename string
@@ -144,7 +160,15 @@ func TestFileTypeRegistry_ImageDetection(t *testing.T) {
 
 // TestFileTypeRegistry_BinaryDetection tests the binary detection functionality.
 func TestFileTypeRegistry_BinaryDetection(t *testing.T) {
-	registry := GetDefaultRegistry()
+	// Create a fresh registry instance for testing to avoid global state pollution
+	registry := &FileTypeRegistry{
+		imageExts:    getImageExtensions(),
+		binaryExts:   getBinaryExtensions(),
+		languageMap:  getLanguageMap(),
+		extCache:     make(map[string]string, 1000),
+		resultCache:  make(map[string]FileTypeResult, 500),
+		maxCacheSize: 500,
+	}
 
 	tests := []struct {
 		filename string
@@ -208,11 +232,11 @@ func TestFileTypeRegistry_BinaryDetection(t *testing.T) {
 		{"page.html", false},
 
 		// Edge cases
-		{"", false},              // Empty filename
-		{"binary", false},        // No extension
-		{".exe", true},           // Just extension
-		{"file.exe.txt", false},  // Multiple extensions
-		{"file.unknown", false},  // Unknown extension
+		{"", false},             // Empty filename
+		{"binary", false},       // No extension
+		{".exe", true},          // Just extension
+		{"file.exe.txt", false}, // Multiple extensions
+		{"file.unknown", false}, // Unknown extension
 	}
 
 	for _, tt := range tests {
