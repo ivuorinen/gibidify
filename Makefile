@@ -43,8 +43,7 @@ build:
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -f gibidify gibidify-benchmark
-	@rm -f coverage.out coverage.html
+	@rm -f gibidify gibidify-benchmark coverage.out coverage.html *.out
 	@echo "Clean complete"
 
 # CI-specific targets
