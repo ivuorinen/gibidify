@@ -24,4 +24,4 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ivuorinen/actions/pr-lint@22e6add79fabcca4bf5761452a51e4fa0207e155 # 25.9.8
+      - uses: ivuorinen/actions/pr-lint@5c468117d836748e28d7213ab3a399fe97b317ec # 25.9.16
