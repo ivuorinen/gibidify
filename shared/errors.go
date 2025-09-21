@@ -1,10 +1,9 @@
-// Package utils provides common utility functions.
-package utils
+// Package shared provides common utility functions.
+package shared
 
 import (
+	"errors"
 	"fmt"
-
-	"github.com/sirupsen/logrus"
 )
 
 // ErrorType represents the category of error.
@@ -63,6 +62,7 @@ func (e *StructuredError) Error() string {
 	if e.Cause != nil {
 		return fmt.Sprintf("%s [%s]: %s: %v", e.Type, e.Code, e.Message, e.Cause)
 	}
+
 	return fmt.Sprintf("%s [%s]: %s", e.Type, e.Code, e.Message)
 }
 
@@ -77,23 +77,26 @@ func (e *StructuredError) WithContext(key string, value any) *StructuredError {
 		e.Context = make(map[string]any)
 	}
 	e.Context[key] = value
+
 	return e
 }
 
 // WithFilePath adds file path information to the error.
 func (e *StructuredError) WithFilePath(filePath string) *StructuredError {
 	e.FilePath = filePath
+
 	return e
 }
 
 // WithLine adds line number information to the error.
 func (e *StructuredError) WithLine(line int) *StructuredError {
 	e.Line = line
+
 	return e
 }
 
 // NewStructuredError creates a new structured error.
-func NewStructuredError(errorType ErrorType, code, message, filePath string, context map[string]interface{}) *StructuredError {
+func NewStructuredError(errorType ErrorType, code, message, filePath string, context map[string]any) *StructuredError {
 	return &StructuredError{
 		Type:     errorType,
 		Code:     code,
@@ -132,29 +135,29 @@ func WrapErrorf(err error, errorType ErrorType, code, format string, args ...any
 	}
 }
 
-// Common error codes for each type
+// Common error codes for each type.
 const (
-	// CLI Error Codes
+	// CodeCLIMissingSource CLI Error Codes.
 	CodeCLIMissingSource = "MISSING_SOURCE"
 	CodeCLIInvalidArgs   = "INVALID_ARGS"
 
-	// FileSystem Error Codes
+	// CodeFSPathResolution FileSystem Error Codes.
 	CodeFSPathResolution = "PATH_RESOLUTION"
 	CodeFSPermission     = "PERMISSION_DENIED"
 	CodeFSNotFound       = "NOT_FOUND"
 	CodeFSAccess         = "ACCESS_DENIED"
 
-	// Processing Error Codes
+	// CodeProcessingFileRead Processing Error Codes.
 	CodeProcessingFileRead   = "FILE_READ"
 	CodeProcessingCollection = "COLLECTION"
 	CodeProcessingTraversal  = "TRAVERSAL"
 	CodeProcessingEncode     = "ENCODE"
 
-	// Configuration Error Codes
+	// CodeConfigValidation Configuration Error Codes.
 	CodeConfigValidation = "VALIDATION"
 	CodeConfigMissing    = "MISSING"
 
-	// IO Error Codes
+	// CodeIOFileCreate IO Error Codes.
 	CodeIOFileCreate = "FILE_CREATE"
 	CodeIOFileWrite  = "FILE_WRITE"
 	CodeIOEncoding   = "ENCODING"
@@ -162,14 +165,14 @@ const (
 	CodeIORead       = "READ"
 	CodeIOClose      = "CLOSE"
 
-	// Validation Error Codes
+	// Validation Error Codes.
 	CodeValidationFormat   = "FORMAT"
 	CodeValidationFileType = "FILE_TYPE"
 	CodeValidationSize     = "SIZE_LIMIT"
 	CodeValidationRequired = "REQUIRED"
 	CodeValidationPath     = "PATH_TRAVERSAL"
 
-	// Resource Limit Error Codes
+	// Resource Limit Error Codes.
 	CodeResourceLimitFiles       = "FILE_COUNT_LIMIT"
 	CodeResourceLimitTotalSize   = "TOTAL_SIZE_LIMIT"
 	CodeResourceLimitTimeout     = "TIMEOUT"
@@ -180,9 +183,16 @@ const (
 
 // Predefined error constructors for common error scenarios
 
-// NewCLIMissingSourceError creates a CLI error for missing source argument.
-func NewCLIMissingSourceError() *StructuredError {
-	return NewStructuredError(ErrorTypeCLI, CodeCLIMissingSource, "usage: gibidify -source <source_directory> [--destination <output_file>] [--format=json|yaml|markdown]", "", nil)
+// NewMissingSourceError creates a CLI error for missing source argument.
+func NewMissingSourceError() *StructuredError {
+	return NewStructuredError(
+		ErrorTypeCLI,
+		CodeCLIMissingSource,
+		"usage: gibidify -source <source_directory> [--destination <output_file>] "+
+			"[--format=json|yaml|markdown (default: json)]",
+		"",
+		nil,
+	)
 }
 
 // NewFileSystemError creates a file system error.
@@ -216,17 +226,20 @@ func LogError(operation string, err error, args ...any) {
 			msg = fmt.Sprintf(operation, args...)
 		}
 
+		logger := GetLogger()
 		// Check if it's a structured error and log with additional context
-		if structErr, ok := err.(*StructuredError); ok {
-			logrus.WithFields(logrus.Fields{
+		structErr := &StructuredError{}
+		if errors.As(err, &structErr) {
+			fields := map[string]any{
 				"error_type": structErr.Type.String(),
 				"error_code": structErr.Code,
 				"context":    structErr.Context,
 				"file_path":  structErr.FilePath,
 				"line":       structErr.Line,
-			}).Errorf("%s: %v", msg, err)
+			}
+			logger.WithFields(fields).Errorf("%s: %v", msg, err)
 		} else {
-			logrus.Errorf("%s: %v", msg, err)
+			logger.Errorf("%s: %v", msg, err)
 		}
 	}
 }

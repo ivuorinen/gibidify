@@ -2,10 +2,9 @@
 package fileproc
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // StartWriter writes the output in the specified format with memory optimization.
@@ -18,17 +17,17 @@ func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- stru
 	case "yaml":
 		startYAMLWriter(outFile, writeCh, done, prefix, suffix)
 	default:
-		context := map[string]interface{}{
+		context := map[string]any{
 			"format": format,
 		}
-		err := utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationFormat,
-			fmt.Sprintf("unsupported format: %s", format),
+		err := shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeValidationFormat,
+			"unsupported format: "+format,
 			"",
 			context,
 		)
-		utils.LogError("Failed to encode output", err)
+		shared.LogError("Failed to encode output", err)
 		close(done)
 	}
 }

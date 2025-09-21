@@ -1,7 +1,9 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
 )
@@ -26,7 +28,7 @@ func (rm *ResourceMonitor) AcquireReadSlot(ctx context.Context) error {
 		// Wait and retry
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("context canceled while waiting for read slot: %w", ctx.Err())
 		case <-time.After(time.Millisecond):
 			// Continue loop
 		}
@@ -47,13 +49,18 @@ func (rm *ResourceMonitor) CreateFileProcessingContext(parent context.Context) (
 	if !rm.enabled || rm.fileProcessingTimeout <= 0 {
 		return parent, func() {}
 	}
+
 	return context.WithTimeout(parent, rm.fileProcessingTimeout)
 }
 
 // CreateOverallProcessingContext creates a context with overall processing timeout.
-func (rm *ResourceMonitor) CreateOverallProcessingContext(parent context.Context) (context.Context, context.CancelFunc) {
+func (rm *ResourceMonitor) CreateOverallProcessingContext(parent context.Context) (
+	context.Context,
+	context.CancelFunc,
+) {
 	if !rm.enabled || rm.overallTimeout <= 0 {
 		return parent, func() {}
 	}
+
 	return context.WithTimeout(parent, rm.overallTimeout)
 }

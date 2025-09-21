@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
@@ -6,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // JSONWriter handles JSON format output with streaming support.
@@ -27,27 +28,27 @@ func NewJSONWriter(outFile *os.File) *JSONWriter {
 func (w *JSONWriter) Start(prefix, suffix string) error {
 	// Start JSON structure
 	if _, err := w.outFile.WriteString(`{"prefix":"`); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON start")
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON start")
 	}
 
 	// Write escaped prefix
-	escapedPrefix := utils.EscapeForJSON(prefix)
-	if err := utils.WriteWithErrorWrap(w.outFile, escapedPrefix, "failed to write JSON prefix", ""); err != nil {
-		return err
+	escapedPrefix := shared.EscapeForJSON(prefix)
+	if err := shared.WriteWithErrorWrap(w.outFile, escapedPrefix, "failed to write JSON prefix", ""); err != nil {
+		return fmt.Errorf("writing JSON prefix: %w", err)
 	}
 
 	if _, err := w.outFile.WriteString(`","suffix":"`); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON middle")
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON middle")
 	}
 
 	// Write escaped suffix
-	escapedSuffix := utils.EscapeForJSON(suffix)
-	if err := utils.WriteWithErrorWrap(w.outFile, escapedSuffix, "failed to write JSON suffix", ""); err != nil {
-		return err
+	escapedSuffix := shared.EscapeForJSON(suffix)
+	if err := shared.WriteWithErrorWrap(w.outFile, escapedSuffix, "failed to write JSON suffix", ""); err != nil {
+		return fmt.Errorf("writing JSON suffix: %w", err)
 	}
 
 	if _, err := w.outFile.WriteString(`","files":[`); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON files start")
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON files start")
 	}
 
 	return nil
@@ -57,7 +58,7 @@ func (w *JSONWriter) Start(prefix, suffix string) error {
 func (w *JSONWriter) WriteFile(req WriteRequest) error {
 	if !w.firstFile {
 		if _, err := w.outFile.WriteString(","); err != nil {
-			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON separator")
+			return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON separator")
 		}
 	}
 	w.firstFile = false
@@ -65,6 +66,7 @@ func (w *JSONWriter) WriteFile(req WriteRequest) error {
 	if req.IsStream {
 		return w.writeStreaming(req)
 	}
+
 	return w.writeInline(req)
 }
 
@@ -72,21 +74,27 @@ func (w *JSONWriter) WriteFile(req WriteRequest) error {
 func (w *JSONWriter) Close() error {
 	// Close JSON structure
 	if _, err := w.outFile.WriteString("]}"); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON end")
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON end")
 	}
+
 	return nil
 }
 
 // writeStreaming writes a large file as JSON in streaming chunks.
 func (w *JSONWriter) writeStreaming(req WriteRequest) error {
-	defer utils.SafeCloseReader(req.Reader, req.Path)
+	defer shared.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
 	// Write file start
-	escapedPath := utils.EscapeForJSON(req.Path)
+	escapedPath := shared.EscapeForJSON(req.Path)
 	if _, err := fmt.Fprintf(w.outFile, `{"path":"%s","language":"%s","content":"`, escapedPath, language); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON file start").WithFilePath(req.Path)
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
+			"failed to write JSON file start",
+		).WithFilePath(req.Path)
 	}
 
 	// Stream content with JSON escaping
@@ -96,7 +104,12 @@ func (w *JSONWriter) writeStreaming(req WriteRequest) error {
 
 	// Write file end
 	if _, err := w.outFile.WriteString(`"}`); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON file end").WithFilePath(req.Path)
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
+			"failed to write JSON file end",
+		).WithFilePath(req.Path)
 	}
 
 	return nil
@@ -113,24 +126,40 @@ func (w *JSONWriter) writeInline(req WriteRequest) error {
 
 	encoded, err := json.Marshal(fileData)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingEncode, "failed to marshal JSON").WithFilePath(req.Path)
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingEncode,
+			"failed to marshal JSON",
+		).WithFilePath(req.Path)
 	}
 
 	if _, err := w.outFile.Write(encoded); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write JSON file").WithFilePath(req.Path)
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
+			"failed to write JSON file",
+		).WithFilePath(req.Path)
 	}
+
 	return nil
 }
 
 // streamJSONContent streams content with JSON escaping.
 func (w *JSONWriter) streamJSONContent(reader io.Reader, path string) error {
-	return utils.StreamContent(reader, w.outFile, StreamChunkSize, path, func(chunk []byte) []byte {
-		escaped := utils.EscapeForJSON(string(chunk))
-		return []byte(escaped)
-	})
+	if err := shared.StreamContent(
+		reader, w.outFile, StreamChunkSize, path, func(chunk []byte) []byte {
+			escaped := shared.EscapeForJSON(string(chunk))
+
+			return []byte(escaped)
+		},
+	); err != nil {
+		return fmt.Errorf("streaming JSON content: %w", err)
+	}
+
+	return nil
 }
-
-
 
 // startJSONWriter handles JSON format output with streaming support.
 func startJSONWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
@@ -140,19 +169,20 @@ func startJSONWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- 
 
 	// Start writing
 	if err := writer.Start(prefix, suffix); err != nil {
-		utils.LogError("Failed to write JSON start", err)
+		shared.LogError("Failed to write JSON start", err)
+
 		return
 	}
 
 	// Process files
 	for req := range writeCh {
 		if err := writer.WriteFile(req); err != nil {
-			utils.LogError("Failed to write JSON file", err)
+			shared.LogError("Failed to write JSON file", err)
 		}
 	}
 
 	// Close writer
 	if err := writer.Close(); err != nil {
-		utils.LogError("Failed to write JSON end", err)
+		shared.LogError("Failed to write JSON end", err)
 	}
 }

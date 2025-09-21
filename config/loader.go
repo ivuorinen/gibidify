@@ -1,13 +1,13 @@
+// Package config handles application configuration management.
 package config
 
 import (
 	"os"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // LoadConfig reads configuration from a YAML file.
@@ -19,10 +19,12 @@ func LoadConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 
+	logger := shared.GetLogger()
+
 	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
 		// Validate XDG_CONFIG_HOME for path traversal attempts
-		if err := utils.ValidateConfigPath(xdgConfig); err != nil {
-			logrus.Warnf("Invalid XDG_CONFIG_HOME path, using default config: %v", err)
+		if err := shared.ValidateConfigPath(xdgConfig); err != nil {
+			logger.Warnf("Invalid XDG_CONFIG_HOME path, using default config: %v", err)
 		} else {
 			configPath := filepath.Join(xdgConfig, "gibidify")
 			viper.AddConfigPath(configPath)
@@ -37,14 +39,14 @@ func LoadConfig() {
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
-		logrus.Infof("Config file not found, using default values: %v", err)
+		logger.Infof("Config file not found, using default values: %v", err)
 		setDefaultConfig()
 	} else {
-		logrus.Infof("Using config file: %s", viper.ConfigFileUsed())
+		logger.Infof("Using config file: %s", viper.ConfigFileUsed())
 		// Validate configuration after loading
 		if err := ValidateConfig(); err != nil {
-			logrus.Warnf("Configuration validation failed: %v", err)
-			logrus.Info("Falling back to default configuration")
+			logger.Warnf("Configuration validation failed: %v", err)
+			logger.Info("Falling back to default configuration")
 			// Reset viper and set defaults when validation fails
 			viper.Reset()
 			setDefaultConfig()
@@ -56,9 +58,11 @@ func LoadConfig() {
 func setDefaultConfig() {
 	viper.SetDefault("fileSizeLimit", DefaultFileSizeLimit)
 	// Default ignored directories.
-	viper.SetDefault("ignoreDirectories", []string{
-		"vendor", "node_modules", ".git", "dist", "build", "target", "bower_components", "cache", "tmp",
-	})
+	viper.SetDefault(
+		"ignoreDirectories", []string{
+			"vendor", "node_modules", ".git", "dist", "build", "target", "bower_components", "cache", "tmp",
+		},
+	)
 
 	// FileTypeRegistry defaults
 	viper.SetDefault("fileTypes.enabled", true)
@@ -87,4 +91,30 @@ func setDefaultConfig() {
 	viper.SetDefault("resourceLimits.hardMemoryLimitMB", DefaultHardMemoryLimitMB)
 	viper.SetDefault("resourceLimits.enableGracefulDegradation", true)
 	viper.SetDefault("resourceLimits.enableResourceMonitoring", true)
+
+	// Output configuration defaults
+	viper.SetDefault("output.template", "")
+	viper.SetDefault("output.metadata.includeStats", false)
+	viper.SetDefault("output.metadata.includeTimestamp", false)
+	viper.SetDefault("output.metadata.includeFileCount", false)
+	viper.SetDefault("output.metadata.includeSourcePath", false)
+	viper.SetDefault("output.metadata.includeFileTypes", false)
+	viper.SetDefault("output.metadata.includeProcessingTime", false)
+	viper.SetDefault("output.metadata.includeTotalSize", false)
+	viper.SetDefault("output.metadata.includeMetrics", false)
+	viper.SetDefault("output.markdown.useCodeBlocks", false)
+	viper.SetDefault("output.markdown.includeLanguage", false)
+	viper.SetDefault("output.markdown.headerLevel", 0)
+	viper.SetDefault("output.markdown.tableOfContents", false)
+	viper.SetDefault("output.markdown.useCollapsible", false)
+	viper.SetDefault("output.markdown.syntaxHighlighting", false)
+	viper.SetDefault("output.markdown.lineNumbers", false)
+	viper.SetDefault("output.markdown.foldLongFiles", false)
+	viper.SetDefault("output.markdown.maxLineLength", 0)
+	viper.SetDefault("output.markdown.customCSS", "")
+	viper.SetDefault("output.custom.header", "")
+	viper.SetDefault("output.custom.footer", "")
+	viper.SetDefault("output.custom.fileHeader", "")
+	viper.SetDefault("output.custom.fileFooter", "")
+	viper.SetDefault("output.variables", map[string]string{})
 }

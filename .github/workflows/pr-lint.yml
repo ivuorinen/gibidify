@@ -5,11 +5,18 @@ name: PR Lint
 # yamllint disable-line rule:truthy
 on:
   push:
-    branches: [master, main]
+    branches:
+      - master
+      - main
   pull_request:
-    branches: [master, main]
+    branches:
+      - master
+      - main
 
 permissions: read-all
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   Linter:
@@ -21,7 +28,9 @@ jobs:
       pull-requests: write
       statuses: write
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
       - uses: ivuorinen/actions/pr-lint@4b6870953c3322e3b22e41e4a46c83e6d96bc1b6 # 25.9.19
+        env:
+          token: ${{ github.token }}

@@ -47,6 +47,7 @@ func TestResourceMonitor_Integration(t *testing.T) {
 		err = rm.ValidateFileProcessing(filePath, fileInfo.Size())
 		if err != nil {
 			t.Errorf("Failed to validate file %s: %v", filePath, err)
+
 			continue
 		}
 
@@ -54,6 +55,7 @@ func TestResourceMonitor_Integration(t *testing.T) {
 		err = rm.AcquireReadSlot(ctx)
 		if err != nil {
 			t.Errorf("Failed to acquire read slot for %s: %v", filePath, err)
+
 			continue
 		}
 

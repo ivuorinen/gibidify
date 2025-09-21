@@ -63,6 +63,7 @@ func getRegistry() *FileTypeRegistry {
 	registryOnce.Do(func() {
 		registry = initRegistry()
 	})
+
 	return registry
 }
 
@@ -75,6 +76,7 @@ func GetDefaultRegistry() *FileTypeRegistry {
 func (r *FileTypeRegistry) GetStats() RegistryStats {
 	r.cacheMutex.RLock()
 	defer r.cacheMutex.RUnlock()
+
 	return r.stats
 }
 
@@ -82,6 +84,7 @@ func (r *FileTypeRegistry) GetStats() RegistryStats {
 func (r *FileTypeRegistry) GetCacheInfo() (extCacheSize, resultCacheSize, maxCacheSize int) {
 	r.cacheMutex.RLock()
 	defer r.cacheMutex.RUnlock()
+
 	return len(r.extCache), len(r.resultCache), r.maxCacheSize
 }
 
@@ -101,7 +104,9 @@ func normalizeExtension(filename string) string {
 func isSpecialFile(filename string, extensions map[string]bool) bool {
 	if filepath.Ext(filename) == "" {
 		basename := strings.ToLower(filepath.Base(filename))
+
 		return extensions[basename]
 	}
+
 	return false
 }
