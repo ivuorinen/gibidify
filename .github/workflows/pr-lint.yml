@@ -25,5 +25,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       - uses: ivuorinen/actions/pr-lint@05e171c506876dce80fc8eb00f6c0e628e2586b5 # 25.8.21
-        env:
+        with:
           token: ${{ secrets.GITHUB_TOKEN }}
