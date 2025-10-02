@@ -34,7 +34,7 @@ func TestResourceMonitor_NewResourceMonitor(t *testing.T) {
 	}
 
 	if rm.fileProcessingTimeout != time.Duration(config.DefaultFileProcessingTimeoutSec)*time.Second {
-		t.Errorf("Expected fileProcessingTimeout to be %v, got %v", 
+		t.Errorf("Expected fileProcessingTimeout to be %v, got %v",
 			time.Duration(config.DefaultFileProcessingTimeoutSec)*time.Second, rm.fileProcessingTimeout)
 	}
 

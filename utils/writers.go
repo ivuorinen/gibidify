@@ -119,13 +119,13 @@ func StreamLines(reader io.Reader, writer io.Writer, filePath string, lineProces
 		if lineProcessor != nil {
 			processedLine = lineProcessor(line)
 		}
-		
+
 		// Write line with proper line ending (except for last empty line)
 		lineToWrite := processedLine
 		if i < len(lines)-1 || line != "" {
 			lineToWrite += "\n"
 		}
-		
+
 		if _, writeErr := writer.Write([]byte(lineToWrite)); writeErr != nil {
 			wrappedErr := WrapError(writeErr, ErrorTypeIO, CodeIOWrite, "failed to write processed line")
 			if filePath != "" {
