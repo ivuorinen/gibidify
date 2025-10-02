@@ -112,6 +112,8 @@ func TestFileTypeRegistry_ModificationMethods(t *testing.T) {
 
 // TestFileTypeRegistry_DefaultRegistryConsistency tests default registry behavior.
 func TestFileTypeRegistry_DefaultRegistryConsistency(t *testing.T) {
+	// Reset registry to ensure clean state
+	ResetRegistryForTesting()
 	registry := GetDefaultRegistry()
 
 	// Test that registry methods work consistently
