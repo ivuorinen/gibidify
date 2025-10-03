@@ -8,6 +8,125 @@ import (
 	"testing"
 )
 
+func TestGetBaseName(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		wantName string
+	}{
+		{"simple file", "/path/to/file.txt", "file.txt"},
+		{"simple directory", "/path/to/dir", "dir"},
+		{"current directory", ".", "output"}, // Special case
+		{"parent directory", "..", ".."},
+		{"root", "/", "/"},
+		{"no extension", "/path/to/filename", "filename"},
+		{"hidden file", "/path/to/.hidden", ".hidden"},
+		{"empty string", "", "output"}, // Special case
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetBaseName(tt.path)
+			if got != tt.wantName {
+				t.Errorf("GetBaseName(%q) = %q, want %q", tt.path, got, tt.wantName)
+			}
+		})
+	}
+}
+
+func TestValidateSourcePath(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+
+	tests := []struct {
+		name    string
+		path    string
+		wantErr bool
+	}{
+		{"valid directory", tmpDir, false},
+		{"empty path", "", true},
+		{"non-existent path", "/nonexistent/path/xyz123", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSourcePath(tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateSourcePath(%q) error = %v, wantErr %v", tt.path, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// Additional test for path validation with path traversal
+func TestValidateSourcePathTraversal(t *testing.T) {
+	// Test path traversal attempt
+	err := ValidateSourcePath("../../../etc/passwd")
+	if err == nil {
+		t.Error("Expected error for path traversal attempt, got nil")
+	}
+}
+
+func TestValidateDestinationPath(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "test.txt")
+
+	// Create a test file
+	if err := os.WriteFile(tmpFile, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		path    string
+		wantErr bool
+	}{
+		{"valid new file", filepath.Join(tmpDir, "newfile.txt"), false},
+		{"empty path", "", true},
+		{"directory path", tmpDir, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateDestinationPath(tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateDestinationPath(%q) error = %v, wantErr %v", tt.path, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateConfigPath(t *testing.T) {
+	// Create a temporary directory for testing
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "config.yaml")
+
+	// Create a test file
+	if err := os.WriteFile(tmpFile, []byte("test"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		path    string
+		wantErr bool
+	}{
+		{"valid config file", tmpFile, false},
+		{"empty path", "", false}, // Empty is allowed
+		{"non-existent file", filepath.Join(tmpDir, "nonexistent.yaml"), false}, // Non-existent is allowed
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateConfigPath(tt.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateConfigPath(%q) error = %v, wantErr %v", tt.path, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestGetAbsolutePath(t *testing.T) {
 	// Get current working directory for tests
 	cwd, err := os.Getwd()

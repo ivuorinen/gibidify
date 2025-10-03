@@ -240,3 +240,163 @@ func BenchmarkLogErrorNil(b *testing.B) {
 		LogError("benchmark operation", nil)
 	}
 }
+
+// TestStructuredErrorMethods tests methods on StructuredError.
+func TestStructuredErrorMethods(t *testing.T) {
+	baseErr := errors.New("base error")
+	structErr := WrapError(baseErr, ErrorTypeIO, CodeIORead, "read failed")
+
+	// Test Unwrap
+	if structErr.Unwrap() != baseErr {
+		t.Errorf("Expected Unwrap to return base error")
+	}
+
+	// Test WithContext
+	structErr = structErr.WithContext("key", "value")
+	if structErr.Context["key"] != "value" {
+		t.Errorf("Expected context key to be set")
+	}
+
+	// Test WithFilePath
+	structErr = structErr.WithFilePath("/test/file.txt")
+	if structErr.FilePath != "/test/file.txt" {
+		t.Errorf("Expected file path to be set")
+	}
+
+	// Test WithLine
+	structErr = structErr.WithLine(42)
+	if structErr.Line != 42 {
+		t.Errorf("Expected line number to be set")
+	}
+}
+
+// TestNewStructuredErrorf tests creating formatted structured errors.
+func TestNewStructuredErrorf(t *testing.T) {
+	structErr := NewStructuredErrorf(ErrorTypeValidation, CodeValidationFormat, "validation failed for %s", "field1")
+
+	if structErr.Type != ErrorTypeValidation {
+		t.Errorf("Expected error type %v, got %v", ErrorTypeValidation, structErr.Type)
+	}
+
+	if structErr.Code != CodeValidationFormat {
+		t.Errorf("Expected error code %v, got %v", CodeValidationFormat, structErr.Code)
+	}
+
+	if !strings.Contains(structErr.Message, "field1") {
+		t.Errorf("Expected message to contain formatted value")
+	}
+}
+
+// TestWrapErrorf tests wrapping errors with formatted messages.
+func TestWrapErrorf(t *testing.T) {
+	baseErr := errors.New("base error")
+	wrappedErr := WrapErrorf(baseErr, ErrorTypeFileSystem, CodeFSPathResolution, "failed to process %s", "file.txt")
+
+	if wrappedErr.Type != ErrorTypeFileSystem {
+		t.Errorf("Expected error type %v, got %v", ErrorTypeFileSystem, wrappedErr.Type)
+	}
+
+	if !strings.Contains(wrappedErr.Message, "file.txt") {
+		t.Errorf("Expected message to contain formatted value")
+	}
+
+	if wrappedErr.Cause != baseErr {
+		t.Errorf("Expected cause error to be set")
+	}
+}
+
+// TestErrorConstructors tests the various error constructor functions.
+func TestErrorConstructors(t *testing.T) {
+	tests := []struct {
+		name        string
+		constructor func() *StructuredError
+		wantType    ErrorType
+	}{
+		{
+			name: "NewCLIMissingSourceError",
+			constructor: func() *StructuredError {
+				return NewCLIMissingSourceError()
+			},
+			wantType: ErrorTypeCLI,
+		},
+		{
+			name: "NewFileSystemError",
+			constructor: func() *StructuredError {
+				return NewFileSystemError(CodeFSNotFound, "test error")
+			},
+			wantType: ErrorTypeFileSystem,
+		},
+		{
+			name: "NewProcessingError",
+			constructor: func() *StructuredError {
+				return NewProcessingError(CodeProcessingFileRead, "test error")
+			},
+			wantType: ErrorTypeProcessing,
+		},
+		{
+			name: "NewIOError",
+			constructor: func() *StructuredError {
+				return NewIOError(CodeIORead, "test error")
+			},
+			wantType: ErrorTypeIO,
+		},
+		{
+			name: "NewValidationError",
+			constructor: func() *StructuredError {
+				return NewValidationError(CodeValidationFormat, "test error")
+			},
+			wantType: ErrorTypeValidation,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.constructor()
+			if err.Type != tt.wantType {
+				t.Errorf("Expected error type %v, got %v", tt.wantType, err.Type)
+			}
+		})
+	}
+}
+
+// TestErrorString tests the String method on error types.
+func TestErrorString(t *testing.T) {
+	tests := []struct {
+		name       string
+		errorType  ErrorType
+		wantString string
+	}{
+		{"IO error", ErrorTypeIO, "IO"},
+		{"FileSystem error", ErrorTypeFileSystem, "FileSystem"},
+		{"Validation error", ErrorTypeValidation, "Validation"},
+		{"Processing error", ErrorTypeProcessing, "Processing"},
+		{"CLI error", ErrorTypeCLI, "CLI"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.errorType.String()
+			if got != tt.wantString {
+				t.Errorf("ErrorType.String() = %q, want %q", got, tt.wantString)
+			}
+		})
+	}
+}
+
+// TestStructuredErrorError tests the Error() method.
+func TestStructuredErrorError(t *testing.T) {
+	baseErr := errors.New("base error")
+	structErr := WrapError(baseErr, ErrorTypeIO, CodeIORead, "read failed")
+	structErr = structErr.WithFilePath("/test/file.txt").WithLine(10)
+
+	errMsg := structErr.Error()
+
+	// Check that the error message contains key information
+	if !strings.Contains(errMsg, "read failed") {
+		t.Error("Error message should contain the message")
+	}
+	if !strings.Contains(errMsg, "base error") {
+		t.Error("Error message should contain the base error")
+	}
+}
+

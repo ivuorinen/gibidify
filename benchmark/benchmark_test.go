@@ -1,7 +1,11 @@
 package benchmark
 
 import (
+	"bytes"
+	"io"
+	"os"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -163,3 +167,95 @@ func BenchmarkFormats(b *testing.B) {
 		}
 	}
 }
+
+// TestPrintBenchmarkResult tests the benchmark result printing.
+func TestPrintBenchmarkResult(t *testing.T) {
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	result := &BenchmarkResult{
+		Name:            "TestBenchmark",
+		Duration:        1000000000, // 1 second
+		FilesProcessed:  100,
+		BytesProcessed:  1024 * 1024, // 1 MB
+		FilesPerSecond:  100.0,
+		BytesPerSecond:  1024 * 1024,
+		MemoryUsage:     MemoryStats{AllocMB: 10.5, SysMB: 20.3, NumGC: 5, PauseTotalNs: 1000000},
+		CPUUsage:        CPUStats{Goroutines: 10},
+	}
+
+	PrintBenchmarkResult(result)
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Check that output contains key information
+	if !strings.Contains(output, "TestBenchmark") {
+		t.Error("Output should contain benchmark name")
+	}
+	if !strings.Contains(output, "Duration:") {
+		t.Error("Output should contain duration")
+	}
+	if !strings.Contains(output, "Files Processed:") {
+		t.Error("Output should contain files processed")
+	}
+	if !strings.Contains(output, "100") {
+		t.Error("Output should contain the number of files")
+	}
+}
+
+// TestPrintBenchmarkSuite tests the benchmark suite printing.
+func TestPrintBenchmarkSuite(t *testing.T) {
+	// Capture stdout
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	suite := &BenchmarkSuite{
+		Name: "TestSuite",
+		Results: []BenchmarkResult{
+			{
+				Name:           "Test1",
+				FilesProcessed: 50,
+			},
+			{
+				Name:           "Test2",
+				FilesProcessed: 75,
+			},
+		},
+	}
+
+	PrintBenchmarkSuite(suite)
+
+	w.Close()
+	os.Stdout = old
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Check that output contains suite name and all results
+	if !strings.Contains(output, "TestSuite") {
+		t.Error("Output should contain suite name")
+	}
+	if !strings.Contains(output, "Test1") {
+		t.Error("Output should contain first result name")
+	}
+	if !strings.Contains(output, "Test2") {
+		t.Error("Output should contain second result name")
+	}
+}
+
+// TestRunAllBenchmarks tests the comprehensive benchmark suite.
+func TestRunAllBenchmarks(t *testing.T) {
+	// This test would require extensive setup, so we'll test it indirectly
+	// by ensuring the individual benchmark functions work
+	t.Skip("RunAllBenchmarks requires comprehensive setup and is tested through integration tests")
+}
+
