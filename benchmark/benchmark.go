@@ -4,6 +4,7 @@ package benchmark
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,6 +15,14 @@ import (
 	"github.com/ivuorinen/gibidify/fileproc"
 	"github.com/ivuorinen/gibidify/utils"
 )
+
+// safeUint64ToInt64 safely converts uint64 to int64, returning max int64 on overflow
+func safeUint64ToInt64(val uint64) int64 {
+	if val > uint64(math.MaxInt64) {
+		return math.MaxInt64 // Return max int64 on overflow
+	}
+	return int64(val)
+}
 
 // BenchmarkResult represents the results of a benchmark run.
 type BenchmarkResult struct {
@@ -272,7 +281,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 		// Create subdirectories for some files
 		if i%10 == 0 {
 			subdir := filepath.Join(tempDir, fmt.Sprintf("subdir_%d", i/10))
-			if err := os.MkdirAll(subdir, 0o755); err != nil {
+			if err := os.MkdirAll(subdir, 0o750); err != nil {
 				cleanup()
 				return "", nil, utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSAccess, "failed to create subdirectory")
 			}
@@ -287,7 +296,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 			content += fmt.Sprintf("// Line %d\n%s\n", j, fileType.content)
 		}
 
-		if err := os.WriteFile(filename, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filename, []byte(content), 0o600); err != nil {
 			cleanup()
 			return "", nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileWrite, "failed to write benchmark file")
 		}
@@ -356,7 +365,7 @@ func PrintBenchmarkResult(result *BenchmarkResult) {
 	fmt.Printf("Files/sec: %.2f\n", result.FilesPerSecond)
 	fmt.Printf("Bytes/sec: %.2f MB/sec\n", result.BytesPerSecond/1024/1024)
 	fmt.Printf("Memory Usage: +%.2f MB (Sys: +%.2f MB)\n", result.MemoryUsage.AllocMB, result.MemoryUsage.SysMB)
-	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, time.Duration(result.MemoryUsage.PauseTotalNs))
+	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, time.Duration(safeUint64ToInt64(result.MemoryUsage.PauseTotalNs)))
 	fmt.Printf("Goroutines: %d\n", result.CPUUsage.Goroutines)
 	fmt.Println()
 }

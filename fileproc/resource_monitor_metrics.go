@@ -1,12 +1,21 @@
 package fileproc
 
 import (
+	"math"
 	"runtime"
 	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
 )
+
+// safeUint64ToInt64 safely converts uint64 to int64, returning max int64 on overflow
+func safeUint64ToInt64(val uint64) int64 {
+	if val > uint64(math.MaxInt64) {
+		return math.MaxInt64 // Return max int64 on overflow
+	}
+	return int64(val)
+}
 
 // RecordFileProcessed records that a file has been successfully processed.
 func (rm *ResourceMonitor) RecordFileProcessed(fileSize int64) {
@@ -55,7 +64,7 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 		ProcessingDuration:  duration,
 		AverageFileSize:     avgFileSize,
 		ProcessingRate:      processingRate,
-		MemoryUsageMB:       int64(m.Alloc) / 1024 / 1024,
+		MemoryUsageMB:       safeUint64ToInt64(m.Alloc) / 1024 / 1024,
 		MaxMemoryUsageMB:    int64(rm.hardMemoryLimitMB),
 		ViolationsDetected:  violations,
 		DegradationActive:   rm.degradationActive,

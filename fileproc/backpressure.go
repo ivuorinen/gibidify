@@ -73,7 +73,7 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(ctx context.Context) bool
 	// Get current memory usage
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := int64(m.Alloc)
+	currentMemory := safeUint64ToInt64(m.Alloc)
 
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
@@ -133,7 +133,7 @@ func (bp *BackpressureManager) GetStats() BackpressureStats {
 	return BackpressureStats{
 		Enabled:             bp.enabled,
 		FilesProcessed:      atomic.LoadInt64(&bp.filesProcessed),
-		CurrentMemoryUsage:  int64(m.Alloc),
+		CurrentMemoryUsage:  safeUint64ToInt64(m.Alloc),
 		MaxMemoryUsage:      bp.maxMemoryUsage,
 		MemoryWarningActive: bp.memoryWarningLogged,
 		LastMemoryCheck:     bp.lastMemoryCheck,
