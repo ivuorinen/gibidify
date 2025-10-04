@@ -5,6 +5,9 @@ run:
   build-tags:
     - test
 
+# golangci-lint configuration version
+version: 2
+
 output:
   format: colored-line-number
   print-issued-lines: true
