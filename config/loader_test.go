@@ -79,9 +79,9 @@ func TestLoadConfigWithValidation(t *testing.T) {
 	configContent := `
 fileSizeLimit: 100
 ignoreDirectories:
-  - node_modules
-  - ""
-  - .git
+- node_modules
+- ""
+- .git
 `
 
 	tempDir := t.TempDir()
