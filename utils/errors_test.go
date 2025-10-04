@@ -399,4 +399,3 @@ func TestStructuredErrorError(t *testing.T) {
 		t.Error("Error message should contain the base error")
 	}
 }
-

@@ -176,14 +176,14 @@ func TestPrintBenchmarkResult(t *testing.T) {
 	os.Stdout = w
 
 	result := &BenchmarkResult{
-		Name:            "TestBenchmark",
-		Duration:        1000000000, // 1 second
-		FilesProcessed:  100,
-		BytesProcessed:  1024 * 1024, // 1 MB
-		FilesPerSecond:  100.0,
-		BytesPerSecond:  1024 * 1024,
-		MemoryUsage:     MemoryStats{AllocMB: 10.5, SysMB: 20.3, NumGC: 5, PauseTotalNs: 1000000},
-		CPUUsage:        CPUStats{Goroutines: 10},
+		Name:           "TestBenchmark",
+		Duration:       1000000000, // 1 second
+		FilesProcessed: 100,
+		BytesProcessed: 1024 * 1024, // 1 MB
+		FilesPerSecond: 100.0,
+		BytesPerSecond: 1024 * 1024,
+		MemoryUsage:    MemoryStats{AllocMB: 10.5, SysMB: 20.3, NumGC: 5, PauseTotalNs: 1000000},
+		CPUUsage:       CPUStats{Goroutines: 10},
 	}
 
 	PrintBenchmarkResult(result)
@@ -258,4 +258,3 @@ func TestRunAllBenchmarks(t *testing.T) {
 	// by ensuring the individual benchmark functions work
 	t.Skip("RunAllBenchmarks requires comprehensive setup and is tested through integration tests")
 }
-

@@ -84,4 +84,3 @@ func TestCollectFilesNonExistentDir(t *testing.T) {
 		t.Error("Expected error for non-existent directory, got nil")
 	}
 }
-

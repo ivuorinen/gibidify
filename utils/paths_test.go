@@ -113,7 +113,7 @@ func TestValidateConfigPath(t *testing.T) {
 		wantErr bool
 	}{
 		{"valid config file", tmpFile, false},
-		{"empty path", "", false}, // Empty is allowed
+		{"empty path", "", false},                                               // Empty is allowed
 		{"non-existent file", filepath.Join(tmpDir, "nonexistent.yaml"), false}, // Non-existent is allowed
 	}
 
