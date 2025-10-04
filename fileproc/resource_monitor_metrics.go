@@ -1,6 +1,7 @@
 package fileproc
 
 import (
+	"math"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -48,6 +49,12 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 		violations = append(violations, violation)
 	}
 
+	// Safe conversion: cap at MaxInt64 to prevent overflow
+	memoryUsage := int64(m.Alloc) / 1024 / 1024
+	if m.Alloc > math.MaxInt64 {
+		memoryUsage = math.MaxInt64 / 1024 / 1024
+	}
+
 	return ResourceMetrics{
 		FilesProcessed:      filesProcessed,
 		TotalSizeProcessed:  totalSize,
@@ -55,7 +62,7 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 		ProcessingDuration:  duration,
 		AverageFileSize:     avgFileSize,
 		ProcessingRate:      processingRate,
-		MemoryUsageMB:       int64(m.Alloc) / 1024 / 1024,
+		MemoryUsageMB:       memoryUsage,
 		MaxMemoryUsageMB:    int64(rm.hardMemoryLimitMB),
 		ViolationsDetected:  violations,
 		DegradationActive:   rm.degradationActive,

@@ -4,6 +4,7 @@ package benchmark
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -272,7 +273,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 		// Create subdirectories for some files
 		if i%10 == 0 {
 			subdir := filepath.Join(tempDir, fmt.Sprintf("subdir_%d", i/10))
-			if err := os.MkdirAll(subdir, 0o755); err != nil {
+			if err := os.MkdirAll(subdir, 0o750); err != nil {
 				cleanup()
 				return "", nil, utils.WrapError(err, utils.ErrorTypeFileSystem, utils.CodeFSAccess, "failed to create subdirectory")
 			}
@@ -287,7 +288,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 			content += fmt.Sprintf("// Line %d\n%s\n", j, fileType.content)
 		}
 
-		if err := os.WriteFile(filename, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filename, []byte(content), 0o600); err != nil {
 			cleanup()
 			return "", nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileWrite, "failed to write benchmark file")
 		}
@@ -356,7 +357,13 @@ func PrintBenchmarkResult(result *BenchmarkResult) {
 	fmt.Printf("Files/sec: %.2f\n", result.FilesPerSecond)
 	fmt.Printf("Bytes/sec: %.2f MB/sec\n", result.BytesPerSecond/1024/1024)
 	fmt.Printf("Memory Usage: +%.2f MB (Sys: +%.2f MB)\n", result.MemoryUsage.AllocMB, result.MemoryUsage.SysMB)
-	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, time.Duration(result.MemoryUsage.PauseTotalNs))
+	// Safe conversion: cap at MaxInt64 to prevent overflow
+	pauseTotalNs := result.MemoryUsage.PauseTotalNs
+	if pauseTotalNs > math.MaxInt64 {
+		pauseTotalNs = math.MaxInt64
+	}
+	pauseDuration := time.Duration(int64(pauseTotalNs)) // #nosec G115 -- overflow check above
+	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, pauseDuration)
 	fmt.Printf("Goroutines: %d\n", result.CPUUsage.Goroutines)
 	fmt.Println()
 }

@@ -208,11 +208,11 @@ func TestFileTypeRegistry_BinaryDetection(t *testing.T) {
 		{"page.html", false},
 
 		// Edge cases
-		{"", false},              // Empty filename
-		{"binary", false},        // No extension
-		{".exe", true},           // Just extension
-		{"file.exe.txt", false},  // Multiple extensions
-		{"file.unknown", false},  // Unknown extension
+		{"", false},             // Empty filename
+		{"binary", false},       // No extension
+		{".exe", true},          // Just extension
+		{"file.exe.txt", false}, // Multiple extensions
+		{"file.unknown", false}, // Unknown extension
 	}
 
 	for _, tt := range tests {

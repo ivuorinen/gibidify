@@ -1,6 +1,7 @@
 package fileproc
 
 import (
+	"math"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -88,7 +89,11 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
+	// Safe conversion: cap at MaxInt64 to prevent overflow
 	currentMemory := int64(m.Alloc)
+	if m.Alloc > math.MaxInt64 {
+		currentMemory = math.MaxInt64
+	}
 
 	if currentMemory > rm.hardMemoryLimitBytes {
 		rm.mu.Lock()
@@ -108,7 +113,11 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 
 			// Check again after GC
 			runtime.ReadMemStats(&m)
+			// Safe conversion: cap at MaxInt64 to prevent overflow
 			currentMemory = int64(m.Alloc)
+			if m.Alloc > math.MaxInt64 {
+				currentMemory = math.MaxInt64
+			}
 
 			if currentMemory > rm.hardMemoryLimitBytes {
 				// Still over limit, activate emergency stop
