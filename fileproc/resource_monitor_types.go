@@ -100,7 +100,7 @@ func NewResourceMonitor() *ResourceMonitor {
 		}
 	rateLimitFull:
 
-		// Start rate limiter refill goroutine  
+		// Start rate limiter refill goroutine
 		go rm.rateLimiterRefill()
 	}
 

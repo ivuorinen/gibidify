@@ -1,0 +1,44 @@
+# Revive configuration for MegaLinter
+ignoreGeneratedHeader = false
+severity = "warning"
+confidence = 0.8
+errorCode = 1
+warningCode = 0
+
+# Enable all rules except the ones we explicitly disable
+enableAllRules = true
+
+# Disabled rules
+[rule.package-comments]
+  disabled = true
+
+[rule.file-header]
+  disabled = true
+
+[rule.max-public-structs]
+  disabled = true
+
+[rule.banned-characters]
+  disabled = true
+
+# Configured rules
+[rule.line-length-limit]
+  arguments = [120]
+
+[rule.function-length]
+  arguments = [50, 100]
+
+[rule.cognitive-complexity]
+  arguments = [20]
+
+[rule.cyclomatic]
+  arguments = [15]
+
+[rule.add-constant]
+  arguments = [{maxLitCount = "3", allowStrs = "\"error\",\"\"", allowInts = "0,1,2"}]
+
+[rule.argument-limit]
+  arguments = [6]
+
+[rule.function-result-limit]
+  arguments = [3]

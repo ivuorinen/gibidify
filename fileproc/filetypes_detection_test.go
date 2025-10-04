@@ -6,6 +6,8 @@ import (
 
 // TestFileTypeRegistry_LanguageDetection tests the language detection functionality.
 func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
+	// Reset registry to ensure clean state
+	ResetRegistryForTesting()
 	registry := GetDefaultRegistry()
 
 	tests := []struct {
@@ -94,6 +96,8 @@ func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
 
 // TestFileTypeRegistry_ImageDetection tests the image detection functionality.
 func TestFileTypeRegistry_ImageDetection(t *testing.T) {
+	// Reset registry to ensure clean state
+	ResetRegistryForTesting()
 	registry := GetDefaultRegistry()
 
 	tests := []struct {
@@ -144,6 +148,8 @@ func TestFileTypeRegistry_ImageDetection(t *testing.T) {
 
 // TestFileTypeRegistry_BinaryDetection tests the binary detection functionality.
 func TestFileTypeRegistry_BinaryDetection(t *testing.T) {
+	// Reset registry to ensure clean state
+	ResetRegistryForTesting()
 	registry := GetDefaultRegistry()
 
 	tests := []struct {
@@ -208,11 +214,11 @@ func TestFileTypeRegistry_BinaryDetection(t *testing.T) {
 		{"page.html", false},
 
 		// Edge cases
-		{"", false},              // Empty filename
-		{"binary", false},        // No extension
-		{".exe", true},           // Just extension
-		{"file.exe.txt", false},  // Multiple extensions
-		{"file.unknown", false},  // Unknown extension
+		{"", false},             // Empty filename
+		{"binary", false},       // No extension
+		{".exe", true},          // Just extension
+		{"file.exe.txt", false}, // Multiple extensions
+		{"file.unknown", false}, // Unknown extension
 	}
 
 	for _, tt := range tests {

@@ -1,25 +1,25 @@
 Available targets:
-  install-tools  - Install required linting and development tools
-  lint          - Run all linters (Go, Makefile, shell, YAML)
-  lint-fix      - Run linters with auto-fix enabled
-  lint-verbose  - Run linters with verbose output
-  test          - Run tests
-  coverage      - Run tests with coverage
-  build         - Build the application
-  clean         - Clean build artifacts
-  all           - Run lint, test, and build
+	install-tools	- Install required linting and development tools
+	lint					- Run all linters (Go, Makefile, shell, YAML)
+	lint-fix			- Run linters with auto-fix enabled
+	lint-verbose	- Run linters with verbose output
+	test					- Run tests
+	coverage			- Run tests with coverage
+	build				 - Build the application
+	clean				 - Clean build artifacts
+	all					 - Run lint, test, and build
 
 Security targets:
-  security      - Run comprehensive security scan
-  security-full - Run full security analysis with all tools
-  vuln-check    - Check for dependency vulnerabilities
+	security			- Run comprehensive security scan
+	security-full - Run full security analysis with all tools
+	vuln-check		- Check for dependency vulnerabilities
 
 Benchmark targets:
-  build-benchmark        - Build the benchmark binary
-  benchmark              - Run all benchmarks
-  benchmark-collection   - Run file collection benchmarks
-  benchmark-processing   - Run file processing benchmarks
-  benchmark-concurrency  - Run concurrency benchmarks
-  benchmark-format       - Run format benchmarks
+	build-benchmark				- Build the benchmark binary
+	benchmark							- Run all benchmarks
+	benchmark-collection	 - Run file collection benchmarks
+	benchmark-processing	 - Run file processing benchmarks
+	benchmark-concurrency	- Run concurrency benchmarks
+	benchmark-format			 - Run format benchmarks
 
 Run 'make <target>' to execute a specific target.

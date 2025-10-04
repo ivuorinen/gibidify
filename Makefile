@@ -6,7 +6,7 @@
 # All target runs full workflow
 all: lint test build
 
-# Help target  
+# Help target
 help:
 	@cat scripts/help.txt
 

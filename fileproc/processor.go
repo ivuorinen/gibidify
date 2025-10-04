@@ -138,7 +138,6 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 	}
 }
 
-
 // validateFileWithLimits checks if the file can be processed with resource limits.
 func (p *FileProcessor) validateFileWithLimits(ctx context.Context, filePath string) (os.FileInfo, error) {
 	// Check context cancellation
@@ -192,7 +191,6 @@ func (p *FileProcessor) getRelativePath(filePath string) string {
 	return relPath
 }
 
-
 // processInMemoryWithContext loads the entire file into memory with context awareness.
 func (p *FileProcessor) processInMemoryWithContext(ctx context.Context, filePath, relPath string, outCh chan<- WriteRequest) {
 	// Check context before reading
@@ -240,7 +238,6 @@ func (p *FileProcessor) processInMemoryWithContext(ctx context.Context, filePath
 	}
 }
 
-
 // processStreamingWithContext creates a streaming reader for large files with context awareness.
 func (p *FileProcessor) processStreamingWithContext(ctx context.Context, filePath, relPath string, outCh chan<- WriteRequest) {
 	// Check context before creating reader
@@ -275,7 +272,6 @@ func (p *FileProcessor) processStreamingWithContext(ctx context.Context, filePat
 	}:
 	}
 }
-
 
 // createStreamReaderWithContext creates a reader that combines header and file content with context awareness.
 func (p *FileProcessor) createStreamReaderWithContext(ctx context.Context, filePath, relPath string) io.Reader {
