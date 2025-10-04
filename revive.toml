@@ -10,35 +10,35 @@ enableAllRules = true
 
 # Disabled rules
 [rule.package-comments]
-  disabled = true
+	disabled = true
 
 [rule.file-header]
-  disabled = true
+	disabled = true
 
 [rule.max-public-structs]
   disabled = true
 
 [rule.banned-characters]
-  disabled = true
+	disabled = true
 
 # Configured rules
 [rule.line-length-limit]
-  arguments = [120]
+ 	arguments = [120]
 
 [rule.function-length]
-  arguments = [50, 100]
+	arguments = [50, 100]
 
 [rule.cognitive-complexity]
-  arguments = [20]
+	arguments = [20]
 
 [rule.cyclomatic]
-  arguments = [15]
+	arguments = [15]
 
 [rule.add-constant]
-  arguments = [{maxLitCount = "3", allowStrs = "\"error\",\"\"", allowInts = "0,1,2"}]
+	arguments = [{maxLitCount = "3", allowStrs = "\"error\",\"\"", allowInts = "0,1,2"}]
 
 [rule.argument-limit]
-  arguments = [6]
+	arguments = [6]
 
 [rule.function-result-limit]
-  arguments = [3]
+	arguments = [3]

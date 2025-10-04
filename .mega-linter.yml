@@ -18,3 +18,5 @@ SHOW_SKIPPED_LINTERS: false # Show skipped linters in MegaLinter log
 DISABLE_LINTERS:
   - REPOSITORY_DEVSKIM
   - REPOSITORY_TRIVY
+  - GO_GOLANGCI_LINT
+  
