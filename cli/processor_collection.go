@@ -8,14 +8,14 @@ import (
 
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/fileproc"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // collectFiles collects all files to be processed.
 func (p *Processor) collectFiles() ([]string, error) {
 	files, err := fileproc.CollectFiles(p.flags.SourceDir)
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "error collecting files")
+		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "error collecting files")
 	}
 	logrus.Infof("Found %d files to process", len(files))
 	return files, nil
@@ -30,9 +30,9 @@ func (p *Processor) validateFileCollection(files []string) error {
 	// Check file count limit
 	maxFiles := config.GetMaxFiles()
 	if len(files) > maxFiles {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitFiles,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeResourceLimitFiles,
 			fmt.Sprintf("file count (%d) exceeds maximum limit (%d)", len(files), maxFiles),
 			"",
 			map[string]interface{}{
@@ -51,9 +51,9 @@ func (p *Processor) validateFileCollection(files []string) error {
 		if fileInfo, err := os.Stat(filePath); err == nil {
 			totalSize += fileInfo.Size()
 			if totalSize > maxTotalSize {
-				return utils.NewStructuredError(
-					utils.ErrorTypeValidation,
-					utils.CodeResourceLimitTotalSize,
+				return gibidiutils.NewStructuredError(
+					gibidiutils.ErrorTypeValidation,
+					gibidiutils.CodeResourceLimitTotalSize,
 					fmt.Sprintf("total file size (%d bytes) would exceed maximum limit (%d bytes)", totalSize, maxTotalSize),
 					"",
 					map[string]interface{}{

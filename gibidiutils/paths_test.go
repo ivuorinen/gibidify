@@ -1,4 +1,5 @@
-package utils
+// Package gibidiutils provides common utility functions for gibidify.
+package gibidiutils
 
 import (
 	"os"
@@ -189,7 +190,7 @@ func TestGetAbsolutePathSpecialCases(t *testing.T) {
 	}
 }
 
-func TestGetAbsolutePathConcurrency(t *testing.T) {
+func TestGetAbsolutePathConcurrency(_ *testing.T) {
 	// Test that GetAbsolutePath is safe for concurrent use
 	paths := []string{".", "..", "test.go", "subdir/file.txt", "/tmp/test"}
 	done := make(chan bool)

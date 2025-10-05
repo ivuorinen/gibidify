@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/ivuorinen/gibidify/benchmark"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 var (
@@ -50,7 +50,7 @@ func runBenchmarks() error {
 	case "format":
 		return runFormatBenchmark()
 	default:
-		return utils.NewValidationError(utils.CodeValidationFormat, "invalid benchmark type: "+*benchmarkType)
+		return gibidiutils.NewValidationError(gibidiutils.CodeValidationFormat, "invalid benchmark type: "+*benchmarkType)
 	}
 }
 
@@ -58,9 +58,9 @@ func runCollectionBenchmark() error {
 	fmt.Println("Running file collection benchmark...")
 	result, err := benchmark.FileCollectionBenchmark(*sourceDir, *numFiles)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file collection benchmark failed")
+		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "file collection benchmark failed")
 	}
-	benchmark.PrintBenchmarkResult(result)
+	benchmark.PrintResult(result)
 	return nil
 }
 
@@ -68,24 +68,24 @@ func runProcessingBenchmark() error {
 	fmt.Printf("Running file processing benchmark (format: %s, concurrency: %d)...\n", *format, *concurrency)
 	result, err := benchmark.FileProcessingBenchmark(*sourceDir, *format, *concurrency)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "file processing benchmark failed")
+		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "file processing benchmark failed")
 	}
-	benchmark.PrintBenchmarkResult(result)
+	benchmark.PrintResult(result)
 	return nil
 }
 
 func runConcurrencyBenchmark() error {
 	concurrencyLevels, err := parseConcurrencyList(*concurrencyList)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeValidation, utils.CodeValidationFormat, "invalid concurrency list")
+		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeValidation, gibidiutils.CodeValidationFormat, "invalid concurrency list")
 	}
 
 	fmt.Printf("Running concurrency benchmark (format: %s, levels: %v)...\n", *format, concurrencyLevels)
 	suite, err := benchmark.ConcurrencyBenchmark(*sourceDir, *format, concurrencyLevels)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "concurrency benchmark failed")
+		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "concurrency benchmark failed")
 	}
-	benchmark.PrintBenchmarkSuite(suite)
+	benchmark.PrintSuite(suite)
 	return nil
 }
 
@@ -94,9 +94,9 @@ func runFormatBenchmark() error {
 	fmt.Printf("Running format benchmark (formats: %v)...\n", formats)
 	suite, err := benchmark.FormatBenchmark(*sourceDir, formats)
 	if err != nil {
-		return utils.WrapError(err, utils.ErrorTypeProcessing, utils.CodeProcessingCollection, "format benchmark failed")
+		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "format benchmark failed")
 	}
-	benchmark.PrintBenchmarkSuite(suite)
+	benchmark.PrintSuite(suite)
 	return nil
 }
 
@@ -115,16 +115,16 @@ func parseConcurrencyList(list string) ([]int, error) {
 		part = strings.TrimSpace(part)
 		var level int
 		if _, err := fmt.Sscanf(part, "%d", &level); err != nil {
-			return nil, utils.WrapErrorf(err, utils.ErrorTypeValidation, utils.CodeValidationFormat, "invalid concurrency level: %s", part)
+			return nil, gibidiutils.WrapErrorf(err, gibidiutils.ErrorTypeValidation, gibidiutils.CodeValidationFormat, "invalid concurrency level: %s", part)
 		}
 		if level <= 0 {
-			return nil, utils.NewValidationError(utils.CodeValidationFormat, "concurrency level must be positive: "+part)
+			return nil, gibidiutils.NewValidationError(gibidiutils.CodeValidationFormat, "concurrency level must be positive: "+part)
 		}
 		levels = append(levels, level)
 	}
 
 	if len(levels) == 0 {
-		return nil, utils.NewValidationError(utils.CodeValidationFormat, "no valid concurrency levels found")
+		return nil, gibidiutils.NewValidationError(gibidiutils.CodeValidationFormat, "no valid concurrency levels found")
 	}
 
 	return levels, nil

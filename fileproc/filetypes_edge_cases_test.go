@@ -31,7 +31,7 @@ func TestFileTypeRegistry_EdgeCases(t *testing.T) {
 	}
 
 	for _, tc := range edgeCases {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(tc.name, func(_ *testing.T) {
 			// These should not panic
 			_ = registry.IsImage(tc.filename)
 			_ = registry.IsBinary(tc.filename)

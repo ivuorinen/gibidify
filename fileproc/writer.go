@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // StartWriter writes the output in the specified format with memory optimization.
@@ -21,14 +21,14 @@ func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- stru
 		context := map[string]interface{}{
 			"format": format,
 		}
-		err := utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationFormat,
+		err := gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeValidationFormat,
 			fmt.Sprintf("unsupported format: %s", format),
 			"",
 			context,
 		)
-		utils.LogError("Failed to encode output", err)
+		gibidiutils.LogError("Failed to encode output", err)
 		close(done)
 	}
 }

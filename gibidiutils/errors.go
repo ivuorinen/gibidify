@@ -1,5 +1,5 @@
-// Package utils provides common utility functions.
-package utils
+// Package gibidiutils provides common utility functions for gibidify.
+package gibidiutils
 
 import (
 	"fmt"

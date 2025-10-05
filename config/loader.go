@@ -7,7 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // LoadConfig reads configuration from a YAML file.
@@ -21,7 +21,7 @@ func LoadConfig() {
 
 	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
 		// Validate XDG_CONFIG_HOME for path traversal attempts
-		if err := utils.ValidateConfigPath(xdgConfig); err != nil {
+		if err := gibidiutils.ValidateConfigPath(xdgConfig); err != nil {
 			logrus.Warnf("Invalid XDG_CONFIG_HOME path, using default config: %v", err)
 		} else {
 			configPath := filepath.Join(xdgConfig, "gibidify")

@@ -14,10 +14,10 @@ func TestFileTypeRegistry_ThreadSafety(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Test concurrent read operations
-	t.Run("ConcurrentReads", func(t *testing.T) {
+	t.Run("ConcurrentReads", func(_ *testing.T) {
 		for i := 0; i < numGoroutines; i++ {
 			wg.Add(1)
-			go func(id int) {
+			go func(_ int) {
 				defer wg.Done()
 				registry := GetDefaultRegistry()
 

@@ -7,7 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/ivuorinen/gibidify/fileproc"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // startWorkers starts the worker goroutines.
@@ -42,9 +42,9 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 		return
 	}
 
-	absRoot, err := utils.GetAbsolutePath(p.flags.SourceDir)
+	absRoot, err := gibidiutils.GetAbsolutePath(p.flags.SourceDir)
 	if err != nil {
-		utils.LogError("Failed to get absolute path", err)
+		gibidiutils.LogError("Failed to get absolute path", err)
 		return
 	}
 

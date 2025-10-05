@@ -5,7 +5,7 @@ import (
 	"runtime"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // Flags holds CLI flags values.
@@ -63,11 +63,11 @@ func ParseFlags() (*Flags, error) {
 // validate validates the CLI flags.
 func (f *Flags) validate() error {
 	if f.SourceDir == "" {
-		return NewCLIMissingSourceError()
+		return NewMissingSourceError()
 	}
 
 	// Validate source path for security
-	if err := utils.ValidateSourcePath(f.SourceDir); err != nil {
+	if err := gibidiutils.ValidateSourcePath(f.SourceDir); err != nil {
 		return err
 	}
 
@@ -87,16 +87,16 @@ func (f *Flags) validate() error {
 // setDefaultDestination sets the default destination if not provided.
 func (f *Flags) setDefaultDestination() error {
 	if f.Destination == "" {
-		absRoot, err := utils.GetAbsolutePath(f.SourceDir)
+		absRoot, err := gibidiutils.GetAbsolutePath(f.SourceDir)
 		if err != nil {
 			return err
 		}
-		baseName := utils.GetBaseName(absRoot)
+		baseName := gibidiutils.GetBaseName(absRoot)
 		f.Destination = baseName + "." + f.Format
 	}
 
 	// Validate destination path for security
-	if err := utils.ValidateDestinationPath(f.Destination); err != nil {
+	if err := gibidiutils.ValidateDestinationPath(f.Destination); err != nil {
 		return err
 	}
 

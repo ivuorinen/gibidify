@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // ValidateConfig validates the loaded configuration.
@@ -237,9 +237,9 @@ func ValidateConfig() error {
 	}
 
 	if len(validationErrors) > 0 {
-		return utils.NewStructuredError(
-			utils.ErrorTypeConfiguration,
-			utils.CodeConfigValidation,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeConfiguration,
+			gibidiutils.CodeConfigValidation,
 			"configuration validation failed: "+strings.Join(validationErrors, "; "),
 			"",
 			map[string]interface{}{"validation_errors": validationErrors},
@@ -253,9 +253,9 @@ func ValidateConfig() error {
 func ValidateFileSize(size int64) error {
 	limit := GetFileSizeLimit()
 	if size > limit {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationSize,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeValidationSize,
 			fmt.Sprintf("file size (%d bytes) exceeds limit (%d bytes)", size, limit),
 			"",
 			map[string]interface{}{"file_size": size, "size_limit": limit},
@@ -267,9 +267,9 @@ func ValidateFileSize(size int64) error {
 // ValidateOutputFormat checks if an output format is valid.
 func ValidateOutputFormat(format string) error {
 	if !IsValidFormat(format) {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationFormat,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeValidationFormat,
 			fmt.Sprintf("unsupported output format: %s (supported: json, yaml, markdown)", format),
 			"",
 			map[string]interface{}{"format": format},
@@ -281,9 +281,9 @@ func ValidateOutputFormat(format string) error {
 // ValidateConcurrency checks if a concurrency level is valid.
 func ValidateConcurrency(concurrency int) error {
 	if concurrency < 1 {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeValidationFormat,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeValidationFormat,
 			fmt.Sprintf("concurrency (%d) must be at least 1", concurrency),
 			"",
 			map[string]interface{}{"concurrency": concurrency},
@@ -293,9 +293,9 @@ func ValidateConcurrency(concurrency int) error {
 	if viper.IsSet("maxConcurrency") {
 		maxConcurrency := GetMaxConcurrency()
 		if concurrency > maxConcurrency {
-			return utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeValidationFormat,
+			return gibidiutils.NewStructuredError(
+				gibidiutils.ErrorTypeValidation,
+				gibidiutils.CodeValidationFormat,
 				fmt.Sprintf("concurrency (%d) exceeds maximum (%d)", concurrency, maxConcurrency),
 				"",
 				map[string]interface{}{"concurrency": concurrency, "max_concurrency": maxConcurrency},

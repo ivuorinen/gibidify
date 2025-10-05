@@ -59,7 +59,7 @@ func (bp *BackpressureManager) CreateChannels() (chan string, chan WriteRequest)
 }
 
 // ShouldApplyBackpressure checks if back-pressure should be applied.
-func (bp *BackpressureManager) ShouldApplyBackpressure(ctx context.Context) bool {
+func (bp *BackpressureManager) ShouldApplyBackpressure(_ context.Context) bool {
 	if !bp.enabled {
 		return false
 	}

@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // MarkdownWriter handles markdown format output with streaming support.
@@ -19,10 +19,10 @@ func NewMarkdownWriter(outFile *os.File) *MarkdownWriter {
 }
 
 // Start writes the markdown header.
-func (w *MarkdownWriter) Start(prefix, suffix string) error {
+func (w *MarkdownWriter) Start(prefix, _ string) error {
 	if prefix != "" {
 		if _, err := fmt.Fprintf(w.outFile, "# %s\n\n", prefix); err != nil {
-			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write prefix")
+			return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write prefix")
 		}
 	}
 	return nil
@@ -40,7 +40,7 @@ func (w *MarkdownWriter) WriteFile(req WriteRequest) error {
 func (w *MarkdownWriter) Close(suffix string) error {
 	if suffix != "" {
 		if _, err := fmt.Fprintf(w.outFile, "\n# %s\n", suffix); err != nil {
-			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write suffix")
+			return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write suffix")
 		}
 	}
 	return nil
@@ -54,7 +54,7 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 
 	// Write file header
 	if _, err := fmt.Fprintf(w.outFile, "## File: `%s`\n```%s\n", req.Path, language); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write file header").WithFilePath(req.Path)
+		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write file header").WithFilePath(req.Path)
 	}
 
 	// Stream file content in chunks
@@ -64,7 +64,7 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 
 	// Write file footer
 	if _, err := w.outFile.WriteString("\n```\n\n"); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write file footer").WithFilePath(req.Path)
+		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write file footer").WithFilePath(req.Path)
 	}
 
 	return nil
@@ -76,7 +76,7 @@ func (w *MarkdownWriter) writeInline(req WriteRequest) error {
 	formatted := fmt.Sprintf("## File: `%s`\n```%s\n%s\n```\n\n", req.Path, language, req.Content)
 
 	if _, err := w.outFile.WriteString(formatted); err != nil {
-		return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write inline content").WithFilePath(req.Path)
+		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write inline content").WithFilePath(req.Path)
 	}
 	return nil
 }
@@ -88,14 +88,14 @@ func (w *MarkdownWriter) streamContent(reader io.Reader, path string) error {
 		n, err := reader.Read(buf)
 		if n > 0 {
 			if _, writeErr := w.outFile.Write(buf[:n]); writeErr != nil {
-				return utils.WrapError(writeErr, utils.ErrorTypeIO, utils.CodeIOWrite, "failed to write chunk").WithFilePath(path)
+				return gibidiutils.WrapError(writeErr, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write chunk").WithFilePath(path)
 			}
 		}
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIORead, "failed to read chunk").WithFilePath(path)
+			return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIORead, "failed to read chunk").WithFilePath(path)
 		}
 	}
 	return nil
@@ -105,9 +105,9 @@ func (w *MarkdownWriter) streamContent(reader io.Reader, path string) error {
 func (w *MarkdownWriter) closeReader(reader io.Reader, path string) {
 	if closer, ok := reader.(io.Closer); ok {
 		if err := closer.Close(); err != nil {
-			utils.LogError(
+			gibidiutils.LogError(
 				"Failed to close file reader",
-				utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOClose, "failed to close file reader").WithFilePath(path),
+				gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOClose, "failed to close file reader").WithFilePath(path),
 			)
 		}
 	}
@@ -121,19 +121,19 @@ func startMarkdownWriter(outFile *os.File, writeCh <-chan WriteRequest, done cha
 
 	// Start writing
 	if err := writer.Start(prefix, suffix); err != nil {
-		utils.LogError("Failed to write markdown prefix", err)
+		gibidiutils.LogError("Failed to write markdown prefix", err)
 		return
 	}
 
 	// Process files
 	for req := range writeCh {
 		if err := writer.WriteFile(req); err != nil {
-			utils.LogError("Failed to write markdown file", err)
+			gibidiutils.LogError("Failed to write markdown file", err)
 		}
 	}
 
 	// Close writer
 	if err := writer.Close(suffix); err != nil {
-		utils.LogError("Failed to write markdown suffix", err)
+		gibidiutils.LogError("Failed to write markdown suffix", err)
 	}
 }

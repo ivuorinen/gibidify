@@ -1,4 +1,5 @@
-package utils
+// Package gibidiutils provides common utility functions for gibidify.
+package gibidiutils
 
 import (
 	"encoding/json"
