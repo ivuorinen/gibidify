@@ -6,3 +6,9 @@ disabled = true
 
 [rules.maxbodylength]
 disabled = true
+
+[rules.minphony]
+disabled = true
+
+[rules.phonydeclared]
+disabled = true

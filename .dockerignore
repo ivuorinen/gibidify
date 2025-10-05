@@ -1,0 +1,38 @@
+# Git
+.git
+.github
+.gitignore
+
+# Build artifacts
+gibidify
+gibidify-*
+dist/
+coverage.out
+coverage.html
+test-results.json
+*.sarif
+
+# Documentation
+*.md
+docs/
+
+# Config and tooling
+.checkmake
+.editorconfig
+.golangci.yml
+.yamllint
+revive.toml
+
+# Scripts
+scripts/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

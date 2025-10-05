@@ -184,6 +184,8 @@ func TestFileTypeRegistry_Configuration(t *testing.T) {
 func TestConfigureFromSettings(t *testing.T) {
 	// Reset registry to ensure clean state
 	ResetRegistryForTesting()
+	// Ensure cleanup runs even if test fails
+	t.Cleanup(ResetRegistryForTesting)
 
 	// Test configuration application
 	customImages := []string{".webp", ".avif"}
@@ -253,7 +255,4 @@ func TestConfigureFromSettings(t *testing.T) {
 	if !IsImage("test.extra") {
 		t.Error("Expected new configuration to be applied")
 	}
-
-	// Reset registry after test to avoid affecting other tests
-	ResetRegistryForTesting()
 }

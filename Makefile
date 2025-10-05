@@ -1,4 +1,7 @@
-.PHONY: help install-tools lint lint-fix lint-verbose test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check check-all dev-setup
+.PHONY: all clean test build coverage help lint lint-fix lint-verbose \
+	install-tools benchmark benchmark-collection benchmark-concurrency \
+	benchmark-format benchmark-processing build-benchmark check-all ci-lint \
+	ci-test dev-setup security security-full vuln-check
 
 # Default target shows help
 .DEFAULT_GOAL := help
@@ -6,7 +9,7 @@
 # All target runs full workflow
 all: lint test build
 
-# Help target  
+# Help target
 help:
 	@cat scripts/help.txt
 
@@ -55,18 +58,19 @@ lint-fix:
 	@echo "Running checkmake..."
 	@checkmake --config=.checkmake Makefile
 	@echo "Running yamllint..."
-	@yamllint -c .yamllint .
+	@yamllint .
 
 # Run linters with verbose output
 lint-verbose:
 	@echo "Running golangci-lint (verbose)..."
 	@golangci-lint run -v ./...
 	@echo "Running checkmake (verbose)..."
-	@checkmake --config=.checkmake --format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
+	@checkmake --config=.checkmake \
+		--format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
 	@echo "Running shfmt check (verbose)..."
 	@shfmt -d .
 	@echo "Running yamllint (verbose)..."
-	@yamllint -c .yamllint -f parsable .
+	@yamllint .
 
 # Run tests
 test:
@@ -94,8 +98,6 @@ clean:
 	@echo "Clean complete"
 
 # CI-specific targets
-.PHONY: ci-lint ci-test
-
 ci-lint:
 	@golangci-lint run --out-format=github-actions ./...
 

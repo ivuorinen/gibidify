@@ -102,9 +102,14 @@ func EscapeForYAML(content string) string {
 }
 
 // SafeUint64ToInt64WithDefault safely converts uint64 to int64, returning a default value if overflow would occur.
-// This prevents integer overflow issues on systems where int64 max might be exceeded.
+// When defaultValue is 0 (the safe default), clamps to MaxInt64 on overflow to keep guardrails active.
+// This prevents overflow from making monitors think memory usage is zero when it's actually maxed out.
 func SafeUint64ToInt64WithDefault(value uint64, defaultValue int64) int64 {
 	if value > math.MaxInt64 {
+		// When caller uses 0 as "safe" default, clamp to max so overflow still trips guardrails
+		if defaultValue == 0 {
+			return math.MaxInt64
+		}
 		return defaultValue
 	}
 	return int64(value)

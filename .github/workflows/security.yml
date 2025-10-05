@@ -83,7 +83,7 @@ jobs:
       - name: Run YAML linting
         run: |
           go install github.com/excilsploft/yamllint@latest
-          yamllint -c .yamllint .
+          yamllint .
 
       # Secrets Detection (basic patterns)
       - name: Run secrets detection

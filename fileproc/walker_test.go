@@ -61,6 +61,8 @@ func TestProdWalkerBinaryCheck(t *testing.T) {
 
 	// Reset FileTypeRegistry to ensure clean state
 	fileproc.ResetRegistryForTesting()
+	// Ensure cleanup runs even if test fails
+	t.Cleanup(fileproc.ResetRegistryForTesting)
 
 	// Run walker
 	w := fileproc.NewProdWalker()
