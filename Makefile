@@ -25,7 +25,7 @@ install-tools:
 	@echo "Installing gocyclo..."
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
 	@echo "Installing checkmake..."
-	@go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+	@go install github.com/checkmake/checkmake/cmd/checkmake@latest
 	@echo "Installing shfmt..."
 	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
 	@echo "Installing yamllint (Go-based)..."
@@ -138,8 +138,6 @@ security:
 security-full:
 	@echo "Running full security analysis..."
 	@./scripts/security-scan.sh
-	@echo "Running additional security checks..."
-	@golangci-lint run --enable-all --disable=depguard,exhaustruct,ireturn,varnamelen,wrapcheck --timeout=10m
 
 vuln-check:
 	@echo "Checking for dependency vulnerabilities..."

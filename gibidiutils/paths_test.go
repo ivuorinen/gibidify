@@ -225,11 +225,9 @@ func TestGetAbsolutePathErrorFormatting(t *testing.T) {
 		if !strings.Contains(err.Error(), path) {
 			t.Errorf("Error message should contain original path: %v", err)
 		}
-	} else {
+	} else if !filepath.IsAbs(got) {
 		// Normal case - just verify we got a valid absolute path
-		if !filepath.IsAbs(got) {
-			t.Errorf("Expected absolute path, got: %v", got)
-		}
+		t.Errorf("Expected absolute path, got: %v", got)
 	}
 }
 

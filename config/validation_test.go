@@ -123,10 +123,8 @@ func TestValidateConfig(t *testing.T) {
 				if structErr.Code != gibidiutils.CodeConfigValidation {
 					t.Errorf("Expected error code %v, got %v", gibidiutils.CodeConfigValidation, structErr.Code)
 				}
-			} else {
-				if err != nil {
-					t.Errorf("Expected no error but got: %v", err)
-				}
+			} else if err != nil {
+				t.Errorf("Expected no error but got: %v", err)
 			}
 		})
 	}

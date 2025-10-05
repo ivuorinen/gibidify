@@ -62,7 +62,7 @@ check_dependencies() {
 
 	if ! command -v checkmake &>/dev/null; then
 		print_warning "checkmake not found, installing..."
-		go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+		go install github.com/checkmake/checkmake/cmd/checkmake@latest
 	fi
 
 	if ! command -v shfmt &>/dev/null; then

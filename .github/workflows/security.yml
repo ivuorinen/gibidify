@@ -70,7 +70,7 @@ jobs:
       # Makefile Linting
       - name: Run checkmake on Makefile
         run: |
-          go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+          go install github.com/checkmake/checkmake/cmd/checkmake@latest
           checkmake --config=.checkmake Makefile
 
       # Shell Script Formatting Check

@@ -1,5 +1,5 @@
 # checkmake configuration
-# See: https://github.com/mrtazz/checkmake#configuration
+# See: https://github.com/checkmake/checkmake#configuration
 
 [rules.timestampexpansion]
 disabled = true
