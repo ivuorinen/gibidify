@@ -272,7 +272,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 		// Create subdirectories for some files
 		if i%10 == 0 {
 			subdir := filepath.Join(tempDir, fmt.Sprintf("subdir_%d", i/10))
-			if err := os.MkdirAll(subdir, 0o755); err != nil {
+			if err := os.MkdirAll(subdir, 0o750); err != nil {
 				cleanup()
 				return "", nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess, "failed to create subdirectory")
 			}
@@ -287,7 +287,7 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 			content += fmt.Sprintf("// Line %d\n%s\n", j, fileType.content)
 		}
 
-		if err := os.WriteFile(filename, []byte(content), 0o644); err != nil {
+		if err := os.WriteFile(filename, []byte(content), 0o600); err != nil {
 			cleanup()
 			return "", nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileWrite, "failed to write benchmark file")
 		}
@@ -356,7 +356,8 @@ func PrintResult(result *Result) {
 	fmt.Printf("Files/sec: %.2f\n", result.FilesPerSecond)
 	fmt.Printf("Bytes/sec: %.2f MB/sec\n", result.BytesPerSecond/1024/1024)
 	fmt.Printf("Memory Usage: +%.2f MB (Sys: +%.2f MB)\n", result.MemoryUsage.AllocMB, result.MemoryUsage.SysMB)
-	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, time.Duration(result.MemoryUsage.PauseTotalNs))
+	pauseDuration := time.Duration(gibidiutils.SafeUint64ToInt64WithDefault(result.MemoryUsage.PauseTotalNs, 0))
+	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, pauseDuration)
 	fmt.Printf("Goroutines: %d\n", result.CPUUsage.Goroutines)
 	fmt.Println()
 }

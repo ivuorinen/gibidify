@@ -139,7 +139,7 @@ func TestGetAbsolutePathSpecialCases(t *testing.T) {
 				target := filepath.Join(tmpDir, "target")
 				link := filepath.Join(tmpDir, "link")
 
-				if err := os.Mkdir(target, 0o755); err != nil {
+				if err := os.Mkdir(target, 0o750); err != nil {
 					t.Fatalf("Failed to create target directory: %v", err)
 				}
 				if err := os.Symlink(target, link); err != nil {

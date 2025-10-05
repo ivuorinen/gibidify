@@ -87,7 +87,7 @@ ignoreDirectories:
 	tempDir := t.TempDir()
 	configFile := tempDir + "/config.yaml"
 
-	err := os.WriteFile(configFile, []byte(configContent), 0o644)
+	err := os.WriteFile(configFile, []byte(configContent), 0o600)
 	if err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}

@@ -88,7 +88,7 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := int64(m.Alloc)
+	currentMemory := gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	if currentMemory > rm.hardMemoryLimitBytes {
 		rm.mu.Lock()
@@ -108,7 +108,7 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 
 			// Check again after GC
 			runtime.ReadMemStats(&m)
-			currentMemory = int64(m.Alloc)
+			currentMemory = gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 			if currentMemory > rm.hardMemoryLimitBytes {
 				// Still over limit, activate emergency stop

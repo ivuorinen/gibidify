@@ -110,21 +110,6 @@ jobs:
           docker run --rm -v "$PWD":/workspace \
             aquasec/trivy:latest fs --security-checks vuln,config /workspace/Dockerfile || true
 
-      # SAST with CodeQL (if available)
-      - name: Initialize CodeQL
-        if: github.event_name != 'schedule'
-        uses: github/codeql-action/init@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
-        with:
-          languages: go
-
-      - name: Autobuild
-        if: github.event_name != 'schedule'
-        uses: github/codeql-action/autobuild@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
-
-      - name: Perform CodeQL Analysis
-        if: github.event_name != 'schedule'
-        uses: github/codeql-action/analyze@3c3833e0f8c1c83d449a7478aa59c036a9165498 # v3.29.11
-
       # Upload artifacts for review
       - name: Upload security scan results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

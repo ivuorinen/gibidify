@@ -4,6 +4,7 @@ package gibidiutils
 import (
 	"encoding/json"
 	"io"
+	"math"
 	"strings"
 )
 
@@ -98,6 +99,15 @@ func EscapeForYAML(content string) string {
 		return "\"" + escaped + "\""
 	}
 	return content
+}
+
+// SafeUint64ToInt64WithDefault safely converts uint64 to int64, returning a default value if overflow would occur.
+// This prevents integer overflow issues on systems where int64 max might be exceeded.
+func SafeUint64ToInt64WithDefault(value uint64, defaultValue int64) int64 {
+	if value > math.MaxInt64 {
+		return defaultValue
+	}
+	return int64(value)
 }
 
 // StreamLines provides line-based streaming for YAML content.

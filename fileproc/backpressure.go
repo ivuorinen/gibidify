@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/ivuorinen/gibidify/config"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // BackpressureManager manages memory usage and applies back-pressure when needed.
@@ -73,7 +74,7 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(_ context.Context) bool {
 	// Get current memory usage
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := int64(m.Alloc)
+	currentMemory := gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
@@ -133,7 +134,7 @@ func (bp *BackpressureManager) GetStats() BackpressureStats {
 	return BackpressureStats{
 		Enabled:             bp.enabled,
 		FilesProcessed:      atomic.LoadInt64(&bp.filesProcessed),
-		CurrentMemoryUsage:  int64(m.Alloc),
+		CurrentMemoryUsage:  gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0),
 		MaxMemoryUsage:      bp.maxMemoryUsage,
 		MemoryWarningActive: bp.memoryWarningLogged,
 		LastMemoryCheck:     bp.lastMemoryCheck,

@@ -83,7 +83,7 @@ func TestCreateTestFile(t *testing.T) {
 			}
 
 			// Verify content
-			readContent, err := os.ReadFile(filePath)
+			readContent, err := os.ReadFile(filePath) // #nosec G304 - test file path is controlled
 			if err != nil {
 				t.Fatalf("Failed to read created file: %v", err)
 			}
@@ -272,7 +272,7 @@ func TestCreateTestFiles(t *testing.T) {
 
 			// Verify each file
 			for i, filePath := range createdFiles {
-				content, err := os.ReadFile(filePath)
+				content, err := os.ReadFile(filePath) // #nosec G304 - test file path is controlled
 				if err != nil {
 					t.Errorf("Failed to read file %s: %v", filePath, err)
 					continue
