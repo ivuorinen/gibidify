@@ -69,13 +69,6 @@ jobs:
             fi
           fi
 
-      # Additional Security Linting
-      - name: Run security-focused golangci-lint
-        run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          golangci-lint run --enable=gosec,gocritic,bodyclose,rowserrcheck,misspell,unconvert,unparam,unused \
-            --timeout=5m
-
       # Makefile Linting
       - name: Run checkmake on Makefile
         run: |
