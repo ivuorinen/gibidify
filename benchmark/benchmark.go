@@ -362,7 +362,7 @@ func PrintBenchmarkResult(result *BenchmarkResult) {
 	if pauseTotalNs > math.MaxInt64 {
 		pauseTotalNs = math.MaxInt64
 	}
-	pauseDuration := time.Duration(int64(pauseTotalNs)) // #nosec G115 -- overflow check above
+	pauseDuration := time.Duration(int64(pauseTotalNs)) // #nosec G115 -- safe conversion: overflow check performed above ensures value <= MaxInt64
 	fmt.Printf("GC Runs: %d (Pause: %v)\n", result.MemoryUsage.NumGC, pauseDuration)
 	fmt.Printf("Goroutines: %d\n", result.CPUUsage.Goroutines)
 	fmt.Println()
