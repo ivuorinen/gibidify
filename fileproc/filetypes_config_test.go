@@ -2,6 +2,8 @@ package fileproc
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestFileTypeRegistry_Configuration tests the configuration functionality.
@@ -141,7 +143,7 @@ func TestFileTypeRegistry_Configuration(t *testing.T) {
 		}
 	})
 
-	// Test case insensitive handling
+	// Test case-insensitive handling
 	t.Run("CaseInsensitiveHandling", func(t *testing.T) {
 		registry := &FileTypeRegistry{
 			imageExts:   make(map[string]bool),
@@ -195,14 +197,15 @@ func TestConfigureFromSettings(t *testing.T) {
 	disabledBinary := []string{".exe"}   // Disable default extension
 	disabledLanguages := []string{".rb"} // Disable default extension
 
-	ConfigureFromSettings(
-		customImages,
-		customBinary,
-		customLanguages,
-		disabledImages,
-		disabledBinary,
-		disabledLanguages,
-	)
+	err := ConfigureFromSettings(RegistryConfig{
+		CustomImages:      customImages,
+		CustomBinary:      customBinary,
+		CustomLanguages:   customLanguages,
+		DisabledImages:    disabledImages,
+		DisabledBinary:    disabledBinary,
+		DisabledLanguages: disabledLanguages,
+	})
+	require.NoError(t, err)
 
 	// Test that custom extensions work
 	if !IsImage("test.webp") {
@@ -238,14 +241,15 @@ func TestConfigureFromSettings(t *testing.T) {
 	}
 
 	// Test multiple calls don't override previous configuration
-	ConfigureFromSettings(
-		[]string{".extra"},
-		[]string{},
-		map[string]string{},
-		[]string{},
-		[]string{},
-		[]string{},
-	)
+	err = ConfigureFromSettings(RegistryConfig{
+		CustomImages:      []string{".extra"},
+		CustomBinary:      []string{},
+		CustomLanguages:   map[string]string{},
+		DisabledImages:    []string{},
+		DisabledBinary:    []string{},
+		DisabledLanguages: []string{},
+	})
+	require.NoError(t, err)
 
 	// Previous configuration should still work
 	if !IsImage("test.webp") {

@@ -27,7 +27,8 @@ func (ef *ErrorFormatter) FormatError(err error) {
 	}
 
 	// Handle structured errors
-	if structErr, ok := err.(*gibidiutils.StructuredError); ok {
+	var structErr *gibidiutils.StructuredError
+	if errors.As(err, &structErr) {
 		ef.formatStructuredError(structErr)
 		return
 	}
@@ -109,14 +110,14 @@ func (ef *ErrorFormatter) provideValidationSuggestions(err *gibidiutils.Structur
 
 	switch err.Code {
 	case gibidiutils.CodeValidationFormat:
-		ef.ui.printf("  • Use a supported format: markdown, json, yaml\n")
-		ef.ui.printf("  • Example: -format markdown\n")
+		ef.ui.printf("  %s Use a supported format: markdown, json, yaml\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Example: -format markdown\n", gibidiutils.IconBullet)
 	case gibidiutils.CodeValidationSize:
-		ef.ui.printf("  • Increase file size limit in config.yaml\n")
-		ef.ui.printf("  • Use smaller files or exclude large files\n")
+		ef.ui.printf("  %s Increase file size limit in config.yaml\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Use smaller files or exclude large files\n", gibidiutils.IconBullet)
 	default:
-		ef.ui.printf("  • Check your command line arguments\n")
-		ef.ui.printf("  • Run with --help for usage information\n")
+		ef.ui.printf("  %s Check your command line arguments\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Run with --help for usage information\n", gibidiutils.IconBullet)
 	}
 }
 
@@ -126,14 +127,14 @@ func (ef *ErrorFormatter) provideProcessingSuggestions(err *gibidiutils.Structur
 
 	switch err.Code {
 	case gibidiutils.CodeProcessingCollection:
-		ef.ui.printf("  • Check if the source directory exists and is readable\n")
-		ef.ui.printf("  • Verify directory permissions\n")
+		ef.ui.printf("  %s Check if the source directory exists and is readable\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify directory permissions\n", gibidiutils.IconBullet)
 	case gibidiutils.CodeProcessingFileRead:
-		ef.ui.printf("  • Check file permissions\n")
-		ef.ui.printf("  • Verify the file is not corrupted\n")
+		ef.ui.printf("  %s Check file permissions\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify the file is not corrupted\n", gibidiutils.IconBullet)
 	default:
-		ef.ui.printf("  • Try reducing concurrency: -concurrency 1\n")
-		ef.ui.printf("  • Check available system resources\n")
+		ef.ui.printf("  %s Try reducing concurrency: -concurrency 1\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Check available system resources\n", gibidiutils.IconBullet)
 	}
 }
 
@@ -143,52 +144,52 @@ func (ef *ErrorFormatter) provideIOSuggestions(err *gibidiutils.StructuredError)
 
 	switch err.Code {
 	case gibidiutils.CodeIOFileCreate:
-		ef.ui.printf("  • Check if the destination directory exists\n")
-		ef.ui.printf("  • Verify write permissions for the output file\n")
-		ef.ui.printf("  • Ensure sufficient disk space\n")
+		ef.ui.printf("  %s Check if the destination directory exists\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify write permissions for the output file\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Ensure sufficient disk space\n", gibidiutils.IconBullet)
 	case gibidiutils.CodeIOWrite:
-		ef.ui.printf("  • Check available disk space\n")
-		ef.ui.printf("  • Verify write permissions\n")
+		ef.ui.printf("  %s Check available disk space\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify write permissions\n", gibidiutils.IconBullet)
 	default:
-		ef.ui.printf("  • Check file/directory permissions\n")
-		ef.ui.printf("  • Verify available disk space\n")
+		ef.ui.printf("  %s Check file/directory permissions\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify available disk space\n", gibidiutils.IconBullet)
 	}
 }
 
 // Helper methods for specific suggestions
 func (ef *ErrorFormatter) suggestFileAccess(filePath string) {
-	ef.ui.printf("  • Check if the path exists: %s\n", filePath)
-	ef.ui.printf("  • Verify read permissions\n")
+	ef.ui.printf("  %s Check if the path exists: %s\n", gibidiutils.IconBullet, filePath)
+	ef.ui.printf("  %s Verify read permissions\n", gibidiutils.IconBullet)
 	if filePath != "" {
 		if stat, err := os.Stat(filePath); err == nil {
-			ef.ui.printf("  • Path exists but may not be accessible\n")
-			ef.ui.printf("  • Mode: %s\n", stat.Mode())
+			ef.ui.printf("  %s Path exists but may not be accessible\n", gibidiutils.IconBullet)
+			ef.ui.printf("  %s Mode: %s\n", gibidiutils.IconBullet, stat.Mode())
 		}
 	}
 }
 
 func (ef *ErrorFormatter) suggestPathResolution(filePath string) {
-	ef.ui.printf("  • Use an absolute path instead of relative\n")
+	ef.ui.printf("  %s Use an absolute path instead of relative\n", gibidiutils.IconBullet)
 	if filePath != "" {
 		if abs, err := filepath.Abs(filePath); err == nil {
-			ef.ui.printf("  • Try: %s\n", abs)
+			ef.ui.printf("  %s Try: %s\n", gibidiutils.IconBullet, abs)
 		}
 	}
 }
 
 func (ef *ErrorFormatter) suggestFileNotFound(filePath string) {
-	ef.ui.printf("  • Check if the file/directory exists: %s\n", filePath)
+	ef.ui.printf("  %s Check if the file/directory exists: %s\n", gibidiutils.IconBullet, filePath)
 	if filePath != "" {
 		dir := filepath.Dir(filePath)
 		if entries, err := os.ReadDir(dir); err == nil {
-			ef.ui.printf("  • Similar files in %s:\n", dir)
+			ef.ui.printf("  %s Similar files in %s:\n", gibidiutils.IconBullet, dir)
 			count := 0
 			for _, entry := range entries {
 				if count >= 3 {
 					break
 				}
 				if strings.Contains(entry.Name(), filepath.Base(filePath)) {
-					ef.ui.printf("    - %s\n", entry.Name())
+					ef.ui.printf("    %s %s\n", gibidiutils.IconBullet, entry.Name())
 					count++
 				}
 			}
@@ -197,18 +198,18 @@ func (ef *ErrorFormatter) suggestFileNotFound(filePath string) {
 }
 
 func (ef *ErrorFormatter) suggestFileSystemGeneral(filePath string) {
-	ef.ui.printf("  • Check file/directory permissions\n")
-	ef.ui.printf("  • Verify the path is correct\n")
+	ef.ui.printf("  %s Check file/directory permissions\n", gibidiutils.IconBullet)
+	ef.ui.printf("  %s Verify the path is correct\n", gibidiutils.IconBullet)
 	if filePath != "" {
-		ef.ui.printf("  • Path: %s\n", filePath)
+		ef.ui.printf("  %s Path: %s\n", gibidiutils.IconBullet, filePath)
 	}
 }
 
 // provideDefaultSuggestions provides general suggestions.
 func (ef *ErrorFormatter) provideDefaultSuggestions() {
-	ef.ui.printf("  • Check your command line arguments\n")
-	ef.ui.printf("  • Run with --help for usage information\n")
-	ef.ui.printf("  • Try with -concurrency 1 to reduce resource usage\n")
+	ef.ui.printf("  %s Check your command line arguments\n", gibidiutils.IconBullet)
+	ef.ui.printf("  %s Run with --help for usage information\n", gibidiutils.IconBullet)
+	ef.ui.printf("  %s Try with -concurrency 1 to reduce resource usage\n", gibidiutils.IconBullet)
 }
 
 // provideGenericSuggestions provides suggestions for generic errors.
@@ -220,14 +221,14 @@ func (ef *ErrorFormatter) provideGenericSuggestions(err error) {
 	// Pattern matching for common errors
 	switch {
 	case strings.Contains(errorMsg, "permission denied"):
-		ef.ui.printf("  • Check file/directory permissions\n")
-		ef.ui.printf("  • Try running with appropriate privileges\n")
+		ef.ui.printf("  %s Check file/directory permissions\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Try running with appropriate privileges\n", gibidiutils.IconBullet)
 	case strings.Contains(errorMsg, "no such file or directory"):
-		ef.ui.printf("  • Verify the file/directory path is correct\n")
-		ef.ui.printf("  • Check if the file exists\n")
+		ef.ui.printf("  %s Verify the file/directory path is correct\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Check if the file exists\n", gibidiutils.IconBullet)
 	case strings.Contains(errorMsg, "flag") && strings.Contains(errorMsg, "redefined"):
-		ef.ui.printf("  • This is likely a test environment issue\n")
-		ef.ui.printf("  • Try running the command directly instead of in tests\n")
+		ef.ui.printf("  %s This is likely a test environment issue\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Try running the command directly instead of in tests\n", gibidiutils.IconBullet)
 	default:
 		ef.provideDefaultSuggestions()
 	}
@@ -260,7 +261,8 @@ func IsUserError(err error) bool {
 	}
 
 	// Check for structured errors that are user-facing
-	if structErr, ok := err.(*gibidiutils.StructuredError); ok {
+	var structErr *gibidiutils.StructuredError
+	if errors.As(err, &structErr) {
 		return structErr.Type == gibidiutils.ErrorTypeValidation ||
 			structErr.Code == gibidiutils.CodeValidationFormat ||
 			structErr.Code == gibidiutils.CodeValidationSize

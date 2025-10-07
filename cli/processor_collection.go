@@ -15,7 +15,12 @@ import (
 func (p *Processor) collectFiles() ([]string, error) {
 	files, err := fileproc.CollectFiles(p.flags.SourceDir)
 	if err != nil {
-		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "error collecting files")
+		return nil, gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeProcessing,
+			gibidiutils.CodeProcessingCollection,
+			"error collecting files",
+		)
 	}
 	logrus.Infof("Found %d files to process", len(files))
 	return files, nil
@@ -54,7 +59,11 @@ func (p *Processor) validateFileCollection(files []string) error {
 				return gibidiutils.NewStructuredError(
 					gibidiutils.ErrorTypeValidation,
 					gibidiutils.CodeResourceLimitTotalSize,
-					fmt.Sprintf("total file size (%d bytes) would exceed maximum limit (%d bytes)", totalSize, maxTotalSize),
+					fmt.Sprintf(
+						"total file size (%d bytes) would exceed maximum limit (%d bytes)",
+						totalSize,
+						maxTotalSize,
+					),
 					"",
 					map[string]interface{}{
 						"total_size":     totalSize,

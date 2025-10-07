@@ -67,7 +67,8 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(_ context.Context) bool {
 
 	// Check if we should evaluate memory usage
 	filesProcessed := atomic.AddInt64(&bp.filesProcessed, 1)
-	if int(filesProcessed)%bp.memoryCheckInterval != 0 {
+	// Avoid divide by zero - if interval is 0, check every file
+	if bp.memoryCheckInterval > 0 && int(filesProcessed)%bp.memoryCheckInterval != 0 {
 		return false
 	}
 
@@ -161,8 +162,8 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 		return
 	}
 
-	// Check if file channel is getting full (>90% capacity)
-	if len(fileCh) > bp.maxPendingFiles*9/10 {
+	// Check if file channel is getting full (>=90% capacity)
+	if bp.maxPendingFiles > 0 && len(fileCh) >= bp.maxPendingFiles*9/10 {
 		logrus.Debugf("File channel is %d%% full, waiting for space", len(fileCh)*100/bp.maxPendingFiles)
 
 		// Wait a bit for the channel to drain
@@ -173,8 +174,8 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 		}
 	}
 
-	// Check if write channel is getting full (>90% capacity)
-	if len(writeCh) > bp.maxPendingWrites*9/10 {
+	// Check if write channel is getting full (>=90% capacity)
+	if bp.maxPendingWrites > 0 && len(writeCh) >= bp.maxPendingWrites*9/10 {
 		logrus.Debugf("Write channel is %d%% full, waiting for space", len(writeCh)*100/bp.maxPendingWrites)
 
 		// Wait a bit for the channel to drain

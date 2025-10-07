@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -233,7 +234,8 @@ func errorAs(err error, target interface{}) bool {
 	if err == nil {
 		return false
 	}
-	if structErr, ok := err.(*gibidiutils.StructuredError); ok {
+	var structErr *gibidiutils.StructuredError
+	if errors.As(err, &structErr) {
 		if ptr, ok := target.(**gibidiutils.StructuredError); ok {
 			*ptr = structErr
 			return true

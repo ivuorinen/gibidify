@@ -11,7 +11,12 @@ import (
 )
 
 // startWorkers starts the worker goroutines.
-func (p *Processor) startWorkers(ctx context.Context, wg *sync.WaitGroup, fileCh chan string, writeCh chan fileproc.WriteRequest) {
+func (p *Processor) startWorkers(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	fileCh chan string,
+	writeCh chan fileproc.WriteRequest,
+) {
 	for range p.flags.Concurrency {
 		wg.Add(1)
 		go p.worker(ctx, wg, fileCh, writeCh)
@@ -19,7 +24,12 @@ func (p *Processor) startWorkers(ctx context.Context, wg *sync.WaitGroup, fileCh
 }
 
 // worker is the worker goroutine function.
-func (p *Processor) worker(ctx context.Context, wg *sync.WaitGroup, fileCh chan string, writeCh chan fileproc.WriteRequest) {
+func (p *Processor) worker(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	fileCh chan string,
+	writeCh chan fileproc.WriteRequest,
+) {
 	defer wg.Done()
 	for {
 		select {
@@ -78,7 +88,11 @@ func (p *Processor) sendFiles(ctx context.Context, files []string, fileCh chan s
 }
 
 // waitForCompletion waits for all workers to complete.
-func (p *Processor) waitForCompletion(wg *sync.WaitGroup, writeCh chan fileproc.WriteRequest, writerDone chan struct{}) {
+func (p *Processor) waitForCompletion(
+	wg *sync.WaitGroup,
+	writeCh chan fileproc.WriteRequest,
+	writerDone chan struct{},
+) {
 	wg.Wait()
 	close(writeCh)
 	<-writerDone

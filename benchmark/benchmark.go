@@ -58,7 +58,12 @@ func FileCollectionBenchmark(sourceDir string, numFiles int) (*Result, error) {
 	if sourceDir == "" {
 		tempDir, cleanupFunc, err := createBenchmarkFiles(numFiles)
 		if err != nil {
-			return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess, "failed to create benchmark files")
+			return nil, gibidiutils.WrapError(
+				err,
+				gibidiutils.ErrorTypeFileSystem,
+				gibidiutils.CodeFSAccess,
+				"failed to create benchmark files",
+			)
 		}
 		cleanup = cleanupFunc
 		defer cleanup()
@@ -74,7 +79,12 @@ func FileCollectionBenchmark(sourceDir string, numFiles int) (*Result, error) {
 	// Run the file collection benchmark
 	files, err := fileproc.CollectFiles(sourceDir)
 	if err != nil {
-		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "benchmark file collection failed")
+		return nil, gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeProcessing,
+			gibidiutils.CodeProcessingCollection,
+			"benchmark file collection failed",
+		)
 	}
 
 	duration := time.Since(startTime)
@@ -113,6 +123,8 @@ func FileCollectionBenchmark(sourceDir string, numFiles int) (*Result, error) {
 }
 
 // FileProcessingBenchmark benchmarks full file processing pipeline.
+//
+//revive:disable-next-line:function-length
 func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (*Result, error) {
 	// Load configuration to ensure proper file filtering
 	config.LoadConfig()
@@ -122,7 +134,12 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 		// Create temporary directory with test files
 		tempDir, cleanupFunc, err := createBenchmarkFiles(100)
 		if err != nil {
-			return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess, "failed to create benchmark files")
+			return nil, gibidiutils.WrapError(
+				err,
+				gibidiutils.ErrorTypeFileSystem,
+				gibidiutils.CodeFSAccess,
+				"failed to create benchmark files",
+			)
 		}
 		cleanup = cleanupFunc
 		defer cleanup()
@@ -132,7 +149,12 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 	// Create temporary output file
 	outputFile, err := os.CreateTemp("", "benchmark_output_*."+format)
 	if err != nil {
-		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileCreate, "failed to create benchmark output file")
+		return nil, gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeIO,
+			gibidiutils.CodeIOFileCreate,
+			"failed to create benchmark output file",
+		)
 	}
 	defer func() {
 		if err := outputFile.Close(); err != nil {
@@ -154,13 +176,29 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 	// Run the full processing pipeline
 	files, err := fileproc.CollectFiles(sourceDir)
 	if err != nil {
-		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "benchmark file collection failed")
+		return nil, gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeProcessing,
+			gibidiutils.CodeProcessingCollection,
+			"benchmark file collection failed",
+		)
 	}
 
 	// Process files with concurrency
-	err = runProcessingPipeline(context.Background(), files, outputFile, format, concurrency, sourceDir)
+	err = runProcessingPipeline(context.Background(), processingConfig{
+		files:       files,
+		outputFile:  outputFile,
+		format:      format,
+		concurrency: concurrency,
+		sourceDir:   sourceDir,
+	})
 	if err != nil {
-		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingFileRead, "benchmark processing pipeline failed")
+		return nil, gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeProcessing,
+			gibidiutils.CodeProcessingFileRead,
+			"benchmark processing pipeline failed",
+		)
 	}
 
 	duration := time.Since(startTime)
@@ -208,7 +246,13 @@ func ConcurrencyBenchmark(sourceDir string, format string, concurrencyLevels []i
 	for _, concurrency := range concurrencyLevels {
 		result, err := FileProcessingBenchmark(sourceDir, format, concurrency)
 		if err != nil {
-			return nil, gibidiutils.WrapErrorf(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "concurrency benchmark failed for level %d", concurrency)
+			return nil, gibidiutils.WrapErrorf(
+				err,
+				gibidiutils.ErrorTypeProcessing,
+				gibidiutils.CodeProcessingCollection,
+				"concurrency benchmark failed for level %d",
+				concurrency,
+			)
 		}
 		suite.Results = append(suite.Results, *result)
 	}
@@ -226,7 +270,13 @@ func FormatBenchmark(sourceDir string, formats []string) (*Suite, error) {
 	for _, format := range formats {
 		result, err := FileProcessingBenchmark(sourceDir, format, runtime.NumCPU())
 		if err != nil {
-			return nil, gibidiutils.WrapErrorf(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "format benchmark failed for format %s", format)
+			return nil, gibidiutils.WrapErrorf(
+				err,
+				gibidiutils.ErrorTypeProcessing,
+				gibidiutils.CodeProcessingCollection,
+				"format benchmark failed for format %s",
+				format,
+			)
 		}
 		suite.Results = append(suite.Results, *result)
 	}
@@ -238,7 +288,12 @@ func FormatBenchmark(sourceDir string, formats []string) (*Suite, error) {
 func createBenchmarkFiles(numFiles int) (string, func(), error) {
 	tempDir, err := os.MkdirTemp("", "gibidify_benchmark_*")
 	if err != nil {
-		return "", nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess, "failed to create temp directory")
+		return "", nil, gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeFileSystem,
+			gibidiutils.CodeFSAccess,
+			"failed to create temp directory",
+		)
 	}
 
 	cleanup := func() {
@@ -256,8 +311,15 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 		{".go", "package main\n\nfunc main() {\n\tprintln(\"Hello, World!\")\n}"},
 		{".js", "console.log('Hello, World!');"},
 		{".py", "print('Hello, World!')"},
-		{".java", "public class Hello {\n\tpublic static void main(String[] args) {\n\t\tSystem.out.println(\"Hello, World!\");\n\t}\n}"},
-		{".cpp", "#include <iostream>\n\nint main() {\n\tstd::cout << \"Hello, World!\" << std::endl;\n\treturn 0;\n}"},
+		{
+			".java",
+			"public class Hello {\n\tpublic static void main(String[] args) {" +
+				"\n\t\tSystem.out.println(\"Hello, World!\");\n\t}\n}",
+		},
+		{
+			".cpp",
+			"#include <iostream>\n\nint main() {\n\tstd::cout << \"Hello, World!\" << std::endl;\n\treturn 0;\n}",
+		},
 		{".rs", "fn main() {\n\tprintln!(\"Hello, World!\");\n}"},
 		{".rb", "puts 'Hello, World!'"},
 		{".php", "<?php\necho 'Hello, World!';\n?>"},
@@ -274,7 +336,12 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 			subdir := filepath.Join(tempDir, fmt.Sprintf("subdir_%d", i/10))
 			if err := os.MkdirAll(subdir, 0o750); err != nil {
 				cleanup()
-				return "", nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess, "failed to create subdirectory")
+				return "", nil, gibidiutils.WrapError(
+					err,
+					gibidiutils.ErrorTypeFileSystem,
+					gibidiutils.CodeFSAccess,
+					"failed to create subdirectory",
+				)
 			}
 			filename = filepath.Join(subdir, filename)
 		} else {
@@ -289,7 +356,12 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 
 		if err := os.WriteFile(filename, []byte(content), 0o600); err != nil {
 			cleanup()
-			return "", nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileWrite, "failed to write benchmark file")
+			return "", nil, gibidiutils.WrapError(
+				err,
+				gibidiutils.ErrorTypeIO,
+				gibidiutils.CodeIOFileWrite,
+				"failed to write benchmark file",
+			)
 		}
 	}
 
@@ -297,23 +369,41 @@ func createBenchmarkFiles(numFiles int) (string, func(), error) {
 }
 
 // runProcessingPipeline runs the processing pipeline similar to main.go.
-func runProcessingPipeline(ctx context.Context, files []string, outputFile *os.File, format string, concurrency int, sourceDir string) error {
-	fileCh := make(chan string, concurrency)
-	writeCh := make(chan fileproc.WriteRequest, concurrency)
+// processingConfig holds configuration for processing pipeline.
+type processingConfig struct {
+	files       []string
+	outputFile  *os.File
+	format      string
+	concurrency int
+	sourceDir   string
+}
+
+func runProcessingPipeline(ctx context.Context, config processingConfig) error {
+	fileCh := make(chan string, config.concurrency)
+	writeCh := make(chan fileproc.WriteRequest, config.concurrency)
 	writerDone := make(chan struct{})
 
 	// Start writer
-	go fileproc.StartWriter(outputFile, writeCh, writerDone, format, "", "")
+	go fileproc.StartWriter(config.outputFile, writeCh, writerDone, fileproc.WriterConfig{
+		Format: config.format,
+		Prefix: "",
+		Suffix: "",
+	})
 
 	// Get absolute path once
-	absRoot, err := gibidiutils.GetAbsolutePath(sourceDir)
+	absRoot, err := gibidiutils.GetAbsolutePath(config.sourceDir)
 	if err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSPathResolution, "failed to get absolute path for source directory")
+		return gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeFileSystem,
+			gibidiutils.CodeFSPathResolution,
+			"failed to get absolute path for source directory",
+		)
 	}
 
 	// Start workers with proper synchronization
 	var workersDone sync.WaitGroup
-	for i := 0; i < concurrency; i++ {
+	for i := 0; i < config.concurrency; i++ {
 		workersDone.Add(1)
 		go func() {
 			defer workersDone.Done()
@@ -324,7 +414,7 @@ func runProcessingPipeline(ctx context.Context, files []string, outputFile *os.F
 	}
 
 	// Send files to workers
-	for _, file := range files {
+	for _, file := range config.files {
 		select {
 		case <-ctx.Done():
 			close(fileCh)
@@ -381,7 +471,12 @@ func RunAllBenchmarks(sourceDir string) error {
 	fmt.Println("Running file collection benchmark...")
 	result, err := FileCollectionBenchmark(sourceDir, 1000)
 	if err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "file collection benchmark failed")
+		return gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeProcessing,
+			gibidiutils.CodeProcessingCollection,
+			"file collection benchmark failed",
+		)
 	}
 	PrintResult(result)
 
@@ -389,7 +484,12 @@ func RunAllBenchmarks(sourceDir string) error {
 	fmt.Println("Running format benchmarks...")
 	formatSuite, err := FormatBenchmark(sourceDir, []string{"json", "yaml", "markdown"})
 	if err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "format benchmark failed")
+		return gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeProcessing,
+			gibidiutils.CodeProcessingCollection,
+			"format benchmark failed",
+		)
 	}
 	PrintSuite(formatSuite)
 
@@ -398,7 +498,12 @@ func RunAllBenchmarks(sourceDir string) error {
 	concurrencyLevels := []int{1, 2, 4, 8, runtime.NumCPU()}
 	concurrencySuite, err := ConcurrencyBenchmark(sourceDir, "json", concurrencyLevels)
 	if err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingCollection, "concurrency benchmark failed")
+		return gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeProcessing,
+			gibidiutils.CodeProcessingCollection,
+			"concurrency benchmark failed",
+		)
 	}
 	PrintSuite(concurrencySuite)
 

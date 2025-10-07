@@ -1,4 +1,4 @@
-.PHONY: all clean test build coverage help lint lint-fix lint-verbose \
+.PHONY: all clean test test-coverage build coverage help lint lint-fix lint-verbose \
 	install-tools benchmark benchmark-collection benchmark-concurrency \
 	benchmark-format benchmark-processing build-benchmark check-all ci-lint \
 	ci-test dev-setup security security-full vuln-check
@@ -19,6 +19,8 @@ install-tools:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@echo "Installing gofumpt..."
 	@go install mvdan.cc/gofumpt@latest
+	@echo "Installing golines..."
+	@go install github.com/segmentio/golines@latest
 	@echo "Installing goimports..."
 	@go install golang.org/x/tools/cmd/goimports@latest
 	@echo "Installing staticcheck..."
@@ -27,6 +29,8 @@ install-tools:
 	@go install github.com/securego/gosec/v2/cmd/gosec@latest
 	@echo "Installing gocyclo..."
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+	@echo "Installing revive..."
+	@go install github.com/mgechev/revive@latest
 	@echo "Installing checkmake..."
 	@go install github.com/checkmake/checkmake/cmd/checkmake@latest
 	@echo "Installing shfmt..."
@@ -43,6 +47,8 @@ lint:
 lint-fix:
 	@echo "Running gofumpt..."
 	@gofumpt -l -w .
+	@echo "Running golines..."
+	@golines -w -m 120 --base-formatter="gofumpt" --shorten-comments .
 	@echo "Running goimports..."
 	@goimports -w -local github.com/ivuorinen/gibidify .
 	@echo "Running go fmt..."
@@ -55,6 +61,8 @@ lint-fix:
 	@golangci-lint run --fix ./...
 	@echo "Auto-fix completed. Running final lint check..."
 	@golangci-lint run ./...
+	@echo "Running revive..."
+	@revive -config revive.toml -formatter friendly ./...
 	@echo "Running checkmake..."
 	@checkmake --config=.checkmake Makefile
 	@echo "Running yamllint..."
@@ -76,6 +84,17 @@ lint-verbose:
 test:
 	@echo "Running tests..."
 	@go test -race -v ./...
+
+# Run tests with coverage output
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -race -v -coverprofile=coverage.out -covermode=atomic ./...
+	@echo ""
+	@echo "Coverage summary:"
+	@go tool cover -func=coverage.out | grep total:
+	@echo ""
+	@echo "Full coverage report saved to: coverage.out"
+	@echo "To view HTML report, run: make coverage"
 
 # Run tests with coverage
 coverage:

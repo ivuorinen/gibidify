@@ -104,7 +104,10 @@ ignoreDirectories:
 		t.Errorf("Expected default file size limit after validation failure, got %d", config.GetFileSizeLimit())
 	}
 	if containsString(config.GetIgnoredDirectories(), "") {
-		t.Errorf("Expected ignored directories not to contain empty string after validation failure, got %v", config.GetIgnoredDirectories())
+		t.Errorf(
+			"Expected ignored directories not to contain empty string after validation failure, got %v",
+			config.GetIgnoredDirectories(),
+		)
 	}
 }
 

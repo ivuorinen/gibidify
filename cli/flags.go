@@ -39,8 +39,10 @@ func ParseFlags() (*Flags, error) {
 	flag.StringVar(&flags.Prefix, "prefix", "", "Text to add at the beginning of the output file")
 	flag.StringVar(&flags.Suffix, "suffix", "", "Text to add at the end of the output file")
 	flag.StringVar(&flags.Format, "format", "markdown", "Output format (json, markdown, yaml)")
-	flag.IntVar(&flags.Concurrency, "concurrency", runtime.NumCPU(),
-		"Number of concurrent workers (default: number of CPU cores)")
+	flag.IntVar(
+		&flags.Concurrency, "concurrency", runtime.NumCPU(),
+		"Number of concurrent workers (default: number of CPU cores)",
+	)
 	flag.BoolVar(&flags.NoColors, "no-colors", false, "Disable colored output")
 	flag.BoolVar(&flags.NoProgress, "no-progress", false, "Disable progress bars")
 	flag.BoolVar(&flags.Verbose, "verbose", false, "Enable verbose output")
@@ -77,11 +79,7 @@ func (f *Flags) validate() error {
 	}
 
 	// Validate concurrency
-	if err := config.ValidateConcurrency(f.Concurrency); err != nil {
-		return err
-	}
-
-	return nil
+	return config.ValidateConcurrency(f.Concurrency)
 }
 
 // setDefaultDestination sets the default destination if not provided.
@@ -96,9 +94,5 @@ func (f *Flags) setDefaultDestination() error {
 	}
 
 	// Validate destination path for security
-	if err := gibidiutils.ValidateDestinationPath(f.Destination); err != nil {
-		return err
-	}
-
-	return nil
+	return gibidiutils.ValidateDestinationPath(f.Destination)
 }

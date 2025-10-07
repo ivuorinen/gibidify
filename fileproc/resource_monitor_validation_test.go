@@ -1,6 +1,7 @@
 package fileproc
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -40,7 +41,8 @@ func TestResourceMonitor_FileCountLimit(t *testing.T) {
 	}
 
 	// Verify it's the correct error type
-	structErr, ok := err.(*gibidiutils.StructuredError)
+	var structErr *gibidiutils.StructuredError
+	ok := errors.As(err, &structErr)
 	if !ok {
 		t.Errorf("Expected StructuredError, got %T", err)
 	} else if structErr.Code != gibidiutils.CodeResourceLimitFiles {
@@ -79,7 +81,8 @@ func TestResourceMonitor_TotalSizeLimit(t *testing.T) {
 	}
 
 	// Verify it's the correct error type
-	structErr, ok := err.(*gibidiutils.StructuredError)
+	var structErr *gibidiutils.StructuredError
+	ok := errors.As(err, &structErr)
 	if !ok {
 		t.Errorf("Expected StructuredError, got %T", err)
 	} else if structErr.Code != gibidiutils.CodeResourceLimitTotalSize {

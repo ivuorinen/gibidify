@@ -16,7 +16,9 @@ func (p *Processor) Process(ctx context.Context) error {
 	defer overallCancel()
 
 	// Configure file type registry
-	p.configureFileTypes()
+	if err := p.configureFileTypes(); err != nil {
+		return err
+	}
 
 	// Print startup info with colors
 	p.ui.PrintHeader("🚀 Starting gibidify")
@@ -65,7 +67,11 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 	writerDone := make(chan struct{})
 
 	// Start writer
-	go fileproc.StartWriter(outFile, writeCh, writerDone, p.flags.Format, p.flags.Prefix, p.flags.Suffix)
+	go fileproc.StartWriter(outFile, writeCh, writerDone, fileproc.WriterConfig{
+		Format: p.flags.Format,
+		Prefix: p.flags.Prefix,
+		Suffix: p.flags.Suffix,
+	})
 
 	// Start workers
 	var wg sync.WaitGroup
@@ -92,9 +98,13 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 // createOutputFile creates the output file.
 func (p *Processor) createOutputFile() (*os.File, error) {
 	// Destination path has been validated in CLI flags validation for path traversal attempts
-	outFile, err := os.Create(p.flags.Destination) // #nosec G304 - destination is validated in flags.validate()
+	// #nosec G304 - destination is validated in flags.validate()
+	outFile, err := os.Create(p.flags.Destination)
 	if err != nil {
-		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileCreate, "failed to create output file").WithFilePath(p.flags.Destination)
+		return nil, gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileCreate,
+			"failed to create output file",
+		).WithFilePath(p.flags.Destination)
 	}
 	return outFile, nil
 }

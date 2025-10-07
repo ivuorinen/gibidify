@@ -36,7 +36,15 @@ func WriteWithErrorWrap(writer io.Writer, content, errorMsg, filePath string) er
 
 // StreamContent provides a common streaming implementation with chunk processing.
 // This eliminates the similar streaming patterns across JSON and Markdown writers.
-func StreamContent(reader io.Reader, writer io.Writer, chunkSize int, filePath string, processChunk func([]byte) []byte) error {
+//
+//revive:disable-next-line:cognitive-complexity
+func StreamContent(
+	reader io.Reader,
+	writer io.Writer,
+	chunkSize int,
+	filePath string,
+	processChunk func([]byte) []byte,
+) error {
 	buf := make([]byte, chunkSize)
 	for {
 		n, err := reader.Read(buf)
@@ -57,7 +65,7 @@ func StreamContent(reader io.Reader, writer io.Writer, chunkSize int, filePath s
 			break
 		}
 		if err != nil {
-			wrappedErr := WrapError(err, ErrorTypeIO, CodeIORead, "failed to read content chunk")
+			wrappedErr := WrapError(err, ErrorTypeIO, CodeIOFileRead, "failed to read content chunk")
 			if filePath != "" {
 				wrappedErr = wrappedErr.WithFilePath(filePath)
 			}
@@ -121,7 +129,7 @@ func StreamLines(reader io.Reader, writer io.Writer, filePath string, lineProces
 	// Read all content first (for small files this is fine)
 	content, err := io.ReadAll(reader)
 	if err != nil {
-		wrappedErr := WrapError(err, ErrorTypeIO, CodeIORead, "failed to read content for line processing")
+		wrappedErr := WrapError(err, ErrorTypeIO, CodeIOFileRead, "failed to read content for line processing")
 		if filePath != "" {
 			wrappedErr = wrappedErr.WithFilePath(filePath)
 		}

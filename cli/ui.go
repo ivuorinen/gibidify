@@ -8,6 +8,8 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/schollz/progressbar/v3"
+
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // UIManager handles CLI user interface elements.
@@ -44,23 +46,28 @@ func (ui *UIManager) StartProgress(total int, description string) {
 		return
 	}
 
-	ui.progressBar = progressbar.NewOptions(total,
+	ui.progressBar = progressbar.NewOptions(
+		total,
 		progressbar.OptionSetWriter(ui.output),
 		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        color.GreenString("█"),
-			SaucerHead:    color.GreenString("█"),
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
+		progressbar.OptionSetTheme(
+			progressbar.Theme{
+				Saucer:        color.GreenString("█"),
+				SaucerHead:    color.GreenString("█"),
+				SaucerPadding: " ",
+				BarStart:      "[",
+				BarEnd:        "]",
+			},
+		),
 		progressbar.OptionShowCount(),
 		progressbar.OptionShowIts(),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionThrottle(100*time.Millisecond),
-		progressbar.OptionOnCompletion(func() {
-			_, _ = fmt.Fprint(ui.output, "\n")
-		}),
+		progressbar.OptionOnCompletion(
+			func() {
+				_, _ = fmt.Fprint(ui.output, "\n")
+			},
+		),
 		progressbar.OptionSetRenderBlankState(true),
 	)
 }
@@ -80,40 +87,44 @@ func (ui *UIManager) FinishProgress() {
 	}
 }
 
-// PrintSuccess prints a success message in green.
+// writeMessage writes a formatted message with optional colorization.
+// It handles color enablement, formatting, writing to output, and error logging.
+func (ui *UIManager) writeMessage(
+	icon, methodName, format string,
+	colorFunc func(string, ...interface{}) string,
+	args ...interface{},
+) {
+	msg := icon + " " + format
+	var output string
+	if ui.enableColors && colorFunc != nil {
+		output = colorFunc(msg, args...)
+	} else {
+		output = fmt.Sprintf(msg, args...)
+	}
+
+	if _, err := fmt.Fprintf(ui.output, "%s\n", output); err != nil {
+		gibidiutils.LogError(fmt.Sprintf("UIManager.%s: failed to write to output", methodName), err)
+	}
+}
+
+// PrintSuccess prints a success message in green (to ui.output if set).
 func (ui *UIManager) PrintSuccess(format string, args ...interface{}) {
-	if ui.enableColors {
-		color.Green("✓ "+format, args...)
-	} else {
-		ui.printf("✓ "+format+"\n", args...)
-	}
+	ui.writeMessage(gibidiutils.IconSuccess, "PrintSuccess", format, color.GreenString, args...)
 }
 
-// PrintError prints an error message in red.
+// PrintError prints an error message in red (to ui.output if set).
 func (ui *UIManager) PrintError(format string, args ...interface{}) {
-	if ui.enableColors {
-		color.Red("✗ "+format, args...)
-	} else {
-		ui.printf("✗ "+format+"\n", args...)
-	}
+	ui.writeMessage(gibidiutils.IconError, "PrintError", format, color.RedString, args...)
 }
 
-// PrintWarning prints a warning message in yellow.
+// PrintWarning prints a warning message in yellow (to ui.output if set).
 func (ui *UIManager) PrintWarning(format string, args ...interface{}) {
-	if ui.enableColors {
-		color.Yellow("⚠ "+format, args...)
-	} else {
-		ui.printf("⚠ "+format+"\n", args...)
-	}
+	ui.writeMessage(gibidiutils.IconWarning, "PrintWarning", format, color.YellowString, args...)
 }
 
-// PrintInfo prints an info message in blue.
+// PrintInfo prints an info message in blue (to ui.output if set).
 func (ui *UIManager) PrintInfo(format string, args ...interface{}) {
-	if ui.enableColors {
-		color.Blue("ℹ "+format, args...)
-	} else {
-		ui.printf("ℹ "+format+"\n", args...)
-	}
+	ui.writeMessage(gibidiutils.IconInfo, "PrintInfo", format, color.BlueString, args...)
 }
 
 // PrintHeader prints a header message in bold.
@@ -127,6 +138,11 @@ func (ui *UIManager) PrintHeader(format string, args ...interface{}) {
 
 // isColorTerminal checks if the terminal supports colors.
 func isColorTerminal() bool {
+	// Check if FORCE_COLOR is set
+	if os.Getenv("FORCE_COLOR") != "" {
+		return true
+	}
+
 	// Check common environment variables
 	term := os.Getenv("TERM")
 	if term == "" || term == "dumb" {
@@ -148,13 +164,7 @@ func isColorTerminal() bool {
 		return false
 	}
 
-	// Check if FORCE_COLOR is set
-	if os.Getenv("FORCE_COLOR") != "" {
-		return true
-	}
-
-	// Default to true for interactive terminals
-	return isInteractiveTerminal()
+	return true
 }
 
 // isInteractiveTerminal checks if we're running in an interactive terminal.

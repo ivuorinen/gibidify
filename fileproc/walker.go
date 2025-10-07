@@ -32,7 +32,10 @@ func NewProdWalker() *ProdWalker {
 func (w *ProdWalker) Walk(root string) ([]string, error) {
 	absRoot, err := gibidiutils.GetAbsolutePath(root)
 	if err != nil {
-		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSPathResolution, "failed to resolve root path").WithFilePath(root)
+		return nil, gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSPathResolution,
+			"failed to resolve root path",
+		).WithFilePath(root)
 	}
 	return w.walkDir(absRoot, []ignoreRule{})
 }
@@ -47,7 +50,10 @@ func (w *ProdWalker) walkDir(currentDir string, parentRules []ignoreRule) ([]str
 
 	entries, err := os.ReadDir(currentDir)
 	if err != nil {
-		return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess, "failed to read directory").WithFilePath(currentDir)
+		return nil, gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess,
+			"failed to read directory",
+		).WithFilePath(currentDir)
 	}
 
 	rules := loadIgnoreRules(currentDir, parentRules)
@@ -63,7 +69,10 @@ func (w *ProdWalker) walkDir(currentDir string, parentRules []ignoreRule) ([]str
 		if entry.IsDir() {
 			subFiles, err := w.walkDir(fullPath, rules)
 			if err != nil {
-				return nil, gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingTraversal, "failed to traverse subdirectory").WithFilePath(fullPath)
+				return nil, gibidiutils.WrapError(
+					err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingTraversal,
+					"failed to traverse subdirectory",
+				).WithFilePath(fullPath)
 			}
 			results = append(results, subFiles...)
 		} else {

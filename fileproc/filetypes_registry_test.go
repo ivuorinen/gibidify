@@ -21,7 +21,7 @@ func TestFileTypeRegistry_ModificationMethods(t *testing.T) {
 			t.Errorf("Expected .webp to be recognized as image after adding")
 		}
 
-		// Test case insensitive addition
+		// Test case-insensitive addition
 		registry.AddImageExtension(".AVIF")
 		if !registry.IsImage("test.avif") {
 			t.Errorf("Expected .avif to be recognized as image after adding .AVIF")
@@ -51,7 +51,7 @@ func TestFileTypeRegistry_ModificationMethods(t *testing.T) {
 			t.Errorf("Expected .custom to be recognized as binary after adding")
 		}
 
-		// Test case insensitive addition
+		// Test case-insensitive addition
 		registry.AddBinaryExtension(".SPECIAL")
 		if !registry.IsBinary("file.special") {
 			t.Errorf("Expected .special to be recognized as binary after adding .SPECIAL")
@@ -81,7 +81,7 @@ func TestFileTypeRegistry_ModificationMethods(t *testing.T) {
 			t.Errorf("Expected CustomLang, got %s", lang)
 		}
 
-		// Test case insensitive addition
+		// Test case-insensitive addition
 		registry.AddLanguageMapping(".ABC", "UpperLang")
 		if lang := registry.GetLanguage("file.abc"); lang != "UpperLang" {
 			t.Errorf("Expected UpperLang, got %s", lang)

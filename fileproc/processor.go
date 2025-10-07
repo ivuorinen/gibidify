@@ -3,6 +3,7 @@ package fileproc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -58,6 +59,34 @@ func NewFileProcessorWithMonitor(rootPath string, monitor *ResourceMonitor) *Fil
 	}
 }
 
+// checkContextCancellation checks if context is cancelled and logs an error if so.
+// Returns true if context is cancelled, false otherwise.
+func (p *FileProcessor) checkContextCancellation(ctx context.Context, filePath, stage string) bool {
+	select {
+	case <-ctx.Done():
+		// Format stage with leading space if provided
+		stageMsg := stage
+		if stage != "" {
+			stageMsg = " " + stage
+		}
+		gibidiutils.LogErrorf(
+			gibidiutils.NewStructuredError(
+				gibidiutils.ErrorTypeValidation,
+				gibidiutils.CodeResourceLimitTimeout,
+				fmt.Sprintf("file processing cancelled%s", stageMsg),
+				filePath,
+				nil,
+			),
+			"File processing cancelled%s: %s",
+			stageMsg,
+			filePath,
+		)
+		return true
+	default:
+		return false
+	}
+}
+
 // ProcessFile reads the file at filePath and sends a formatted output to outCh.
 // It automatically chooses between loading the entire file or streaming based on file size.
 func ProcessFile(filePath string, outCh chan<- WriteRequest, rootPath string) {
@@ -67,7 +96,13 @@ func ProcessFile(filePath string, outCh chan<- WriteRequest, rootPath string) {
 }
 
 // ProcessFileWithMonitor processes a file using a shared resource monitor.
-func ProcessFileWithMonitor(ctx context.Context, filePath string, outCh chan<- WriteRequest, rootPath string, monitor *ResourceMonitor) {
+func ProcessFileWithMonitor(
+	ctx context.Context,
+	filePath string,
+	outCh chan<- WriteRequest,
+	rootPath string,
+	monitor *ResourceMonitor,
+) {
 	processor := NewFileProcessorWithMonitor(rootPath, monitor)
 	processor.ProcessWithContext(ctx, filePath, outCh)
 }
@@ -86,10 +121,17 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 
 	// Wait for rate limiting
 	if err := p.resourceMonitor.WaitForRateLimit(fileCtx); err != nil {
-		if err == context.DeadlineExceeded {
+		if errors.Is(err, context.DeadlineExceeded) {
 			gibidiutils.LogErrorf(
-				gibidiutils.NewStructuredError(gibidiutils.ErrorTypeValidation, gibidiutils.CodeResourceLimitTimeout, "file processing timeout during rate limiting", filePath, nil),
-				"File processing timeout during rate limiting: %s", filePath,
+				gibidiutils.NewStructuredError(
+					gibidiutils.ErrorTypeValidation,
+					gibidiutils.CodeResourceLimitTimeout,
+					"file processing timeout during rate limiting",
+					filePath,
+					nil,
+				),
+				"File processing timeout during rate limiting: %s",
+				filePath,
 			)
 		}
 		return
@@ -103,10 +145,17 @@ func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string,
 
 	// Acquire read slot for concurrent processing
 	if err := p.resourceMonitor.AcquireReadSlot(fileCtx); err != nil {
-		if err == context.DeadlineExceeded {
+		if errors.Is(err, context.DeadlineExceeded) {
 			gibidiutils.LogErrorf(
-				gibidiutils.NewStructuredError(gibidiutils.ErrorTypeValidation, gibidiutils.CodeResourceLimitTimeout, "file processing timeout waiting for read slot", filePath, nil),
-				"File processing timeout waiting for read slot: %s", filePath,
+				gibidiutils.NewStructuredError(
+					gibidiutils.ErrorTypeValidation,
+					gibidiutils.CodeResourceLimitTimeout,
+					"file processing timeout waiting for read slot",
+					filePath,
+					nil,
+				),
+				"File processing timeout waiting for read slot: %s",
+				filePath,
 			)
 		}
 		return
@@ -149,14 +198,17 @@ func (p *FileProcessor) validateFileWithLimits(ctx context.Context, filePath str
 
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		structErr := gibidiutils.WrapError(err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess, "failed to stat file").WithFilePath(filePath)
+		structErr := gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess,
+			"failed to stat file",
+		).WithFilePath(filePath)
 		gibidiutils.LogErrorf(structErr, "Failed to stat file %s", filePath)
-		return nil, err
+		return nil, structErr
 	}
 
 	// Check traditional size limit
 	if fileInfo.Size() > p.sizeLimit {
-		context := map[string]interface{}{
+		filesizeContext := map[string]interface{}{
 			"file_size":  fileInfo.Size(),
 			"size_limit": p.sizeLimit,
 		}
@@ -166,7 +218,7 @@ func (p *FileProcessor) validateFileWithLimits(ctx context.Context, filePath str
 				gibidiutils.CodeValidationSize,
 				fmt.Sprintf("file size (%d bytes) exceeds limit (%d bytes)", fileInfo.Size(), p.sizeLimit),
 				filePath,
-				context,
+				filesizeContext,
 			),
 			"Skipping large file %s", filePath,
 		)
@@ -192,63 +244,53 @@ func (p *FileProcessor) getRelativePath(filePath string) string {
 }
 
 // processInMemoryWithContext loads the entire file into memory with context awareness.
-func (p *FileProcessor) processInMemoryWithContext(ctx context.Context, filePath, relPath string, outCh chan<- WriteRequest) {
+func (p *FileProcessor) processInMemoryWithContext(
+	ctx context.Context,
+	filePath, relPath string,
+	outCh chan<- WriteRequest,
+) {
 	// Check context before reading
-	select {
-	case <-ctx.Done():
-		gibidiutils.LogErrorf(
-			gibidiutils.NewStructuredError(gibidiutils.ErrorTypeValidation, gibidiutils.CodeResourceLimitTimeout, "file processing cancelled", filePath, nil),
-			"File processing cancelled: %s", filePath,
-		)
+	if p.checkContextCancellation(ctx, filePath, "") {
 		return
-	default:
 	}
 
-	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated by walker
+	// #nosec G304 - filePath is validated by walker
+	content, err := os.ReadFile(filePath)
 	if err != nil {
-		structErr := gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingFileRead, "failed to read file").WithFilePath(filePath)
+		structErr := gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingFileRead,
+			"failed to read file",
+		).WithFilePath(filePath)
 		gibidiutils.LogErrorf(structErr, "Failed to read file %s", filePath)
 		return
 	}
 
 	// Check context again after reading
-	select {
-	case <-ctx.Done():
-		gibidiutils.LogErrorf(
-			gibidiutils.NewStructuredError(gibidiutils.ErrorTypeValidation, gibidiutils.CodeResourceLimitTimeout, "file processing cancelled after read", filePath, nil),
-			"File processing cancelled after read: %s", filePath,
-		)
+	if p.checkContextCancellation(ctx, filePath, "after read") {
 		return
-	default:
 	}
 
-	// Try to send the result, but respect context cancellation
-	select {
-	case <-ctx.Done():
-		gibidiutils.LogErrorf(
-			gibidiutils.NewStructuredError(gibidiutils.ErrorTypeValidation, gibidiutils.CodeResourceLimitTimeout, "file processing cancelled before output", filePath, nil),
-			"File processing cancelled before output: %s", filePath,
-		)
+	// Check context before sending output
+	if p.checkContextCancellation(ctx, filePath, "before output") {
 		return
-	case outCh <- WriteRequest{
+	}
+
+	outCh <- WriteRequest{
 		Path:     relPath,
 		Content:  p.formatContent(relPath, string(content)),
 		IsStream: false,
-	}:
 	}
 }
 
 // processStreamingWithContext creates a streaming reader for large files with context awareness.
-func (p *FileProcessor) processStreamingWithContext(ctx context.Context, filePath, relPath string, outCh chan<- WriteRequest) {
+func (p *FileProcessor) processStreamingWithContext(
+	ctx context.Context,
+	filePath, relPath string,
+	outCh chan<- WriteRequest,
+) {
 	// Check context before creating reader
-	select {
-	case <-ctx.Done():
-		gibidiutils.LogErrorf(
-			gibidiutils.NewStructuredError(gibidiutils.ErrorTypeValidation, gibidiutils.CodeResourceLimitTimeout, "streaming processing cancelled", filePath, nil),
-			"Streaming processing cancelled: %s", filePath,
-		)
+	if p.checkContextCancellation(ctx, filePath, "before streaming") {
 		return
-	default:
 	}
 
 	reader := p.createStreamReaderWithContext(ctx, filePath, relPath)
@@ -256,35 +298,33 @@ func (p *FileProcessor) processStreamingWithContext(ctx context.Context, filePat
 		return // Error already logged
 	}
 
-	// Try to send the result, but respect context cancellation
-	select {
-	case <-ctx.Done():
-		gibidiutils.LogErrorf(
-			gibidiutils.NewStructuredError(gibidiutils.ErrorTypeValidation, gibidiutils.CodeResourceLimitTimeout, "streaming processing cancelled before output", filePath, nil),
-			"Streaming processing cancelled before output: %s", filePath,
-		)
+	// Check context before sending output
+	if p.checkContextCancellation(ctx, filePath, "before streaming output") {
 		return
-	case outCh <- WriteRequest{
+	}
+
+	outCh <- WriteRequest{
 		Path:     relPath,
 		Content:  "", // Empty since content is in Reader
 		IsStream: true,
 		Reader:   reader,
-	}:
 	}
 }
 
 // createStreamReaderWithContext creates a reader that combines header and file content with context awareness.
 func (p *FileProcessor) createStreamReaderWithContext(ctx context.Context, filePath, relPath string) io.Reader {
 	// Check context before opening file
-	select {
-	case <-ctx.Done():
+	if p.checkContextCancellation(ctx, filePath, "before opening file") {
 		return nil
-	default:
 	}
 
-	file, err := os.Open(filePath) // #nosec G304 - filePath is validated by walker
+	// #nosec G304 - filePath is validated by walker
+	file, err := os.Open(filePath)
 	if err != nil {
-		structErr := gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingFileRead, "failed to open file for streaming").WithFilePath(filePath)
+		structErr := gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingFileRead,
+			"failed to open file for streaming",
+		).WithFilePath(filePath)
 		gibidiutils.LogErrorf(structErr, "Failed to open file for streaming %s", filePath)
 		return nil
 	}

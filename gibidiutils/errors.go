@@ -2,7 +2,10 @@
 package gibidiutils
 
 import (
+	"errors"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -60,10 +63,25 @@ type StructuredError struct {
 
 // Error implements the error interface.
 func (e *StructuredError) Error() string {
-	if e.Cause != nil {
-		return fmt.Sprintf("%s [%s]: %s: %v", e.Type, e.Code, e.Message, e.Cause)
+	base := fmt.Sprintf("%s [%s]: %s", e.Type, e.Code, e.Message)
+	if len(e.Context) > 0 {
+		// Sort keys for deterministic output
+		keys := make([]string, 0, len(e.Context))
+		for k := range e.Context {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		ctxPairs := make([]string, 0, len(e.Context))
+		for _, k := range keys {
+			ctxPairs = append(ctxPairs, fmt.Sprintf("%s=%v", k, e.Context[k]))
+		}
+		base = fmt.Sprintf("%s | context: %s", base, strings.Join(ctxPairs, ", "))
 	}
-	return fmt.Sprintf("%s [%s]: %s", e.Type, e.Code, e.Message)
+	if e.Cause != nil {
+		return fmt.Sprintf("%s: %v", base, e.Cause)
+	}
+	return base
 }
 
 // Unwrap returns the underlying cause error.
@@ -93,7 +111,11 @@ func (e *StructuredError) WithLine(line int) *StructuredError {
 }
 
 // NewStructuredError creates a new structured error.
-func NewStructuredError(errorType ErrorType, code, message, filePath string, context map[string]interface{}) *StructuredError {
+func NewStructuredError(
+	errorType ErrorType,
+	code, message, filePath string,
+	context map[string]any,
+) *StructuredError {
 	return &StructuredError{
 		Type:     errorType,
 		Code:     code,
@@ -135,34 +157,40 @@ func WrapErrorf(err error, errorType ErrorType, code, format string, args ...any
 // Common error codes for each type
 const (
 	// CLI Error Codes
+
 	CodeCLIMissingSource = "MISSING_SOURCE"
 	CodeCLIInvalidArgs   = "INVALID_ARGS"
 
 	// FileSystem Error Codes
+
 	CodeFSPathResolution = "PATH_RESOLUTION"
 	CodeFSPermission     = "PERMISSION_DENIED"
 	CodeFSNotFound       = "NOT_FOUND"
 	CodeFSAccess         = "ACCESS_DENIED"
 
 	// Processing Error Codes
+
 	CodeProcessingFileRead   = "FILE_READ"
 	CodeProcessingCollection = "COLLECTION"
 	CodeProcessingTraversal  = "TRAVERSAL"
 	CodeProcessingEncode     = "ENCODE"
 
 	// Configuration Error Codes
+
 	CodeConfigValidation = "VALIDATION"
 	CodeConfigMissing    = "MISSING"
 
 	// IO Error Codes
+
 	CodeIOFileCreate = "FILE_CREATE"
 	CodeIOFileWrite  = "FILE_WRITE"
 	CodeIOEncoding   = "ENCODING"
 	CodeIOWrite      = "WRITE"
-	CodeIORead       = "READ"
+	CodeIOFileRead   = "FILE_READ"
 	CodeIOClose      = "CLOSE"
 
 	// Validation Error Codes
+
 	CodeValidationFormat   = "FORMAT"
 	CodeValidationFileType = "FILE_TYPE"
 	CodeValidationSize     = "SIZE_LIMIT"
@@ -170,6 +198,7 @@ const (
 	CodeValidationPath     = "PATH_TRAVERSAL"
 
 	// Resource Limit Error Codes
+
 	CodeResourceLimitFiles       = "FILE_COUNT_LIMIT"
 	CodeResourceLimitTotalSize   = "TOTAL_SIZE_LIMIT"
 	CodeResourceLimitTimeout     = "TIMEOUT"
@@ -182,7 +211,14 @@ const (
 
 // NewCLIMissingSourceError creates a CLI error for missing source argument.
 func NewCLIMissingSourceError() *StructuredError {
-	return NewStructuredError(ErrorTypeCLI, CodeCLIMissingSource, "usage: gibidify -source <source_directory> [--destination <output_file>] [--format=json|yaml|markdown]", "", nil)
+	return NewStructuredError(
+		ErrorTypeCLI,
+		CodeCLIMissingSource,
+		"usage: gibidify -source <source_directory> "+
+			"[--destination <output_file>] [--format=json|yaml|markdown]",
+		"",
+		nil,
+	)
 }
 
 // NewFileSystemError creates a file system error.
@@ -217,7 +253,8 @@ func LogError(operation string, err error, args ...any) {
 		}
 
 		// Check if it's a structured error and log with additional context
-		if structErr, ok := err.(*StructuredError); ok {
+		var structErr *StructuredError
+		if errors.As(err, &structErr) {
 			logrus.WithFields(logrus.Fields{
 				"error_type": structErr.Type.String(),
 				"error_code": structErr.Code,
@@ -226,6 +263,7 @@ func LogError(operation string, err error, args ...any) {
 				"line":       structErr.Line,
 			}).Errorf("%s: %v", msg, err)
 		} else {
+			// Log regular errors without structured fields
 			logrus.Errorf("%s: %v", msg, err)
 		}
 	}

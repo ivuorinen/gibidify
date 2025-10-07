@@ -7,12 +7,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
 const (
 	testFileCount = 1000
 )
+
+// TestMain configures test-time flags for packages.
+func TestMain(m *testing.M) {
+	// Inform packages that we're running under tests so they can adjust noisy logging.
+	// The config package will suppress the specific info-level message about missing config
+	// while still allowing tests to enable debug/info level logging when needed.
+	config.SetRunningInTest(true)
+	os.Exit(m.Run())
+}
 
 // TestIntegrationFullCLI simulates a full run of the CLI application using adaptive concurrency.
 func TestIntegrationFullCLI(t *testing.T) {

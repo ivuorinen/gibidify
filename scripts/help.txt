@@ -4,7 +4,8 @@ Available targets:
   lint-fix      - Run linters with auto-fix enabled
   lint-verbose  - Run linters with verbose output
   test          - Run tests
-  coverage      - Run tests with coverage
+  test-coverage - Run tests with coverage output
+  coverage      - Run tests with coverage and generate HTML report
   build         - Build the application
   clean         - Clean build artifacts
   all           - Run lint, test, and build

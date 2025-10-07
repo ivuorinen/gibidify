@@ -27,7 +27,12 @@ func NewJSONWriter(outFile *os.File) *JSONWriter {
 func (w *JSONWriter) Start(prefix, suffix string) error {
 	// Start JSON structure
 	if _, err := w.outFile.WriteString(`{"prefix":"`); err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write JSON start")
+		return gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeIO,
+			gibidiutils.CodeIOWrite,
+			"failed to write JSON start",
+		)
 	}
 
 	// Write escaped prefix
@@ -37,7 +42,12 @@ func (w *JSONWriter) Start(prefix, suffix string) error {
 	}
 
 	if _, err := w.outFile.WriteString(`","suffix":"`); err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write JSON middle")
+		return gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeIO,
+			gibidiutils.CodeIOWrite,
+			"failed to write JSON middle",
+		)
 	}
 
 	// Write escaped suffix
@@ -47,7 +57,12 @@ func (w *JSONWriter) Start(prefix, suffix string) error {
 	}
 
 	if _, err := w.outFile.WriteString(`","files":[`); err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write JSON files start")
+		return gibidiutils.WrapError(
+			err,
+			gibidiutils.ErrorTypeIO,
+			gibidiutils.CodeIOWrite,
+			"failed to write JSON files start",
+		)
 	}
 
 	return nil
@@ -57,7 +72,12 @@ func (w *JSONWriter) Start(prefix, suffix string) error {
 func (w *JSONWriter) WriteFile(req WriteRequest) error {
 	if !w.firstFile {
 		if _, err := w.outFile.WriteString(","); err != nil {
-			return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write JSON separator")
+			return gibidiutils.WrapError(
+				err,
+				gibidiutils.ErrorTypeIO,
+				gibidiutils.CodeIOWrite,
+				"failed to write JSON separator",
+			)
 		}
 	}
 	w.firstFile = false
@@ -86,7 +106,10 @@ func (w *JSONWriter) writeStreaming(req WriteRequest) error {
 	// Write file start
 	escapedPath := gibidiutils.EscapeForJSON(req.Path)
 	if _, err := fmt.Fprintf(w.outFile, `{"path":"%s","language":"%s","content":"`, escapedPath, language); err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write JSON file start").WithFilePath(req.Path)
+		return gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+			"failed to write JSON file start",
+		).WithFilePath(req.Path)
 	}
 
 	// Stream content with JSON escaping
@@ -96,7 +119,10 @@ func (w *JSONWriter) writeStreaming(req WriteRequest) error {
 
 	// Write file end
 	if _, err := w.outFile.WriteString(`"}`); err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write JSON file end").WithFilePath(req.Path)
+		return gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+			"failed to write JSON file end",
+		).WithFilePath(req.Path)
 	}
 
 	return nil
@@ -113,11 +139,17 @@ func (w *JSONWriter) writeInline(req WriteRequest) error {
 
 	encoded, err := json.Marshal(fileData)
 	if err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingEncode, "failed to marshal JSON").WithFilePath(req.Path)
+		return gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingEncode,
+			"failed to marshal JSON",
+		).WithFilePath(req.Path)
 	}
 
 	if _, err := w.outFile.Write(encoded); err != nil {
-		return gibidiutils.WrapError(err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite, "failed to write JSON file").WithFilePath(req.Path)
+		return gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+			"failed to write JSON file",
+		).WithFilePath(req.Path)
 	}
 	return nil
 }

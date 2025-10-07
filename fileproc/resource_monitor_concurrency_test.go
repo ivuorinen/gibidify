@@ -35,7 +35,7 @@ func TestResourceMonitor_ConcurrentReadsLimit(t *testing.T) {
 		t.Errorf("Expected no error for second read slot, got %v", err)
 	}
 
-	// Third read slot should timeout (context deadline exceeded)
+	// Third read slot should time out (context deadline exceeded)
 	err = rm.AcquireReadSlot(ctx)
 	if err == nil {
 		t.Error("Expected timeout error for third read slot, got nil")
