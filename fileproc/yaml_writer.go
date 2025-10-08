@@ -176,6 +176,14 @@ func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
 		return err
 	}
 
+	// Check for nil reader
+	if req.Reader == nil {
+		return gibidiutils.WrapError(
+			nil, gibidiutils.ErrorTypeValidation, gibidiutils.CodeValidationRequired,
+			"nil reader in write request",
+		).WithFilePath(req.Path)
+	}
+
 	defer gibidiutils.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)

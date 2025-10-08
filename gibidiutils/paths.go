@@ -29,16 +29,25 @@ func GetBaseName(absPath string) string {
 
 // checkPathTraversal checks for path traversal patterns and returns an error if found.
 func checkPathTraversal(path, context string) error {
-	if strings.Contains(path, "..") {
-		return NewStructuredError(
-			ErrorTypeValidation,
-			CodeValidationPath,
-			fmt.Sprintf("path traversal attempt detected in %s", context),
-			path,
-			map[string]interface{}{
-				"original_path": path,
-			},
-		)
+	// Normalize separators without cleaning (to preserve ..)
+	normalized := filepath.ToSlash(path)
+
+	// Split into components
+	components := strings.Split(normalized, "/")
+
+	// Check each component for exact ".." match
+	for _, component := range components {
+		if component == ".." {
+			return NewStructuredError(
+				ErrorTypeValidation,
+				CodeValidationPath,
+				fmt.Sprintf("path traversal attempt detected in %s", context),
+				path,
+				map[string]interface{}{
+					"original_path": path,
+				},
+			)
+		}
 	}
 	return nil
 }
@@ -59,6 +68,68 @@ func cleanAndResolveAbsPath(path, context string) (string, error) {
 		)
 	}
 	return abs, nil
+}
+
+// validateWorkingDirectoryBoundary checks if the given absolute path escapes the working directory.
+func validateWorkingDirectoryBoundary(abs, path string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return NewStructuredError(
+			ErrorTypeFileSystem,
+			CodeFSPathResolution,
+			"cannot get current working directory",
+			path,
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
+	}
+
+	cwdAbs, err := filepath.Abs(cwd)
+	if err != nil {
+		return NewStructuredError(
+			ErrorTypeFileSystem,
+			CodeFSPathResolution,
+			"cannot resolve current working directory",
+			path,
+			map[string]interface{}{
+				"error": err.Error(),
+			},
+		)
+	}
+
+	// Use filepath.Rel to check if path escapes working directory
+	rel, err := filepath.Rel(cwdAbs, abs)
+	if err != nil {
+		return NewStructuredError(
+			ErrorTypeValidation,
+			CodeValidationPath,
+			"cannot determine relative path",
+			path,
+			map[string]interface{}{
+				"resolved_path": abs,
+				"working_dir":   cwdAbs,
+				"error":         err.Error(),
+			},
+		)
+	}
+
+	// Check if the relative path tries to escape the working directory
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return NewStructuredError(
+			ErrorTypeValidation,
+			CodeValidationPath,
+			"source path attempts to access directories outside current working directory",
+			path,
+			map[string]interface{}{
+				"resolved_path": abs,
+				"working_dir":   cwdAbs,
+				"relative_path": rel,
+			},
+		)
+	}
+
+	return nil
 }
 
 // ValidateSourcePath validates a source directory path for security.
@@ -82,47 +153,10 @@ func ValidateSourcePath(path string) error {
 	}
 	cleaned := filepath.Clean(path)
 
-	// Get current working directory to ensure we're not escaping it for relative paths
+	// Ensure the resolved path is within or below the current working directory for relative paths
 	if !filepath.IsAbs(path) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return NewStructuredError(
-				ErrorTypeFileSystem,
-				CodeFSPathResolution,
-				"cannot get current working directory",
-				path,
-				map[string]interface{}{
-					"error": err.Error(),
-				},
-			)
-		}
-
-		// Ensure the resolved path is within or below the current working directory
-		cwdAbs, err := filepath.Abs(cwd)
-		if err != nil {
-			return NewStructuredError(
-				ErrorTypeFileSystem,
-				CodeFSPathResolution,
-				"cannot resolve current working directory",
-				path,
-				map[string]interface{}{
-					"error": err.Error(),
-				},
-			)
-		}
-
-		// Check if the absolute path tries to escape the current working directory
-		if !strings.HasPrefix(abs, cwdAbs) {
-			return NewStructuredError(
-				ErrorTypeValidation,
-				CodeValidationPath,
-				"source path attempts to access directories outside current working directory",
-				path,
-				map[string]interface{}{
-					"resolved_path": abs,
-					"working_dir":   cwdAbs,
-				},
-			)
+		if err := validateWorkingDirectoryBoundary(abs, path); err != nil {
+			return err
 		}
 	}
 
