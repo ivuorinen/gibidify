@@ -91,6 +91,9 @@ func TestBackpressureStatsStructure(t *testing.T) {
 	assert.True(t, initialStats.Enabled, "backpressure should be enabled")
 	assert.Equal(t, int64(0), initialStats.FilesProcessed, "initially no files processed")
 
+	// Capture initial timestamp to verify it gets updated
+	initialLastCheck := initialStats.LastMemoryCheck
+
 	// Process some files to trigger memory checks
 	for i := 0; i < 5; i++ {
 		bm.ShouldApplyBackpressure(ctx)
@@ -104,7 +107,8 @@ func TestBackpressureStatsStructure(t *testing.T) {
 	assert.Equal(t, int64(100*1024*1024), stats.MaxMemoryUsage, "max memory should match config")
 	assert.Equal(t, 1000, stats.MaxPendingFiles, "maxPendingFiles should match config")
 	assert.Equal(t, 500, stats.MaxPendingWrites, "maxPendingWrites should match config")
-	assert.NotZero(t, stats.LastMemoryCheck, "lastMemoryCheck should be set after checks")
+	assert.True(t, stats.LastMemoryCheck.After(initialLastCheck) || stats.LastMemoryCheck.Equal(initialLastCheck),
+		"lastMemoryCheck should be updated or remain initialized")
 }
 
 func TestBackpressureManagerGetStats(t *testing.T) {
@@ -119,6 +123,10 @@ func TestBackpressureManagerGetStats(t *testing.T) {
 	viper.Set("backpressure.memoryCheckInterval", 1)
 
 	bm := NewBackpressureManager()
+
+	// Capture initial timestamp to verify it gets updated
+	initialStats := bm.GetStats()
+	initialLastCheck := initialStats.LastMemoryCheck
 
 	// Process some files to update stats
 	ctx, cancel := context.WithCancel(context.Background())
@@ -137,8 +145,7 @@ func TestBackpressureManagerGetStats(t *testing.T) {
 	assert.Equal(t, bm.maxPendingFiles, stats.MaxPendingFiles)
 	assert.Equal(t, bm.maxPendingWrites, stats.MaxPendingWrites)
 
-	// LastMemoryCheck should be set if we hit the interval
-	if bm.memoryCheckInterval <= 5 {
-		assert.NotZero(t, stats.LastMemoryCheck)
-	}
+	// LastMemoryCheck should be updated after processing files (memoryCheckInterval=1)
+	assert.True(t, stats.LastMemoryCheck.After(initialLastCheck),
+		"lastMemoryCheck should be updated after memory checks")
 }

@@ -30,7 +30,7 @@ func TestIntegrationFullCLI(t *testing.T) {
 	outFilePath := setupOutputFile(t)
 	setupCLIArgs(srcDir, outFilePath)
 
-	// Run the application with a background context.
+	// Run the application with the test context.
 	ctx := t.Context()
 	if runErr := run(ctx); runErr != nil {
 		t.Fatalf("Run failed: %v", runErr)
