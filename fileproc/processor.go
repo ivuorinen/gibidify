@@ -34,6 +34,26 @@ type WriteRequest struct {
 	Reader   io.Reader
 }
 
+// multiReaderCloser wraps an io.Reader with a Close method that closes underlying closers.
+type multiReaderCloser struct {
+	reader  io.Reader
+	closers []io.Closer
+}
+
+func (m *multiReaderCloser) Read(p []byte) (n int, err error) {
+	return m.reader.Read(p)
+}
+
+func (m *multiReaderCloser) Close() error {
+	var firstErr error
+	for _, c := range m.closers {
+		if err := c.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
 // FileProcessor handles file processing operations.
 type FileProcessor struct {
 	rootPath        string
@@ -300,6 +320,10 @@ func (p *FileProcessor) processStreamingWithContext(
 
 	// Check context before sending output
 	if p.checkContextCancellation(ctx, filePath, "before streaming output") {
+		// Close the reader to prevent file descriptor leak
+		if closer, ok := reader.(io.Closer); ok {
+			_ = closer.Close()
+		}
 		return
 	}
 
@@ -328,10 +352,13 @@ func (p *FileProcessor) createStreamReaderWithContext(ctx context.Context, fileP
 		gibidiutils.LogErrorf(structErr, "Failed to open file for streaming %s", filePath)
 		return nil
 	}
-	// Note: file will be closed by the writer
 
 	header := p.formatHeader(relPath)
-	return io.MultiReader(header, file)
+	// Wrap in multiReaderCloser to ensure file is closed even on cancellation
+	return &multiReaderCloser{
+		reader:  io.MultiReader(header, file),
+		closers: []io.Closer{file},
+	}
 }
 
 // formatContent formats the file content with header.

@@ -11,12 +11,12 @@ func TestIsColorTerminal(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		setupEnv func()
+		setupEnv func(t *testing.T)
 		expected bool
 	}{
 		{
 			name: "dumb terminal",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "dumb")
 				t.Setenv("CI", "")
 				t.Setenv("NO_COLOR", "")
@@ -26,14 +26,14 @@ func TestIsColorTerminal(t *testing.T) {
 		},
 		{
 			name: "empty TERM",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "")
 			},
 			expected: false,
 		},
 		{
 			name: "CI without GitHub Actions",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "xterm")
 				t.Setenv("CI", "true")
 				t.Setenv("GITHUB_ACTIONS", "")
@@ -42,7 +42,7 @@ func TestIsColorTerminal(t *testing.T) {
 		},
 		{
 			name: "GitHub Actions",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "xterm")
 				t.Setenv("CI", "true")
 				t.Setenv("GITHUB_ACTIONS", "true")
@@ -51,7 +51,7 @@ func TestIsColorTerminal(t *testing.T) {
 		},
 		{
 			name: "NO_COLOR set",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "xterm")
 				t.Setenv("NO_COLOR", "1")
 				t.Setenv("CI", "")
@@ -60,7 +60,7 @@ func TestIsColorTerminal(t *testing.T) {
 		},
 		{
 			name: "FORCE_COLOR set",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "dumb")
 				t.Setenv("FORCE_COLOR", "1")
 			},
@@ -71,7 +71,7 @@ func TestIsColorTerminal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				tt.setupEnv()
+				tt.setupEnv(t)
 
 				result := isColorTerminal()
 				assert.Equal(t, tt.expected, result)

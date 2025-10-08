@@ -14,13 +14,13 @@ func TestNewUIManager(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		setupEnv         func()
+		setupEnv         func(t *testing.T)
 		expectedColors   bool
 		expectedProgress bool
 	}{
 		{
 			name: "default terminal",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "xterm-256color")
 				t.Setenv("CI", "")
 				t.Setenv("NO_COLOR", "")
@@ -31,7 +31,7 @@ func TestNewUIManager(t *testing.T) {
 		},
 		{
 			name: "dumb terminal",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "dumb")
 			},
 			expectedColors:   false,
@@ -39,7 +39,7 @@ func TestNewUIManager(t *testing.T) {
 		},
 		{
 			name: "CI environment without GitHub Actions",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("CI", "true")
 				t.Setenv("GITHUB_ACTIONS", "")
 			},
@@ -48,7 +48,7 @@ func TestNewUIManager(t *testing.T) {
 		},
 		{
 			name: "GitHub Actions CI",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "xterm")
 				t.Setenv("CI", "true")
 				t.Setenv("GITHUB_ACTIONS", "true")
@@ -59,7 +59,7 @@ func TestNewUIManager(t *testing.T) {
 		},
 		{
 			name: "NO_COLOR set",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "xterm-256color")
 				t.Setenv("CI", "")
 				t.Setenv("NO_COLOR", "1")
@@ -70,7 +70,7 @@ func TestNewUIManager(t *testing.T) {
 		},
 		{
 			name: "FORCE_COLOR set",
-			setupEnv: func() {
+			setupEnv: func(t *testing.T) {
 				t.Setenv("TERM", "dumb")
 				t.Setenv("FORCE_COLOR", "1")
 			},
@@ -82,7 +82,7 @@ func TestNewUIManager(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				tt.setupEnv()
+				tt.setupEnv(t)
 
 				ui := NewUIManager()
 				assert.NotNil(t, ui)

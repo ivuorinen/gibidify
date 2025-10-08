@@ -252,8 +252,8 @@ func TestWrapErrorf(t *testing.T) {
 }
 
 func TestSpecificErrorConstructors(t *testing.T) {
-	t.Run("NewCLIMissingSourceError", func(t *testing.T) {
-		err := NewCLIMissingSourceError()
+	t.Run("NewMissingSourceError", func(t *testing.T) {
+		err := NewMissingSourceError()
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrorTypeCLI, err.Type)
 		assert.Equal(t, CodeCLIMissingSource, err.Code)

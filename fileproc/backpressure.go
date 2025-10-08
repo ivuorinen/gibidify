@@ -3,6 +3,7 @@ package fileproc
 
 import (
 	"context"
+	"math"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -75,7 +76,7 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(_ context.Context) bool {
 	// Get current memory usage
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
+	currentMemory := gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, math.MaxInt64)
 
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
@@ -135,7 +136,7 @@ func (bp *BackpressureManager) GetStats() BackpressureStats {
 	return BackpressureStats{
 		Enabled:             bp.enabled,
 		FilesProcessed:      atomic.LoadInt64(&bp.filesProcessed),
-		CurrentMemoryUsage:  gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0),
+		CurrentMemoryUsage:  gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, math.MaxInt64),
 		MaxMemoryUsage:      bp.maxMemoryUsage,
 		MemoryWarningActive: bp.memoryWarningLogged,
 		LastMemoryCheck:     bp.lastMemoryCheck,

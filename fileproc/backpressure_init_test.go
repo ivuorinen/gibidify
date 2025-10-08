@@ -8,32 +8,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// viperState captures the original state of a viper key.
-type viperState struct {
-	value  interface{}
-	wasSet bool
-}
-
-// setupViperCleanup captures the current state of viper keys and registers a cleanup
-// that restores previously-set keys to their original values and unsets keys that
-// were not originally set, preventing pollution of global viper state between tests.
+// setupViperCleanup is a test helper that captures and restores viper configuration.
+// It takes a testing.T and a list of config keys to save/restore.
 func setupViperCleanup(t *testing.T, keys []string) {
 	t.Helper()
-	original := make(map[string]viperState)
+	// Capture original values
+	origValues := make(map[string]interface{})
 	for _, key := range keys {
-		original[key] = viperState{
-			value:  viper.Get(key),
-			wasSet: viper.IsSet(key),
-		}
+		origValues[key] = viper.Get(key)
 	}
-
+	// Register cleanup to restore values
 	t.Cleanup(func() {
-		for key, state := range original {
-			if state.wasSet {
-				viper.Set(key, state.value)
-			} else {
-				// Key was not originally set, so unset it
-				viper.Set(key, nil)
+		for key, val := range origValues {
+			if val != nil {
+				viper.Set(key, val)
 			}
 		}
 	})

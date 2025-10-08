@@ -56,22 +56,31 @@ func TestBackpressureManagerConcurrency(t *testing.T) {
 
 	// Multiple goroutines creating channels
 	// Note: CreateChannels returns new channels each time, caller owns them
+	type channelResult struct {
+		fileCh  chan string
+		writeCh chan WriteRequest
+	}
+	results := make(chan channelResult, 3)
 	for i := 0; i < 3; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			fileCh, writeCh := bm.CreateChannels()
-			// Verify channels are created and have expected properties
-			// Using assert instead of require because require.FailNow is unsafe in goroutines
-			assert.NotNil(t, fileCh)
-			assert.NotNil(t, writeCh)
-			// Close channels to prevent resource leak (caller owns them)
-			close(fileCh)
-			close(writeCh)
+			results <- channelResult{fileCh, writeCh}
 		}()
 	}
 
 	wg.Wait()
+	close(results)
+
+	// Verify channels are created and have expected properties
+	for result := range results {
+		assert.NotNil(t, result.fileCh)
+		assert.NotNil(t, result.writeCh)
+		// Close channels to prevent resource leak (caller owns them)
+		close(result.fileCh)
+		close(result.writeCh)
+	}
 
 	// Verify stats are consistent
 	stats := bm.GetStats()

@@ -209,8 +209,8 @@ const (
 
 // Predefined error constructors for common error scenarios
 
-// NewCLIMissingSourceError creates a CLI error for missing source argument.
-func NewCLIMissingSourceError() *StructuredError {
+// NewMissingSourceError creates a CLI error for missing source argument.
+func NewMissingSourceError() *StructuredError {
 	return NewStructuredError(
 		ErrorTypeCLI,
 		CodeCLIMissingSource,

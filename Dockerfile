@@ -22,11 +22,10 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 # Runtime stage - minimal image with the binary
 FROM alpine:3.22.1
 
-# Install ca-certificates for HTTPS
-RUN apk add --no-cache ca-certificates
-
-# Create non-root user
-RUN adduser -D -s /bin/sh gibidify
+# Install ca-certificates for HTTPS and create non-root user
+# hadolint ignore=DL3018
+RUN apk add --no-cache ca-certificates && \
+	adduser -D -s /bin/sh gibidify
 
 # Copy the binary from builder
 COPY --from=builder /build/gibidify /usr/local/bin/gibidify
