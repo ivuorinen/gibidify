@@ -61,7 +61,7 @@ jobs:
       - name: Cleanup
         if: always()
         shell: bash
-        run: rm coverage.out test-results.json
+        run: rm -f coverage.out test-results.json
 
       - name: Fail if coverage is below threshold
         if: always()

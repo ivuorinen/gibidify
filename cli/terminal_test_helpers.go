@@ -14,21 +14,14 @@ type terminalEnvSetup struct {
 // apply sets up the environment variables using t.Setenv.
 func (e terminalEnvSetup) apply(t *testing.T) {
 	t.Helper()
-	// Always set TERM (including when empty string)
+
+	// Always set all environment variables to ensure isolation
+	// Empty string explicitly unsets the variable in the test environment
 	t.Setenv("TERM", e.Term)
-	// Set other variables only if non-empty
-	if e.CI != "" {
-		t.Setenv("CI", e.CI)
-	}
-	if e.GitHubActions != "" {
-		t.Setenv("GITHUB_ACTIONS", e.GitHubActions)
-	}
-	if e.NoColor != "" {
-		t.Setenv("NO_COLOR", e.NoColor)
-	}
-	if e.ForceColor != "" {
-		t.Setenv("FORCE_COLOR", e.ForceColor)
-	}
+	t.Setenv("CI", e.CI)
+	t.Setenv("GITHUB_ACTIONS", e.GitHubActions)
+	t.Setenv("NO_COLOR", e.NoColor)
+	t.Setenv("FORCE_COLOR", e.ForceColor)
 }
 
 // Common terminal environment setups for reuse across tests.
