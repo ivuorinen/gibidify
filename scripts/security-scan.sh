@@ -100,7 +100,8 @@ check_dependencies() {
 			print_status "Attempting install with pipx..."
 			if pipx install yamllint; then
 				# Update PATH to include pipx bin directory
-				export PATH="$(pipx environment --value PIPX_BIN_DIR 2>/dev/null || echo "$HOME/.local/bin"):$PATH"
+				pipx_bin_dir=$(pipx environment --value PIPX_BIN_DIR 2>/dev/null || echo "$HOME/.local/bin")
+				export PATH="$pipx_bin_dir:$PATH"
 				installed=1
 			else
 				print_warning "pipx install yamllint failed, trying next method..."

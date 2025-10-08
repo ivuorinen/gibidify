@@ -5,7 +5,7 @@ repos:
       - id: golangci-lint
         args: ["--timeout=5m"]
   - repo: https://github.com/tekwizely/pre-commit-golang
-    rev: v1.0.0-rc.1
+    rev: v1.0.0-rc.2
     hooks:
       - id: go-build-mod
         alias: build
@@ -14,7 +14,11 @@ repos:
       - id: go-fmt
         alias: fmt
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 3.0.3
+    rev: 3.4.0
     hooks:
       - id: editorconfig-checker
         alias: ec
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.11.0.1
+    hooks:
+      - id: shellcheck

@@ -13,6 +13,9 @@ checkmake --config=.checkmake Makefile
 echo "Running editorconfig-checker..."
 editorconfig-checker
 
+echo "Running shellcheck..."
+shellcheck scripts/*.sh
+
 echo "Running shfmt check..."
 shfmt -d -i 0 -ci .
 

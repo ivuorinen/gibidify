@@ -34,6 +34,8 @@ install-tools:
 	@go install github.com/mgechev/revive@latest
 	@echo "Installing checkmake..."
 	@go install github.com/checkmake/checkmake/cmd/checkmake@latest
+	@echo "Installing shellcheck..."
+	@go install github.com/koalaman/shellcheck/cmd/shellcheck@latest
 	@echo "Installing shfmt..."
 	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
 	@echo "Installing yamllint (Go-based)..."
