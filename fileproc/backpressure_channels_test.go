@@ -54,17 +54,11 @@ func TestBackpressureManagerCreateChannels(t *testing.T) {
 		assert.Greater(t, cap(writeCh), 0)
 
 		// Test sending and receiving
-		go func() {
-			fileCh <- "test.go"
-		}()
-
+		fileCh <- "test.go"
 		val := <-fileCh
 		assert.Equal(t, "test.go", val)
 
-		go func() {
-			writeCh <- WriteRequest{Content: "test content"}
-		}()
-
+		writeCh <- WriteRequest{Content: "test content"}
 		writeReq := <-writeCh
 		assert.Equal(t, "test content", writeReq.Content)
 

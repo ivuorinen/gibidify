@@ -8,6 +8,17 @@ import (
 	"strings"
 )
 
+// EscapeForMarkdown sanitizes a string for safe use in Markdown code-fence and header lines.
+// It replaces backticks with backslash-escaped backticks and removes/collapses newlines.
+func EscapeForMarkdown(s string) string {
+	// Escape backticks
+	safe := strings.ReplaceAll(s, "`", "\\`")
+	// Remove newlines (collapse to space)
+	safe = strings.ReplaceAll(safe, "\n", " ")
+	safe = strings.ReplaceAll(safe, "\r", " ")
+	return safe
+}
+
 // GetAbsolutePath returns the absolute path for the given path.
 // It wraps filepath.Abs with consistent error handling.
 func GetAbsolutePath(path string) (string, error) {
@@ -71,6 +82,24 @@ func cleanAndResolveAbsPath(path, context string) (string, error) {
 }
 
 // validateWorkingDirectoryBoundary checks if the given absolute path escapes the working directory.
+func evalSymlinksOrStructuredError(path, context, original string) (string, error) {
+	eval, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", NewStructuredError(
+			ErrorTypeValidation,
+			CodeValidationPath,
+			fmt.Sprintf("cannot resolve symlinks for %s", context),
+			original,
+			map[string]interface{}{
+				"resolved_path": path,
+				"context":       context,
+				"error":         err.Error(),
+			},
+		)
+	}
+	return eval, nil
+}
+
 func validateWorkingDirectoryBoundary(abs, path string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -98,8 +127,16 @@ func validateWorkingDirectoryBoundary(abs, path string) error {
 		)
 	}
 
-	// Use filepath.Rel to check if path escapes working directory
-	rel, err := filepath.Rel(cwdAbs, abs)
+	absEval, err := evalSymlinksOrStructuredError(abs, "source path", path)
+	if err != nil {
+		return err
+	}
+	cwdEval, err := evalSymlinksOrStructuredError(cwdAbs, "working directory", path)
+	if err != nil {
+		return err
+	}
+
+	rel, err := filepath.Rel(cwdEval, absEval)
 	if err != nil {
 		return NewStructuredError(
 			ErrorTypeValidation,
@@ -107,14 +144,13 @@ func validateWorkingDirectoryBoundary(abs, path string) error {
 			"cannot determine relative path",
 			path,
 			map[string]interface{}{
-				"resolved_path": abs,
-				"working_dir":   cwdAbs,
+				"resolved_path": absEval,
+				"working_dir":   cwdEval,
 				"error":         err.Error(),
 			},
 		)
 	}
 
-	// Check if the relative path tries to escape the working directory
 	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
 		return NewStructuredError(
 			ErrorTypeValidation,
@@ -122,8 +158,8 @@ func validateWorkingDirectoryBoundary(abs, path string) error {
 			"source path attempts to access directories outside current working directory",
 			path,
 			map[string]interface{}{
-				"resolved_path": abs,
-				"working_dir":   cwdAbs,
+				"resolved_path": absEval,
+				"working_dir":   cwdEval,
 				"relative_path": rel,
 			},
 		)

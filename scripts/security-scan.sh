@@ -286,20 +286,19 @@ check_secrets() {
 	# Clean up temp file on exit and signals (POSIX-portable)
 	trap 'rm -f "$secrets_found_file"' 0 HUP INT TERM
 
-	# Common secret patterns (fixed quoting and quantifiers)
-	patterns='password\s*[:=]\s*['\''"][^'\''"]{3,}['\''"]
-secret\s*[:=]\s*['\''"][^'\''"]{3,}['\''"]
-key\s*[:=]\s*['\''"][^'\''"]{8,}['\''"]
-token\s*[:=]\s*['\''"][^'\''"]{8,}['\''"]
-api_?key\s*[:=]\s*['\''"][^'\''"]{8,}['\''"]
+	# Common secret patterns (POSIX [[:space:]] and here-doc quoting)
+	cat <<'PATTERNS' | while IFS= read -r pattern; do
+password[[:space:]]*[:=][[:space:]]*['"][^'"]{3,}['"]
+secret[[:space:]]*[:=][[:space:]]*['"][^'"]{3,}['"]
+key[[:space:]]*[:=][[:space:]]*['"][^'"]{8,}['"]
+token[[:space:]]*[:=][[:space:]]*['"][^'"]{8,}['"]
+api_?key[[:space:]]*[:=][[:space:]]*['"][^'"]{8,}['"]
 aws_?access_?key
 aws_?secret
 AKIA[0-9A-Z]{16}
 github_?token
-private_?key'
-
-	# Check each pattern using find and grep (POSIX-portable, no --include)
-	printf '%s\n' "$patterns" | while IFS= read -r pattern; do
+private_?key
+PATTERNS
 		if [ -n "$pattern" ]; then
 			if find . -type f -name "*.go" -exec grep -i -E -H -n -e "$pattern" {} + 2>/dev/null | grep -q .; then
 				print_warning "Potential secret pattern found: $pattern"

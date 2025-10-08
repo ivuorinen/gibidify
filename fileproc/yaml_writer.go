@@ -119,6 +119,20 @@ func validatePath(path string) error {
 		)
 	}
 
+	// Validate original trimmed path components before cleaning
+	origComponents := strings.Split(filepath.ToSlash(trimmed), "/")
+	for _, comp := range origComponents {
+		if comp == "" || comp == "." || comp == ".." {
+			return gibidiutils.NewStructuredError(
+				gibidiutils.ErrorTypeValidation,
+				gibidiutils.CodeValidationPath,
+				"invalid or traversal path component in original path",
+				trimmed,
+				map[string]any{"path": trimmed, "component": comp},
+			)
+		}
+	}
+
 	// Clean the path to normalize it
 	cleaned := filepath.Clean(trimmed)
 

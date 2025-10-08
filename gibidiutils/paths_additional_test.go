@@ -347,7 +347,7 @@ func TestPathValidationConcurrency(t *testing.T) {
 		"/tmp",
 	}
 
-	errChan := make(chan error, len(paths)*3)
+	errChan := make(chan error, len(paths)*2)
 
 	for _, path := range paths {
 		go func(p string) {

@@ -78,7 +78,7 @@ func TestBackpressureStatsStructure(t *testing.T) {
 	// Configure backpressure with realistic settings
 	viper.Set(testBackpressureEnabled, true)
 	viper.Set(testBackpressureMaxMemory, 100*1024*1024) // 100MB
-	viper.Set(testBackpressureMemoryCheck, 1)        // Check every file
+	viper.Set(testBackpressureMemoryCheck, 1)           // Check every file
 	viper.Set(testBackpressureMaxFiles, 1000)
 	viper.Set(testBackpressureMaxWrites, 500)
 

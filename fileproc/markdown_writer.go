@@ -131,7 +131,8 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 	language := detectLanguage(req.Path)
 
 	// Write file header
-	if _, err := fmt.Fprintf(w.outFile, "## File: `%s`\n```%s\n", req.Path, language); err != nil {
+	safePath := gibidiutils.EscapeForMarkdown(req.Path)
+	if _, err := fmt.Fprintf(w.outFile, "## File: `%s`\n```%s\n", safePath, language); err != nil {
 		return gibidiutils.WrapError(
 			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
 			"failed to write file header",
@@ -162,7 +163,8 @@ func (w *MarkdownWriter) writeInline(req WriteRequest) error {
 	}
 
 	language := detectLanguage(req.Path)
-	formatted := fmt.Sprintf("## File: `%s`\n```%s\n%s\n```\n\n", req.Path, language, req.Content)
+	safePath := gibidiutils.EscapeForMarkdown(req.Path)
+	formatted := fmt.Sprintf("## File: `%s`\n```%s\n%s\n```\n\n", safePath, language, req.Content)
 
 	if _, err := w.outFile.WriteString(formatted); err != nil {
 		return gibidiutils.WrapError(
