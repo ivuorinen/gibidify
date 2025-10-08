@@ -78,7 +78,7 @@ func TestStructuredErrorMethods(t *testing.T) {
 		err := &StructuredError{
 			Type:    ErrorTypeFileSystem,
 			Code:    CodeFSNotFound,
-			Message: "file not found",
+			Message: testErrFileNotFound,
 			Context: map[string]interface{}{
 				"path": "/test/file.txt",
 			},
@@ -86,7 +86,7 @@ func TestStructuredErrorMethods(t *testing.T) {
 		errStr := err.Error()
 		assert.Contains(t, errStr, "FileSystem")
 		assert.Contains(t, errStr, "NOT_FOUND")
-		assert.Contains(t, errStr, "file not found")
+		assert.Contains(t, errStr, testErrFileNotFound)
 		assert.Contains(t, errStr, "/test/file.txt")
 		assert.Contains(t, errStr, "path")
 	})
@@ -96,7 +96,7 @@ func TestStructuredErrorMethods(t *testing.T) {
 		err := &StructuredError{
 			Type:    ErrorTypeIO,
 			Code:    CodeIOFileWrite,
-			Message: "write failed",
+			Message: testErrWriteFailed,
 			Cause:   innerErr,
 		}
 		assert.Equal(t, innerErr, err.Unwrap())
@@ -106,7 +106,7 @@ func TestStructuredErrorMethods(t *testing.T) {
 		err := &StructuredError{
 			Type:    ErrorTypeIO,
 			Code:    CodeIOFileWrite,
-			Message: "write failed",
+			Message: testErrWriteFailed,
 		}
 		assert.Nil(t, err.Unwrap())
 	})
@@ -117,7 +117,7 @@ func TestWithContextMethods(t *testing.T) {
 		err := &StructuredError{
 			Type:    ErrorTypeValidation,
 			Code:    CodeValidationFormat,
-			Message: "invalid format",
+			Message: testErrInvalidFormat,
 		}
 
 		err = err.WithContext("format", "xml")
@@ -174,7 +174,7 @@ func TestNewStructuredError(t *testing.T) {
 			name:     "error with file path",
 			errType:  ErrorTypeFileSystem,
 			code:     CodeFSNotFound,
-			message:  "file not found",
+			message:  testErrFileNotFound,
 			filePath: "/test/missing.txt",
 			context:  nil,
 		},
@@ -182,7 +182,7 @@ func TestNewStructuredError(t *testing.T) {
 			name:    "error with context",
 			errType: ErrorTypeIO,
 			code:    CodeIOFileWrite,
-			message: "write failed",
+			message: testErrWriteFailed,
 			context: map[string]interface{}{
 				"size":  1024,
 				"error": "disk full",
@@ -277,19 +277,19 @@ func TestSpecificErrorConstructors(t *testing.T) {
 	})
 
 	t.Run("NewIOError", func(t *testing.T) {
-		err := NewIOError(CodeIOFileWrite, "write failed")
+		err := NewIOError(CodeIOFileWrite, testErrWriteFailed)
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrorTypeIO, err.Type)
 		assert.Equal(t, CodeIOFileWrite, err.Code)
-		assert.Equal(t, "write failed", err.Message)
+		assert.Equal(t, testErrWriteFailed, err.Message)
 	})
 
 	t.Run("NewValidationError", func(t *testing.T) {
-		err := NewValidationError(CodeValidationFormat, "invalid format")
+		err := NewValidationError(CodeValidationFormat, testErrInvalidFormat)
 		assert.NotNil(t, err)
 		assert.Equal(t, ErrorTypeValidation, err.Type)
 		assert.Equal(t, CodeValidationFormat, err.Code)
-		assert.Equal(t, "invalid format", err.Message)
+		assert.Equal(t, testErrInvalidFormat, err.Message)
 	})
 }
 
@@ -300,7 +300,7 @@ func TestStructuredErrorChaining(t *testing.T) {
 	err := NewStructuredError(
 		ErrorTypeFileSystem,
 		CodeFSNotFound,
-		"file not found",
+		testErrFileNotFound,
 		"",
 		nil,
 	).WithFilePath("/test.txt").WithLine(10).WithContext("operation", "read")

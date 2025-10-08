@@ -74,7 +74,7 @@ func TestSafeUint64ToInt64WithDefault(t *testing.T) {
 	}
 }
 
-func TestSafeUint64ToInt64WithDefault_GuardrailsBehavior(t *testing.T) {
+func TestSafeUint64ToInt64WithDefaultGuardrailsBehavior(t *testing.T) {
 	// Test that overflow with default=0 returns MaxInt64, not 0
 	// This is critical for back-pressure and resource monitors
 	result := SafeUint64ToInt64WithDefault(math.MaxUint64, 0)

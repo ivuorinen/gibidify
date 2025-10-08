@@ -33,10 +33,10 @@ func TestParseFlags(t *testing.T) {
 			name: "valid flags with all options",
 			args: []string{
 				"gibidify",
-				"-source", "", // will set to tempDir in test body
+				testFlagSource, "", // will set to tempDir in test body
 				"-destination", "output.md",
 				"-format", "json",
-				"-concurrency", "4",
+				testFlagConcurrency, "4",
 				"-prefix", "prefix",
 				"-suffix", "suffix",
 				"-no-colors",
@@ -48,13 +48,13 @@ func TestParseFlags(t *testing.T) {
 		{
 			name:          "missing source directory",
 			args:          []string{"gibidify"},
-			expectedError: "source directory is required",
+			expectedError: testErrSourceRequired,
 		},
 		{
 			name: "invalid format",
 			args: []string{
 				"gibidify",
-				"-source", "", // will set to tempDir in test body
+				testFlagSource, "", // will set to tempDir in test body
 				"-format", "invalid",
 			},
 			expectedError: "unsupported output format: invalid",
@@ -63,8 +63,8 @@ func TestParseFlags(t *testing.T) {
 			name: "invalid concurrency (zero)",
 			args: []string{
 				"gibidify",
-				"-source", "", // will set to tempDir in test body
-				"-concurrency", "0",
+				testFlagSource, "", // will set to tempDir in test body
+				testFlagConcurrency, "0",
 			},
 			expectedError: "concurrency (0) must be at least 1",
 		},
@@ -72,8 +72,8 @@ func TestParseFlags(t *testing.T) {
 			name: "invalid concurrency (too high)",
 			args: []string{
 				"gibidify",
-				"-source", "", // will set to tempDir in test body
-				"-concurrency", "200",
+				testFlagSource, "", // will set to tempDir in test body
+				testFlagConcurrency, "200",
 			},
 			// Set maxConcurrency so the upper bound is enforced
 			expectedError: "concurrency (200) exceeds maximum (128)",
@@ -87,15 +87,15 @@ func TestParseFlags(t *testing.T) {
 			name: "path traversal in source",
 			args: []string{
 				"gibidify",
-				"-source", "../../../etc/passwd",
+				testFlagSource, testPathTraversalPath,
 			},
-			expectedError: "path traversal attempt detected",
+			expectedError: testErrPathTraversal,
 		},
 		{
 			name: "default values",
 			args: []string{
 				"gibidify",
-				"-source", "", // will set to tempDir in test body
+				testFlagSource, "", // will set to tempDir in test body
 			},
 			validate: nil, // set in test body using closure
 		},
@@ -114,7 +114,7 @@ func TestParseFlags(t *testing.T) {
 			// Use t.TempDir for source directory if needed
 			tempDir := ""
 			for i := range args {
-				if i > 0 && args[i-1] == "-source" && args[i] == "" {
+				if i > 0 && args[i-1] == testFlagSource && args[i] == "" {
 					tempDir = t.TempDir()
 					args[i] = tempDir
 				}
@@ -183,7 +183,7 @@ func TestFlagsValidate(t *testing.T) {
 		{
 			name:          "missing source directory",
 			flags:         &Flags{},
-			expectedError: "source directory is required",
+			expectedError: testErrSourceRequired,
 		},
 		{
 			name: "invalid format",
@@ -209,10 +209,10 @@ func TestFlagsValidate(t *testing.T) {
 		{
 			name: "path traversal attempt",
 			flags: &Flags{
-				SourceDir: "../../../etc/passwd",
+				SourceDir: testPathTraversalPath,
 				Format:    "markdown",
 			},
-			expectedError: "path traversal attempt detected",
+			expectedError: testErrPathTraversal,
 		},
 		{
 			name: "valid flags",
@@ -287,12 +287,12 @@ func TestSetDefaultDestination(t *testing.T) {
 			name: "path traversal in destination",
 			flags: &Flags{
 				Format:      "markdown",
-				Destination: "../../../etc/passwd",
+				Destination: testPathTraversalPath,
 			},
 			setupFunc: func(t *testing.T, f *Flags) {
 				f.SourceDir = t.TempDir()
 			},
-			expectedError: "path traversal attempt detected",
+			expectedError: testErrPathTraversal,
 		},
 	}
 
@@ -356,7 +356,7 @@ func TestNewMissingSourceError(t *testing.T) {
 	err := NewMissingSourceError()
 
 	assert.Error(t, err)
-	assert.Equal(t, "source directory is required", err.Error())
+	assert.Equal(t, testErrSourceRequired, err.Error())
 
 	// Check if it's the right type
 	var missingSourceError *MissingSourceError

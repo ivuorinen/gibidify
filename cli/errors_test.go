@@ -40,14 +40,14 @@ func TestFormatError(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeFileSystem,
 				gibidiutils.CodeFSNotFound,
-				"file not found",
+				testErrFileNotFound,
 				"/test/file.txt",
 				map[string]interface{}{"size": 1024},
 			),
 			expectedOutput: []string{
-				gibidiutils.IconError + " Error",
+				gibidiutils.IconError + testErrorSuffix,
 				"FileSystem",
-				"file not found",
+				testErrFileNotFound,
 				"/test/file.txt",
 				"NOT_FOUND",
 			},
@@ -55,7 +55,7 @@ func TestFormatError(t *testing.T) {
 		{
 			name:           "generic error",
 			err:            errors.New("something went wrong"),
-			expectedOutput: []string{gibidiutils.IconError + " Error", "something went wrong"},
+			expectedOutput: []string{gibidiutils.IconError + testErrorSuffix, "something went wrong"},
 		},
 		{
 			name: "wrapped structured error",
@@ -66,7 +66,7 @@ func TestFormatError(t *testing.T) {
 				"validation failed",
 			),
 			expectedOutput: []string{
-				gibidiutils.IconError + " Error",
+				gibidiutils.IconError + testErrorSuffix,
 				"validation failed",
 			},
 		},
@@ -108,16 +108,16 @@ func TestFormatStructuredError(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeFileSystem,
 				gibidiutils.CodeFSPermission,
-				"permission denied",
+				testErrPermissionDenied,
 				"/etc/shadow",
 				nil,
 			),
 			expectedOutput: []string{
 				"FileSystem",
-				"permission denied",
+				testErrPermissionDenied,
 				"/etc/shadow",
 				"PERMISSION_DENIED",
-				"Suggestions:",
+				testSuggestionsHeader,
 			},
 		},
 		{
@@ -125,15 +125,15 @@ func TestFormatStructuredError(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeValidation,
 				gibidiutils.CodeValidationFormat,
-				"invalid format",
+				testErrInvalidFormat,
 				"",
 				map[string]interface{}{"format": "xml"},
 			),
 			expectedOutput: []string{
 				"Validation",
-				"invalid format",
+				testErrInvalidFormat,
 				"FORMAT",
-				"Suggestions:",
+				testSuggestionsHeader,
 			},
 		},
 		{
@@ -150,7 +150,7 @@ func TestFormatStructuredError(t *testing.T) {
 				"failed to read file",
 				"large.bin",
 				"FILE_READ",
-				"Suggestions:",
+				testSuggestionsHeader,
 			},
 		},
 		{
@@ -167,7 +167,7 @@ func TestFormatStructuredError(t *testing.T) {
 				"disk full",
 				"/output/result.txt",
 				"FILE_WRITE",
-				"Suggestions:",
+				testSuggestionsHeader,
 			},
 		},
 	}
@@ -208,7 +208,7 @@ func TestFormatGenericError(t *testing.T) {
 	ef.formatGenericError(errors.New("generic error message"))
 
 	output := buf.String()
-	assert.Contains(t, output, gibidiutils.IconError+" Error")
+	assert.Contains(t, output, gibidiutils.IconError+testErrorSuffix)
 	assert.Contains(t, output, "generic error message")
 }
 
@@ -223,13 +223,13 @@ func TestProvideSuggestions(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeFileSystem,
 				gibidiutils.CodeFSPermission,
-				"permission denied",
+				testErrPermissionDenied,
 				"/root/file",
 				nil,
 			),
 			expectedSugges: []string{
-				"Check file/directory permissions",
-				"Verify the path is correct",
+				testSuggestCheckPerms,
+				testSuggestVerifyPath,
 			},
 		},
 		{
@@ -237,7 +237,7 @@ func TestProvideSuggestions(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeFileSystem,
 				gibidiutils.CodeFSNotFound,
-				"file not found",
+				testErrFileNotFound,
 				"/missing/file",
 				nil,
 			),
@@ -255,8 +255,8 @@ func TestProvideSuggestions(t *testing.T) {
 				nil,
 			),
 			expectedSugges: []string{
-				"Use a supported format: markdown, json, yaml",
-				"Example: -format markdown",
+				testSuggestFormat,
+				testSuggestFormatEx,
 			},
 		},
 		{
@@ -269,8 +269,8 @@ func TestProvideSuggestions(t *testing.T) {
 				nil,
 			),
 			expectedSugges: []string{
-				"Check your command line arguments",
-				"Run with --help for usage information",
+				testSuggestCheckArgs,
+				testSuggestHelp,
 			},
 		},
 		{
@@ -297,8 +297,8 @@ func TestProvideSuggestions(t *testing.T) {
 				nil,
 			),
 			expectedSugges: []string{
-				"Check file/directory permissions",
-				"Verify available disk space",
+				testSuggestCheckPerms,
+				testSuggestDiskSpace,
 			},
 		},
 		{
@@ -311,7 +311,7 @@ func TestProvideSuggestions(t *testing.T) {
 				nil,
 			),
 			expectedSugges: []string{
-				"Check your command line arguments",
+				testSuggestCheckArgs,
 			},
 		},
 	}
@@ -345,17 +345,17 @@ func TestProvideFileSystemSuggestions(t *testing.T) {
 		expectedSugges []string
 	}{
 		{
-			name: "permission denied",
+			name: testErrPermissionDenied,
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeFileSystem,
 				gibidiutils.CodeFSPermission,
-				"permission denied",
+				testErrPermissionDenied,
 				"/root/secret",
 				nil,
 			),
 			expectedSugges: []string{
-				"Check file/directory permissions",
-				"Verify the path is correct",
+				testSuggestCheckPerms,
+				testSuggestVerifyPath,
 			},
 		},
 		{
@@ -372,7 +372,7 @@ func TestProvideFileSystemSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "file not found",
+			name: testErrFileNotFound,
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeFileSystem,
 				gibidiutils.CodeFSNotFound,
@@ -389,13 +389,13 @@ func TestProvideFileSystemSuggestions(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeFileSystem,
 				"OTHER_FS_ERROR",
-				"other error",
+				testErrOther,
 				"/some/path",
 				nil,
 			),
 			expectedSugges: []string{
-				"Check file/directory permissions",
-				"Verify the path is correct",
+				testSuggestCheckPerms,
+				testSuggestVerifyPath,
 				"Path: /some/path",
 			},
 		},
@@ -431,13 +431,13 @@ func TestProvideValidationSuggestions(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeValidation,
 				gibidiutils.CodeValidationFormat,
-				"invalid format",
+				testErrInvalidFormat,
 				"",
 				nil,
 			),
 			expectedSugges: []string{
-				"Use a supported format: markdown, json, yaml",
-				"Example: -format markdown",
+				testSuggestFormat,
+				testSuggestFormatEx,
 			},
 		},
 		{
@@ -450,8 +450,8 @@ func TestProvideValidationSuggestions(t *testing.T) {
 				nil,
 			),
 			expectedSugges: []string{
-				"Check your command line arguments",
-				"Run with --help for usage information",
+				testSuggestCheckArgs,
+				testSuggestHelp,
 			},
 		},
 		{
@@ -478,8 +478,8 @@ func TestProvideValidationSuggestions(t *testing.T) {
 				nil,
 			),
 			expectedSugges: []string{
-				"Check your command line arguments",
-				"Run with --help for usage information",
+				testSuggestCheckArgs,
+				testSuggestHelp,
 			},
 		},
 		{
@@ -492,8 +492,8 @@ func TestProvideValidationSuggestions(t *testing.T) {
 				nil,
 			),
 			expectedSugges: []string{
-				"Check your command line arguments",
-				"Run with --help for usage information",
+				testSuggestCheckArgs,
+				testSuggestHelp,
 			},
 		},
 	}
@@ -552,11 +552,11 @@ func TestProvideProcessingSuggestions(t *testing.T) {
 			},
 		},
 		{
-			name: "encoding error",
+			name: testErrEncoding,
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeProcessing,
 				gibidiutils.CodeProcessingEncode,
-				"encoding error",
+				testErrEncoding,
 				"",
 				nil,
 			),
@@ -570,7 +570,7 @@ func TestProvideProcessingSuggestions(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeProcessing,
 				"OTHER",
-				"other error",
+				testErrOther,
 				"",
 				nil,
 			),
@@ -631,22 +631,22 @@ func TestProvideIOSuggestions(t *testing.T) {
 				nil,
 			),
 			expectedSugges: []string{
-				"Check file/directory permissions",
-				"Verify available disk space",
+				testSuggestCheckPerms,
+				testSuggestDiskSpace,
 			},
 		},
 		{
-			name: "encoding error",
+			name: testErrEncoding,
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeIO,
 				gibidiutils.CodeIOEncoding,
-				"encoding error",
+				testErrEncoding,
 				"",
 				nil,
 			),
 			expectedSugges: []string{
-				"Check file/directory permissions",
-				"Verify available disk space",
+				testSuggestCheckPerms,
+				testSuggestDiskSpace,
 			},
 		},
 		{
@@ -654,13 +654,13 @@ func TestProvideIOSuggestions(t *testing.T) {
 			err: gibidiutils.NewStructuredError(
 				gibidiutils.ErrorTypeIO,
 				"OTHER",
-				"other error",
+				testErrOther,
 				"",
 				nil,
 			),
 			expectedSugges: []string{
-				"Check file/directory permissions",
-				"Verify available disk space",
+				testSuggestCheckPerms,
+				testSuggestDiskSpace,
 			},
 		},
 	}
@@ -694,7 +694,7 @@ func TestProvideGenericSuggestions(t *testing.T) {
 			name: "permission error",
 			err:  errors.New("permission denied accessing file"),
 			expectedSugges: []string{
-				"Check file/directory permissions",
+				testSuggestCheckPerms,
 				"Try running with appropriate privileges",
 			},
 		},
@@ -710,36 +710,36 @@ func TestProvideGenericSuggestions(t *testing.T) {
 			name: "memory error",
 			err:  errors.New("out of memory"),
 			expectedSugges: []string{
-				"Check your command line arguments",
-				"Run with --help for usage information",
-				"Try with -concurrency 1 to reduce resource usage",
+				testSuggestCheckArgs,
+				testSuggestHelp,
+				testSuggestReduceConcur,
 			},
 		},
 		{
 			name: "timeout error",
 			err:  errors.New("operation timed out"),
 			expectedSugges: []string{
-				"Check your command line arguments",
-				"Run with --help for usage information",
-				"Try with -concurrency 1 to reduce resource usage",
+				testSuggestCheckArgs,
+				testSuggestHelp,
+				testSuggestReduceConcur,
 			},
 		},
 		{
 			name: "connection error",
 			err:  errors.New("connection refused"),
 			expectedSugges: []string{
-				"Check your command line arguments",
-				"Run with --help for usage information",
-				"Try with -concurrency 1 to reduce resource usage",
+				testSuggestCheckArgs,
+				testSuggestHelp,
+				testSuggestReduceConcur,
 			},
 		},
 		{
 			name: "default error",
 			err:  errors.New("unknown error occurred"),
 			expectedSugges: []string{
-				"Check your command line arguments",
-				"Run with --help for usage information",
-				"Try with -concurrency 1 to reduce resource usage",
+				testSuggestCheckArgs,
+				testSuggestHelp,
+				testSuggestReduceConcur,
 			},
 		},
 	}
@@ -796,7 +796,7 @@ func TestFormatErrorWithColors(t *testing.T) {
 	err := gibidiutils.NewStructuredError(
 		gibidiutils.ErrorTypeValidation,
 		gibidiutils.CodeValidationFormat,
-		"invalid format",
+		testErrInvalidFormat,
 		"",
 		nil,
 	)
@@ -806,8 +806,8 @@ func TestFormatErrorWithColors(t *testing.T) {
 	output := buf.String()
 	// When colors are enabled, some output may go directly to stdout
 	// Check for suggestions that are captured in the buffer
-	assert.Contains(t, output, "Use a supported format: markdown, json, yaml")
-	assert.Contains(t, output, "Example: -format markdown")
+	assert.Contains(t, output, testSuggestFormat)
+	assert.Contains(t, output, testSuggestFormatEx)
 }
 
 // Test wrapped error handling

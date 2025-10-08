@@ -190,6 +190,9 @@ func TestGetAbsolutePathSpecialCases(t *testing.T) {
 	}
 }
 
+// TestGetAbsolutePathConcurrency verifies that GetAbsolutePath is safe for concurrent use.
+// The test intentionally does not use assertions - it will panic if there's a race condition.
+// Run with -race flag to detect concurrent access issues.
 func TestGetAbsolutePathConcurrency(_ *testing.T) {
 	// Test that GetAbsolutePath is safe for concurrent use
 	paths := []string{".", "..", "test.go", "subdir/file.txt", "/tmp/test"}

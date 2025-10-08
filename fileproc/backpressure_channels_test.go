@@ -38,11 +38,11 @@ func cleanupViperConfig(t *testing.T, keys ...string) {
 func TestBackpressureManagerCreateChannels(t *testing.T) {
 	t.Run("creates buffered channels when enabled", func(t *testing.T) {
 		// Capture and restore viper config
-		cleanupViperConfig(t, "backpressure.enabled", "backpressure.maxPendingFiles", "backpressure.maxPendingWrites")
+		cleanupViperConfig(t, testBackpressureEnabled, testBackpressureMaxFiles, testBackpressureMaxWrites)
 
-		viper.Set("backpressure.enabled", true)
-		viper.Set("backpressure.maxPendingFiles", 10)
-		viper.Set("backpressure.maxPendingWrites", 10)
+		viper.Set(testBackpressureEnabled, true)
+		viper.Set(testBackpressureMaxFiles, 10)
+		viper.Set(testBackpressureMaxWrites, 10)
 		bm := NewBackpressureManager()
 
 		fileCh, writeCh := bm.CreateChannels()
@@ -74,9 +74,9 @@ func TestBackpressureManagerCreateChannels(t *testing.T) {
 
 	t.Run("creates unbuffered channels when disabled", func(t *testing.T) {
 		// Use viper to configure instead of direct field access
-		cleanupViperConfig(t, "backpressure.enabled")
+		cleanupViperConfig(t, testBackpressureEnabled)
 
-		viper.Set("backpressure.enabled", false)
+		viper.Set(testBackpressureEnabled, false)
 		bm := NewBackpressureManager()
 
 		fileCh, writeCh := bm.CreateChannels()
@@ -95,9 +95,9 @@ func TestBackpressureManagerCreateChannels(t *testing.T) {
 func TestBackpressureManagerWaitForChannelSpace(t *testing.T) {
 	t.Run("does nothing when disabled", func(t *testing.T) {
 		// Use viper to configure instead of direct field access
-		cleanupViperConfig(t, "backpressure.enabled")
+		cleanupViperConfig(t, testBackpressureEnabled)
 
-		viper.Set("backpressure.enabled", false)
+		viper.Set(testBackpressureEnabled, false)
 		bm := NewBackpressureManager()
 
 		fileCh := make(chan string, 1)
@@ -127,10 +127,10 @@ func TestBackpressureManagerWaitForChannelSpace(t *testing.T) {
 
 	t.Run("waits when file channel is nearly full", func(t *testing.T) {
 		// Use viper to configure instead of direct field access
-		cleanupViperConfig(t, "backpressure.enabled", "backpressure.maxPendingFiles")
+		cleanupViperConfig(t, testBackpressureEnabled, testBackpressureMaxFiles)
 
-		viper.Set("backpressure.enabled", true)
-		viper.Set("backpressure.maxPendingFiles", 10)
+		viper.Set(testBackpressureEnabled, true)
+		viper.Set(testBackpressureMaxFiles, 10)
 		bm := NewBackpressureManager()
 
 		// Create channel with exact capacity
@@ -177,10 +177,10 @@ func TestBackpressureManagerWaitForChannelSpace(t *testing.T) {
 
 	t.Run("waits when write channel is nearly full", func(t *testing.T) {
 		// Use viper to configure instead of direct field access
-		cleanupViperConfig(t, "backpressure.enabled", "backpressure.maxPendingWrites")
+		cleanupViperConfig(t, testBackpressureEnabled, testBackpressureMaxWrites)
 
-		viper.Set("backpressure.enabled", true)
-		viper.Set("backpressure.maxPendingWrites", 10)
+		viper.Set(testBackpressureEnabled, true)
+		viper.Set(testBackpressureMaxWrites, 10)
 		bm := NewBackpressureManager()
 
 		fileCh := make(chan string, 10)
@@ -226,10 +226,10 @@ func TestBackpressureManagerWaitForChannelSpace(t *testing.T) {
 
 	t.Run("respects context cancellation", func(t *testing.T) {
 		// Use viper to configure instead of direct field access
-		cleanupViperConfig(t, "backpressure.enabled", "backpressure.maxPendingFiles")
+		cleanupViperConfig(t, testBackpressureEnabled, testBackpressureMaxFiles)
 
-		viper.Set("backpressure.enabled", true)
-		viper.Set("backpressure.maxPendingFiles", 10)
+		viper.Set(testBackpressureEnabled, true)
+		viper.Set(testBackpressureMaxFiles, 10)
 		bm := NewBackpressureManager()
 
 		fileCh := make(chan string, 10)

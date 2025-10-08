@@ -20,14 +20,14 @@ func TestPrintSuccess(t *testing.T) {
 		expectSymbol string
 	}{
 		{
-			name:         "with colors",
+			name:         testWithColors,
 			enableColors: true,
 			format:       "Operation %s",
 			args:         []interface{}{"completed"},
 			expectSymbol: gibidiutils.IconSuccess,
 		},
 		{
-			name:         "without colors",
+			name:         testWithoutColors,
 			enableColors: false,
 			format:       "Operation %s",
 			args:         []interface{}{"completed"},
@@ -75,14 +75,14 @@ func TestPrintError(t *testing.T) {
 		expectSymbol string
 	}{
 		{
-			name:         "with colors",
+			name:         testWithColors,
 			enableColors: true,
 			format:       "Failed to %s",
 			args:         []interface{}{"process"},
 			expectSymbol: gibidiutils.IconError,
 		},
 		{
-			name:         "without colors",
+			name:         testWithoutColors,
 			enableColors: false,
 			format:       "Failed to %s",
 			args:         []interface{}{"process"},
@@ -155,13 +155,13 @@ func TestPrintHeader(t *testing.T) {
 		args         []interface{}
 	}{
 		{
-			name:         "with colors",
+			name:         testWithColors,
 			enableColors: true,
 			format:       "Header %s",
 			args:         []interface{}{"Title"},
 		},
 		{
-			name:         "without colors",
+			name:         testWithoutColors,
 			enableColors: false,
 			format:       "Header %s",
 			args:         []interface{}{"Title"},

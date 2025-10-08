@@ -50,6 +50,11 @@ func (e ErrorType) String() string {
 	}
 }
 
+// Error formatting templates.
+const (
+	errorFormatWithCause = "%s: %v"
+)
+
 // StructuredError represents a structured error with type, code, and context.
 type StructuredError struct {
 	Type     ErrorType
@@ -79,7 +84,7 @@ func (e *StructuredError) Error() string {
 		base = fmt.Sprintf("%s | context: %s", base, strings.Join(ctxPairs, ", "))
 	}
 	if e.Cause != nil {
-		return fmt.Sprintf("%s: %v", base, e.Cause)
+		return fmt.Sprintf(errorFormatWithCause, base, e.Cause)
 	}
 	return base
 }
@@ -261,10 +266,10 @@ func LogError(operation string, err error, args ...any) {
 				"context":    structErr.Context,
 				"file_path":  structErr.FilePath,
 				"line":       structErr.Line,
-			}).Errorf("%s: %v", msg, err)
+			}).Errorf(errorFormatWithCause, msg, err)
 		} else {
 			// Log regular errors without structured fields
-			logrus.Errorf("%s: %v", msg, err)
+			logrus.Errorf(errorFormatWithCause, msg, err)
 		}
 	}
 }

@@ -40,19 +40,19 @@ func setupViperCleanup(t *testing.T, keys []string) {
 
 func TestNewBackpressureManager(t *testing.T) {
 	keys := []string{
-		"backpressure.enabled",
-		"backpressure.maxMemoryUsage",
-		"backpressure.memoryCheckInterval",
-		"backpressure.maxPendingFiles",
-		"backpressure.maxPendingWrites",
+		testBackpressureEnabled,
+		testBackpressureMaxMemory,
+		testBackpressureMemoryCheck,
+		testBackpressureMaxFiles,
+		testBackpressureMaxWrites,
 	}
 	setupViperCleanup(t, keys)
 
-	viper.Set("backpressure.enabled", true)
-	viper.Set("backpressure.maxMemoryUsage", 100)
-	viper.Set("backpressure.memoryCheckInterval", 10)
-	viper.Set("backpressure.maxPendingFiles", 10)
-	viper.Set("backpressure.maxPendingWrites", 10)
+	viper.Set(testBackpressureEnabled, true)
+	viper.Set(testBackpressureMaxMemory, 100)
+	viper.Set(testBackpressureMemoryCheck, 10)
+	viper.Set(testBackpressureMaxFiles, 10)
+	viper.Set(testBackpressureMaxWrites, 10)
 
 	bm := NewBackpressureManager()
 	assert.NotNil(t, bm)
@@ -67,20 +67,20 @@ func TestNewBackpressureManager(t *testing.T) {
 func TestBackpressureStatsStructure(t *testing.T) {
 	// Behavioral test that exercises BackpressureManager and validates stats
 	keys := []string{
-		"backpressure.enabled",
-		"backpressure.maxMemoryUsage",
-		"backpressure.memoryCheckInterval",
-		"backpressure.maxPendingFiles",
-		"backpressure.maxPendingWrites",
+		testBackpressureEnabled,
+		testBackpressureMaxMemory,
+		testBackpressureMemoryCheck,
+		testBackpressureMaxFiles,
+		testBackpressureMaxWrites,
 	}
 	setupViperCleanup(t, keys)
 
 	// Configure backpressure with realistic settings
-	viper.Set("backpressure.enabled", true)
-	viper.Set("backpressure.maxMemoryUsage", 100*1024*1024) // 100MB
-	viper.Set("backpressure.memoryCheckInterval", 1)        // Check every file
-	viper.Set("backpressure.maxPendingFiles", 1000)
-	viper.Set("backpressure.maxPendingWrites", 500)
+	viper.Set(testBackpressureEnabled, true)
+	viper.Set(testBackpressureMaxMemory, 100*1024*1024) // 100MB
+	viper.Set(testBackpressureMemoryCheck, 1)        // Check every file
+	viper.Set(testBackpressureMaxFiles, 1000)
+	viper.Set(testBackpressureMaxWrites, 500)
 
 	bm := NewBackpressureManager()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -113,14 +113,14 @@ func TestBackpressureStatsStructure(t *testing.T) {
 
 func TestBackpressureManagerGetStats(t *testing.T) {
 	keys := []string{
-		"backpressure.enabled",
-		"backpressure.memoryCheckInterval",
+		testBackpressureEnabled,
+		testBackpressureMemoryCheck,
 	}
 	setupViperCleanup(t, keys)
 
 	// Ensure config enables backpressure and checks every call
-	viper.Set("backpressure.enabled", true)
-	viper.Set("backpressure.memoryCheckInterval", 1)
+	viper.Set(testBackpressureEnabled, true)
+	viper.Set(testBackpressureMemoryCheck, 1)
 
 	bm := NewBackpressureManager()
 

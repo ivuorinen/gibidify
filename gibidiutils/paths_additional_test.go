@@ -37,7 +37,7 @@ func TestGetBaseName(t *testing.T) {
 			expected: "output",
 		},
 		{
-			name:     "empty path",
+			name:     testEmptyPath,
 			absPath:  "",
 			expected: "output",
 		},
@@ -68,19 +68,19 @@ func TestValidateSourcePath(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name:          "empty path",
+			name:          testEmptyPath,
 			path:          "",
 			expectedError: "source path is required",
 		},
 		{
-			name:          "path traversal attempt",
+			name:          testPathTraversalAttempt,
 			path:          "../../../etc/passwd",
-			expectedError: "path traversal attempt detected",
+			expectedError: testPathTraversalDetected,
 		},
 		{
 			name:          "path with double dots",
 			path:          "/home/../etc/passwd",
-			expectedError: "path traversal attempt detected",
+			expectedError: testPathTraversalDetected,
 		},
 		{
 			name:          "non-existent path",
@@ -134,19 +134,19 @@ func TestValidateDestinationPath(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name:          "empty path",
+			name:          testEmptyPath,
 			path:          "",
 			expectedError: "destination path is required",
 		},
 		{
-			name:          "path traversal attempt",
+			name:          testPathTraversalAttempt,
 			path:          "../../etc/passwd",
-			expectedError: "path traversal attempt detected",
+			expectedError: testPathTraversalDetected,
 		},
 		{
 			name:          "absolute path traversal",
 			path:          "/home/../../../etc/passwd",
-			expectedError: "path traversal attempt detected",
+			expectedError: testPathTraversalDetected,
 		},
 		{
 			name:          "valid new file",
@@ -185,14 +185,14 @@ func TestValidateConfigPath(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name:          "empty path",
+			name:          testEmptyPath,
 			path:          "",
 			expectedError: "", // Empty config path is allowed
 		},
 		{
-			name:          "path traversal attempt",
+			name:          testPathTraversalAttempt,
 			path:          "../../../etc/config.yaml",
-			expectedError: "path traversal attempt detected",
+			expectedError: testPathTraversalDetected,
 		},
 		// ValidateConfigPath doesn't check if file exists or is regular file
 		// It only checks for path traversal
@@ -277,19 +277,19 @@ func TestPathSecurityChecks(t *testing.T) {
 		t.Run("source_"+path, func(t *testing.T) {
 			err := ValidateSourcePath(path)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "path traversal")
+			assert.Contains(t, err.Error(), testPathTraversal)
 		})
 
 		t.Run("dest_"+path, func(t *testing.T) {
 			err := ValidateDestinationPath(path)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "path traversal")
+			assert.Contains(t, err.Error(), testPathTraversal)
 		})
 
 		t.Run("config_"+path, func(t *testing.T) {
 			err := ValidateConfigPath(path)
 			assert.Error(t, err)
-			assert.Contains(t, err.Error(), "path traversal")
+			assert.Contains(t, err.Error(), testPathTraversal)
 		})
 	}
 }

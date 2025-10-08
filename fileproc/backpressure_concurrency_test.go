@@ -13,13 +13,13 @@ import (
 
 func TestBackpressureManagerConcurrency(t *testing.T) {
 	// Configure via viper instead of direct field access
-	origEnabled := viper.Get("backpressure.enabled")
+	origEnabled := viper.Get(testBackpressureEnabled)
 	t.Cleanup(func() {
 		if origEnabled != nil {
-			viper.Set("backpressure.enabled", origEnabled)
+			viper.Set(testBackpressureEnabled, origEnabled)
 		}
 	})
-	viper.Set("backpressure.enabled", true)
+	viper.Set(testBackpressureEnabled, true)
 
 	bm := NewBackpressureManager()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -89,34 +89,34 @@ func TestBackpressureManagerConcurrency(t *testing.T) {
 
 func TestBackpressureManagerIntegration(t *testing.T) {
 	// Configure via viper instead of direct field access
-	origEnabled := viper.Get("backpressure.enabled")
-	origMaxFiles := viper.Get("backpressure.maxPendingFiles")
-	origMaxWrites := viper.Get("backpressure.maxPendingWrites")
-	origCheckInterval := viper.Get("backpressure.memoryCheckInterval")
-	origMaxMemory := viper.Get("backpressure.maxMemoryUsage")
+	origEnabled := viper.Get(testBackpressureEnabled)
+	origMaxFiles := viper.Get(testBackpressureMaxFiles)
+	origMaxWrites := viper.Get(testBackpressureMaxWrites)
+	origCheckInterval := viper.Get(testBackpressureMemoryCheck)
+	origMaxMemory := viper.Get(testBackpressureMaxMemory)
 	t.Cleanup(func() {
 		if origEnabled != nil {
-			viper.Set("backpressure.enabled", origEnabled)
+			viper.Set(testBackpressureEnabled, origEnabled)
 		}
 		if origMaxFiles != nil {
-			viper.Set("backpressure.maxPendingFiles", origMaxFiles)
+			viper.Set(testBackpressureMaxFiles, origMaxFiles)
 		}
 		if origMaxWrites != nil {
-			viper.Set("backpressure.maxPendingWrites", origMaxWrites)
+			viper.Set(testBackpressureMaxWrites, origMaxWrites)
 		}
 		if origCheckInterval != nil {
-			viper.Set("backpressure.memoryCheckInterval", origCheckInterval)
+			viper.Set(testBackpressureMemoryCheck, origCheckInterval)
 		}
 		if origMaxMemory != nil {
-			viper.Set("backpressure.maxMemoryUsage", origMaxMemory)
+			viper.Set(testBackpressureMaxMemory, origMaxMemory)
 		}
 	})
 
-	viper.Set("backpressure.enabled", true)
-	viper.Set("backpressure.maxPendingFiles", 10)
-	viper.Set("backpressure.maxPendingWrites", 10)
-	viper.Set("backpressure.memoryCheckInterval", 10)
-	viper.Set("backpressure.maxMemoryUsage", 100*1024*1024) // 100MB
+	viper.Set(testBackpressureEnabled, true)
+	viper.Set(testBackpressureMaxFiles, 10)
+	viper.Set(testBackpressureMaxWrites, 10)
+	viper.Set(testBackpressureMemoryCheck, 10)
+	viper.Set(testBackpressureMaxMemory, 100*1024*1024) // 100MB
 
 	bm := NewBackpressureManager()
 	ctx, cancel := context.WithCancel(context.Background())

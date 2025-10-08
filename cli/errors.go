@@ -20,6 +20,11 @@ func NewErrorFormatter(ui *UIManager) *ErrorFormatter {
 	return &ErrorFormatter{ui: ui}
 }
 
+// Suggestion messages for error formatting.
+const (
+	suggestionCheckPermissions = "  %s Check file/directory permissions\n"
+)
+
 // FormatError formats an error with context and suggestions.
 func (ef *ErrorFormatter) FormatError(err error) {
 	if err == nil {
@@ -151,7 +156,7 @@ func (ef *ErrorFormatter) provideIOSuggestions(err *gibidiutils.StructuredError)
 		ef.ui.printf("  %s Check available disk space\n", gibidiutils.IconBullet)
 		ef.ui.printf("  %s Verify write permissions\n", gibidiutils.IconBullet)
 	default:
-		ef.ui.printf("  %s Check file/directory permissions\n", gibidiutils.IconBullet)
+		ef.ui.printf(suggestionCheckPermissions, gibidiutils.IconBullet)
 		ef.ui.printf("  %s Verify available disk space\n", gibidiutils.IconBullet)
 	}
 }
@@ -198,7 +203,7 @@ func (ef *ErrorFormatter) suggestFileNotFound(filePath string) {
 }
 
 func (ef *ErrorFormatter) suggestFileSystemGeneral(filePath string) {
-	ef.ui.printf("  %s Check file/directory permissions\n", gibidiutils.IconBullet)
+	ef.ui.printf(suggestionCheckPermissions, gibidiutils.IconBullet)
 	ef.ui.printf("  %s Verify the path is correct\n", gibidiutils.IconBullet)
 	if filePath != "" {
 		ef.ui.printf("  %s Path: %s\n", gibidiutils.IconBullet, filePath)
@@ -221,7 +226,7 @@ func (ef *ErrorFormatter) provideGenericSuggestions(err error) {
 	// Pattern matching for common errors
 	switch {
 	case strings.Contains(errorMsg, "permission denied"):
-		ef.ui.printf("  %s Check file/directory permissions\n", gibidiutils.IconBullet)
+		ef.ui.printf(suggestionCheckPermissions, gibidiutils.IconBullet)
 		ef.ui.printf("  %s Try running with appropriate privileges\n", gibidiutils.IconBullet)
 	case strings.Contains(errorMsg, "no such file or directory"):
 		ef.ui.printf("  %s Verify the file/directory path is correct\n", gibidiutils.IconBullet)

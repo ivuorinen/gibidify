@@ -83,8 +83,8 @@ func TestProcessorSimple(t *testing.T) {
 
 		// Small collection should be valid
 		err = p.validateFileCollection([]string{
-			"/test/file1.go",
-			"/test/file2.go",
+			testFilePath1,
+			testFilePath2,
 		})
 		assert.NoError(t, err)
 	})
@@ -142,8 +142,8 @@ func TestProcessorSimple(t *testing.T) {
 		ctx := context.Background()
 		fileCh := make(chan string, 3)
 		files := []string{
-			"/test/file1.go",
-			"/test/file2.go",
+			testFilePath1,
+			testFilePath2,
 		}
 
 		var wg sync.WaitGroup
@@ -250,8 +250,8 @@ func TestProcessorErrors(t *testing.T) {
 		fileCh := make(chan string) // Unbuffered to force blocking
 
 		files := []string{
-			"/test/file1.go",
-			"/test/file2.go",
+			testFilePath1,
+			testFilePath2,
 			"/test/file3.go",
 		}
 
