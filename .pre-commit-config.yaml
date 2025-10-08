@@ -13,3 +13,8 @@ repos:
         alias: tidy
       - id: go-fmt
         alias: fmt
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+    rev: 3.0.3
+    hooks:
+      - id: editorconfig-checker
+        alias: ec

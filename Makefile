@@ -1,7 +1,8 @@
-.PHONY: all clean test test-coverage build coverage help lint lint-fix lint-verbose \
-	install-tools benchmark benchmark-collection benchmark-concurrency \
-	benchmark-format benchmark-processing build-benchmark check-all ci-lint \
-	ci-test dev-setup security security-full vuln-check
+.PHONY: all clean test test-coverage build coverage help lint lint-fix \
+	lint-verbose install-tools benchmark benchmark-collection \
+	benchmark-concurrency benchmark-format benchmark-processing \
+	build-benchmark check-all ci-lint ci-test dev-setup security \
+	security-full vuln-check
 
 # Default target shows help
 .DEFAULT_GOAL := help
@@ -37,6 +38,9 @@ install-tools:
 	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
 	@echo "Installing yamllint (Go-based)..."
 	@go install github.com/excilsploft/yamllint@latest
+	@echo "Installing editorconfig-checker..."
+	@go install github.com/editorconfig-checker/editorconfig-checker/\
+		cmd/editorconfig-checker@latest
 	@echo "All tools installed successfully!"
 
 # Run linters
@@ -56,7 +60,7 @@ lint-fix:
 	@echo "Running go mod tidy..."
 	@go mod tidy
 	@echo "Running shfmt formatting..."
-	@shfmt -w -i 2 -ci .
+	@shfmt -w -i 0 -ci .
 	@echo "Running golangci-lint with --fix..."
 	@golangci-lint run --fix ./...
 	@echo "Auto-fix completed. Running final lint check..."
