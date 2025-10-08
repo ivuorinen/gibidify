@@ -24,6 +24,7 @@ FROM alpine:3.22.1
 
 # Install ca-certificates for HTTPS and create non-root user
 # hadolint ignore=DL3018
+# kics-scan ignore-line
 RUN apk add --no-cache ca-certificates && \
 	adduser -D -s /bin/sh gibidify
 
