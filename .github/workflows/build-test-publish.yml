@@ -32,21 +32,24 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      - name: Install dependencies
+      - name: Download dependencies
         shell: bash
-        run: go mod tidy
+        run: go mod download
 
       - name: Run tests with coverage
         shell: bash
         run: |
-          set -o pipefail
-          go test -json -coverprofile=coverage.out ./... | tee test-results.json
+          go test -race -covermode=atomic -json -coverprofile=coverage.out ./... | tee test-results.json
 
       - name: Check coverage
         id: coverage
         if: always()
         shell: bash
         run: |
+          if [[ ! -f coverage.out ]]; then
+            echo "coverage.out is missing; tests likely failed before producing coverage"
+            exit 1
+          fi
           coverage="$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')"
           echo "total_coverage=$coverage" >> "$GITHUB_ENV"
           echo "Coverage: $coverage%"
@@ -67,7 +70,12 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if (( $(echo "$total_coverage < 60" | bc -l) )); then
+          if [[ -z "${total_coverage:-}" ]]; then
+            echo "total_coverage is unset; previous step likely failed"
+            exit 1
+          fi
+          awk -v cov="$total_coverage" 'BEGIN{ if (cov < 60) exit 0; else exit 1 }'
+          if [ $? -eq 0 ]; then
             echo "Coverage ($total_coverage%) is below the threshold (60%)"
             exit 1
           fi
@@ -95,8 +103,8 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      - name: Install dependencies
-        run: go mod tidy
+      - name: Download dependencies
+        run: go mod download
 
       - name: Build binary for ${{ matrix.goos }}-${{ matrix.goarch }}
         run: |
@@ -142,12 +150,11 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Log in to GitHub Container Registry
-        run: echo "${{ github.token }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ github.token }}" | docker login ghcr.io -u ${{ toLower(github.actor) }} --password-stdin
 
-      - name: Build and push multi-arch Docker image
+      - name: Build and push Docker image
         run: |
-          docker buildx build --platform linux/amd64,linux/arm64,linux/arm/v7 \
-            --tag ghcr.io/${{ github.repository }}/gibidify:${{ github.ref_name }} \
-            --tag ghcr.io/${{ github.repository }}/gibidify:latest \
-            --push \
-            .
+          docker buildx build --platform linux/amd64 \
+            --tag ghcr.io/${{ toLower(github.repository) }}/gibidify:${{ github.ref_name }} \
+            --tag ghcr.io/${{ toLower(github.repository) }}/gibidify:latest \
+            --push .

@@ -455,8 +455,8 @@ func PrintResult(result *Result) {
 // PrintSuite prints all results in a benchmark suite.
 func PrintSuite(suite *Suite) {
 	fmt.Printf("=== %s ===\n", suite.Name)
-	for _, result := range suite.Results {
-		PrintResult(&result)
+	for i := range suite.Results {
+		PrintResult(&suite.Results[i])
 	}
 }
 

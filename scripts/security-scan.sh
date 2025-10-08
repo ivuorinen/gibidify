@@ -378,7 +378,7 @@ check_docker_security() {
 			docker_issues=true
 		fi
 
-		if grep -q "RUN.*wget\|RUN.*curl" Dockerfile && ! grep -q "rm.*wget\|rm.*curl" Dockerfile; then
+		if grep -Eq 'RUN.*(wget|curl)' Dockerfile && ! grep -Eq 'rm.*(wget|curl)' Dockerfile; then
 			print_warning "Dockerfile may leave curl/wget installed"
 			docker_issues=true
 		fi
