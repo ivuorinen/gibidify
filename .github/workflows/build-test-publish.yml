@@ -9,8 +9,7 @@ on:
   release:
     types: [created]
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   test:
@@ -25,19 +24,10 @@ jobs:
       statuses: write
 
     steps:
-      - name: Harden the runner (Audit all outbound calls)
-        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+      - name: Setup Go with Runner Hardening
+        uses: ./.github/actions/setup
         with:
-          egress-policy: audit
-
-      - name: Checkout code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-
-      - name: Set up Go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
-        with:
-          go-version-file: "go.mod"
-          cache: true
+          token: ${{ github.token }}
 
       - name: Install dependencies
         run: go mod tidy
@@ -86,15 +76,10 @@ jobs:
         goarch: [amd64, arm64]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Setup Go with Runner Hardening
+        uses: ./.github/actions/setup
         with:
           token: ${{ github.token }}
-
-      - name: Set up Go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
-        with:
-          go-version-file: "go.mod"
 
       - name: Run go mod tidy
         run: go mod tidy
@@ -131,8 +116,8 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Setup Go with Runner Hardening
+        uses: ./.github/actions/setup
         with:
           token: ${{ github.token }}
 

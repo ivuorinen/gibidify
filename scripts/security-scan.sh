@@ -283,26 +283,28 @@ check_secrets() {
 		print_error "mktemp returned empty path"
 		exit 1
 	fi
-	# Clean up temp file on exit
-	trap 'rm -f "$secrets_found_file"' EXIT
+	# Clean up temp file on exit and signals (POSIX-portable)
+	trap 'rm -f "$secrets_found_file"' 0 HUP INT TERM
 
-	# Common secret patterns
-	patterns='password\s*[:=]\s*['\''"][^'\''"]''{3,}['\''"]
-secret\s*[:=]\s*['\''"][^'\''"]''{3,}['\''"]
-key\s*[:=]\s*['\''"][^'\''"]''{8,}['\''"]
-token\s*[:=]\s*['\''"][^'\''"]''{8,}['\''"]
-api_?key\s*[:=]\s*['\''"][^'\''"]''{8,}['\''"]
+	# Common secret patterns (fixed quoting and quantifiers)
+	patterns='password\s*[:=]\s*['\''"][^'\''"]{3,}['\''"]
+secret\s*[:=]\s*['\''"][^'\''"]{3,}['\''"]
+key\s*[:=]\s*['\''"][^'\''"]{8,}['\''"]
+token\s*[:=]\s*['\''"][^'\''"]{8,}['\''"]
+api_?key\s*[:=]\s*['\''"][^'\''"]{8,}['\''"]
 aws_?access_?key
 aws_?secret
 AKIA[0-9A-Z]{16}
 github_?token
 private_?key'
 
-	# Check each pattern using printf and a pipe (POSIX)
+	# Check each pattern using find and grep (POSIX-portable, no --include)
 	printf '%s\n' "$patterns" | while IFS= read -r pattern; do
-		if [ -n "$pattern" ] && grep -r -i -E "$pattern" --include="*.go" . 2>/dev/null | grep -q .; then
-			print_warning "Potential secret pattern found: $pattern"
-			touch "$secrets_found_file"
+		if [ -n "$pattern" ]; then
+			if find . -type f -name "*.go" -exec grep -i -E -H -n -e "$pattern" {} + 2>/dev/null | grep -q .; then
+				print_warning "Potential secret pattern found: $pattern"
+				touch "$secrets_found_file"
+			fi
 		fi
 	done
 

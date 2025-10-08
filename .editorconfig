@@ -18,6 +18,9 @@ trim_trailing_whitespace = false
 indent_style = space
 max_line_length = 250
 
+[*.{yaml.example,yml.example}]
+indent_style = space
+
 [.yamllint]
 indent_style = space
 

@@ -7,58 +7,58 @@ fileSizeLimit: 5242880
 
 # Directories to ignore during traversal
 ignoreDirectories:
-	- vendor
-	- node_modules
-	- .git
-	- dist
-	- build
-	- target
-	- bower_components
-	- cache
-	- tmp
+  - vendor
+  - node_modules
+  - .git
+  - dist
+  - build
+  - target
+  - bower_components
+  - cache
+  - tmp
 
 # File type detection and filtering
 fileTypes:
-	enabled: true
-	customImageExtensions: []
-	customBinaryExtensions: []
-	customLanguages: {}
-	disabledImageExtensions: []
-	disabledBinaryExtensions: []
-	disabledLanguageExtensions: []
+  enabled: true
+  customImageExtensions: []
+  customBinaryExtensions: []
+  customLanguages: {}
+  disabledImageExtensions: []
+  disabledBinaryExtensions: []
+  disabledLanguageExtensions: []
 
 # Back-pressure management for memory optimization
 backpressure:
-	enabled: true
-	maxPendingFiles: 1000			# Max files in channel buffer
-	maxPendingWrites: 100			# Max writes in channel buffer
-	maxMemoryUsage: 104857600 # 100MB soft memory limit
-	memoryCheckInterval: 1000 # Check memory every N files
+  enabled: true
+  maxPendingFiles: 1000     # Max files in channel buffer
+  maxPendingWrites: 100     # Max writes in channel buffer
+  maxMemoryUsage: 104857600 # 100MB soft memory limit
+  memoryCheckInterval: 1000 # Check memory every N files
 
 # Resource limits for DoS protection and security
 resourceLimits:
-	enabled: true
+  enabled: true
 
-	# File processing limits
-	maxFiles: 10000										 # Maximum number of files to process
-	maxTotalSize: 1073741824					# Maximum total size (1GB)
+  # File processing limits
+  maxFiles: 10000                    # Maximum number of files to process
+  maxTotalSize: 1073741824          # Maximum total size (1GB)
 
-	# Timeout limits (in seconds)
-	fileProcessingTimeoutSec: 30			 # Timeout for individual file processing
-	overallTimeoutSec: 3600						# Overall processing timeout (1 hour)
+  # Timeout limits (in seconds)
+  fileProcessingTimeoutSec: 30       # Timeout for individual file processing
+  overallTimeoutSec: 3600           # Overall processing timeout (1 hour)
 
-	# Concurrency limits
-	maxConcurrentReads: 10						# Maximum concurrent file reading operations
+  # Concurrency limits
+  maxConcurrentReads: 10            # Maximum concurrent file reading operations
 
-	# Rate limiting (0 = disabled)
-	rateLimitFilesPerSec: 0						# Files per second rate limit
+  # Rate limiting (0 = disabled)
+  rateLimitFilesPerSec: 0           # Files per second rate limit
 
-	# Memory limits
-	hardMemoryLimitMB: 512						# Hard memory limit (512MB)
+  # Memory limits
+  hardMemoryLimitMB: 512            # Hard memory limit (512MB)
 
-	# Safety features
-	enableGracefulDegradation: true		# Enable graceful degradation on resource pressure
-	enableResourceMonitoring: true		# Enable detailed resource monitoring
+  # Safety features
+  enableGracefulDegradation: true   # Enable graceful degradation on resource pressure
+  enableResourceMonitoring: true    # Enable detailed resource monitoring
 
 # Optional: Maximum concurrency for workers
 # Default: number of CPU cores
@@ -67,13 +67,13 @@ resourceLimits:
 # Optional: Supported output formats
 # Default: ["json", "yaml", "markdown"]
 # supportedFormats:
-#		- json
-#		- yaml
-#		- markdown
+#   - json
+#   - yaml
+#   - markdown
 
 # Optional: File patterns to include
 # Default: all files (empty list means no pattern filtering)
 # filePatterns:
-#		- "*.go"
-#		- "*.py"
-#		- "*.js"
+#   - "*.go"
+#   - "*.py"
+#   - "*.js"

@@ -44,4 +44,7 @@ EditorConfig (LF, tabs), semantic commits, testing required
 
 ## Workflow
 
-1. `make lint-fix` first 2. >80% coverage 3. Follow patterns 4. Update docs
+1. `make lint-fix` first 
+2. >80% coverage 
+3. Follow patterns 
+4. Update docs

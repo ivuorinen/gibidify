@@ -9,7 +9,7 @@ on:
   pull_request:
     branches: [master, main]
 
-permissions: read-all
+permissions: {}
 
 jobs:
   Linter:
@@ -21,7 +21,9 @@ jobs:
       pull-requests: write
       statuses: write
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Setup Go with Runner Hardening
+        uses: ./.github/actions/setup
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
+
       - uses: ivuorinen/actions/pr-lint@dc895c40ffdce61ab057fb992f4e00f1efdcbcbf # 25.10.7

@@ -46,19 +46,31 @@ func (ui *UIManager) StartProgress(total int, description string) {
 		return
 	}
 
+	// Set progress bar theme based on color support
+	var theme progressbar.Theme
+	if ui.enableColors {
+		theme = progressbar.Theme{
+			Saucer:        color.GreenString("█"),
+			SaucerHead:    color.GreenString("█"),
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}
+	} else {
+		theme = progressbar.Theme{
+			Saucer:        "█",
+			SaucerHead:    "█",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}
+	}
+
 	ui.progressBar = progressbar.NewOptions(
 		total,
 		progressbar.OptionSetWriter(ui.output),
 		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetTheme(
-			progressbar.Theme{
-				Saucer:        color.GreenString("█"),
-				SaucerHead:    color.GreenString("█"),
-				SaucerPadding: " ",
-				BarStart:      "[",
-				BarEnd:        "]",
-			},
-		),
+		progressbar.OptionSetTheme(theme),
 		progressbar.OptionShowCount(),
 		progressbar.OptionShowIts(),
 		progressbar.OptionSetWidth(40),

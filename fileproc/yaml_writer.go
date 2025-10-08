@@ -237,6 +237,10 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 // streamYAMLContent streams content with YAML indentation.
 func (w *YAMLWriter) streamYAMLContent(reader io.Reader, path string) error {
 	scanner := bufio.NewScanner(reader)
+	// Increase buffer size to handle long lines (up to 1MB per line)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		if _, err := fmt.Fprintf(w.outFile, "      %s\n", line); err != nil {

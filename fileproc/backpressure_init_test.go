@@ -12,16 +12,27 @@ import (
 // It takes a testing.T and a list of config keys to save/restore.
 func setupViperCleanup(t *testing.T, keys []string) {
 	t.Helper()
-	// Capture original values
+	// Capture original values and track which keys existed
 	origValues := make(map[string]interface{})
+	keysExisted := make(map[string]bool)
 	for _, key := range keys {
-		origValues[key] = viper.Get(key)
+		val := viper.Get(key)
+		origValues[key] = val
+		keysExisted[key] = viper.IsSet(key)
 	}
 	// Register cleanup to restore values
 	t.Cleanup(func() {
-		for key, val := range origValues {
-			if val != nil {
-				viper.Set(key, val)
+		for _, key := range keys {
+			if keysExisted[key] {
+				viper.Set(key, origValues[key])
+			} else {
+				// Key didn't exist originally, so remove it
+				allSettings := viper.AllSettings()
+				delete(allSettings, key)
+				viper.Reset()
+				for k, v := range allSettings {
+					viper.Set(k, v)
+				}
 			}
 		}
 	})

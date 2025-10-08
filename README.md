@@ -86,43 +86,43 @@ gibidify supports a YAML configuration file. Place it at:
 Example configuration:
 
 ```yaml
-fileSizeLimit: 5242880	# 5 MB
+fileSizeLimit: 5242880  # 5 MB
 ignoreDirectories:
-	- vendor
-	- node_modules
-	- .git
-	- dist
-	- build
-	- target
+  - vendor
+  - node_modules
+  - .git
+  - dist
+  - build
+  - target
 
 # FileType customization
 fileTypes:
-	enabled: true
-	# Add custom file extensions
-	customImageExtensions:
-		- .webp
-		- .avif
-	customBinaryExtensions:
-		- .custom
-	customLanguages:
-		.zig: zig
-		.odin: odin
-		.v: vlang
-	# Disable default extensions
-	disabledImageExtensions:
-		- .bmp
-	disabledBinaryExtensions:
-		- .exe
-	disabledLanguageExtensions:
-		- .bat
+  enabled: true
+  # Add custom file extensions
+  customImageExtensions:
+    - .webp
+    - .avif
+  customBinaryExtensions:
+    - .custom
+  customLanguages:
+    .zig: zig
+    .odin: odin
+    .v: vlang
+  # Disable default extensions
+  disabledImageExtensions:
+    - .bmp
+  disabledBinaryExtensions:
+    - .exe
+  disabledLanguageExtensions:
+    - .bat
 
 # Memory optimization (back-pressure management)
 backpressure:
-	enabled: true
-	maxPendingFiles: 1000			 # Max files in file channel buffer
-	maxPendingWrites: 100			 # Max writes in write channel buffer
-	maxMemoryUsage: 104857600	 # 100MB max memory usage
-	memoryCheckInterval: 1000	 # Check memory every 1000 files
+  enabled: true
+  maxPendingFiles: 1000      # Max files in file channel buffer
+  maxPendingWrites: 100      # Max writes in write channel buffer
+  maxMemoryUsage: 104857600  # 100MB max memory usage
+  memoryCheckInterval: 1000  # Check memory every 1000 files
 ```
 
 See `config.example.yaml` for a comprehensive configuration example.
