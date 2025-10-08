@@ -7,76 +7,50 @@ import (
 )
 
 func TestIsColorTerminal(t *testing.T) {
-	// Use t.Setenv for environment isolation
-
 	tests := []struct {
 		name     string
-		setupEnv func(t *testing.T)
+		env      terminalEnvSetup
 		expected bool
 	}{
 		{
-			name: "dumb terminal",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "dumb")
-				t.Setenv("CI", "")
-				t.Setenv("NO_COLOR", "")
-				t.Setenv("FORCE_COLOR", "")
-			},
+			name:     "dumb terminal",
+			env:      envDumbTerminal,
 			expected: false,
 		},
 		{
-			name: "empty TERM",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "")
-			},
+			name:     "empty TERM",
+			env:      envEmptyTerm,
 			expected: false,
 		},
 		{
-			name: "CI without GitHub Actions",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "xterm")
-				t.Setenv("CI", "true")
-				t.Setenv("GITHUB_ACTIONS", "")
-			},
+			name:     "CI without GitHub Actions",
+			env:      envCIWithoutGitHub,
 			expected: false,
 		},
 		{
-			name: "GitHub Actions",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "xterm")
-				t.Setenv("CI", "true")
-				t.Setenv("GITHUB_ACTIONS", "true")
-			},
+			name:     "GitHub Actions",
+			env:      envGitHubActions,
 			expected: true,
 		},
 		{
-			name: "NO_COLOR set",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "xterm")
-				t.Setenv("NO_COLOR", "1")
-				t.Setenv("CI", "")
-			},
+			name:     "NO_COLOR set",
+			env:      envNoColor,
 			expected: false,
 		},
 		{
-			name: "FORCE_COLOR set",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "dumb")
-				t.Setenv("FORCE_COLOR", "1")
-			},
+			name:     "FORCE_COLOR set",
+			env:      envForceColor,
 			expected: true,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(
-			tt.name, func(t *testing.T) {
-				tt.setupEnv(t)
+		t.Run(tt.name, func(t *testing.T) {
+			tt.env.apply(t)
 
-				result := isColorTerminal()
-				assert.Equal(t, tt.expected, result)
-			},
-		)
+			result := isColorTerminal()
+			assert.Equal(t, tt.expected, result)
+		})
 	}
 }
 

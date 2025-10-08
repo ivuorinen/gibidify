@@ -10,87 +10,60 @@ import (
 )
 
 func TestNewUIManager(t *testing.T) {
-	// Use t.Setenv for environment isolation
-
 	tests := []struct {
 		name             string
-		setupEnv         func(t *testing.T)
+		env              terminalEnvSetup
 		expectedColors   bool
 		expectedProgress bool
 	}{
 		{
-			name: "default terminal",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "xterm-256color")
-				t.Setenv("CI", "")
-				t.Setenv("NO_COLOR", "")
-				t.Setenv("FORCE_COLOR", "")
-			},
+			name:             "default terminal",
+			env:              envDefaultTerminal,
 			expectedColors:   true,
 			expectedProgress: false, // Not a tty in test environment
 		},
 		{
-			name: "dumb terminal",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "dumb")
-			},
+			name:             "dumb terminal",
+			env:              envDumbTerminal,
 			expectedColors:   false,
 			expectedProgress: false,
 		},
 		{
-			name: "CI environment without GitHub Actions",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("CI", "true")
-				t.Setenv("GITHUB_ACTIONS", "")
-			},
+			name:             "CI environment without GitHub Actions",
+			env:              envCIWithoutGitHub,
 			expectedColors:   false,
 			expectedProgress: false,
 		},
 		{
-			name: "GitHub Actions CI",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "xterm")
-				t.Setenv("CI", "true")
-				t.Setenv("GITHUB_ACTIONS", "true")
-				t.Setenv("NO_COLOR", "")
-			},
+			name:             "GitHub Actions CI",
+			env:              envGitHubActions,
 			expectedColors:   true,
 			expectedProgress: false,
 		},
 		{
-			name: "NO_COLOR set",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "xterm-256color")
-				t.Setenv("CI", "")
-				t.Setenv("NO_COLOR", "1")
-				t.Setenv("FORCE_COLOR", "")
-			},
+			name:             "NO_COLOR set",
+			env:              envNoColor,
 			expectedColors:   false,
 			expectedProgress: false,
 		},
 		{
-			name: "FORCE_COLOR set",
-			setupEnv: func(t *testing.T) {
-				t.Setenv("TERM", "dumb")
-				t.Setenv("FORCE_COLOR", "1")
-			},
+			name:             "FORCE_COLOR set",
+			env:              envForceColor,
 			expectedColors:   true,
 			expectedProgress: false,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(
-			tt.name, func(t *testing.T) {
-				tt.setupEnv(t)
+		t.Run(tt.name, func(t *testing.T) {
+			tt.env.apply(t)
 
-				ui := NewUIManager()
-				assert.NotNil(t, ui)
-				assert.NotNil(t, ui.output)
-				assert.Equal(t, tt.expectedColors, ui.enableColors, "color state mismatch")
-				assert.Equal(t, tt.expectedProgress, ui.enableProgress, "progress state mismatch")
-			},
-		)
+			ui := NewUIManager()
+			assert.NotNil(t, ui)
+			assert.NotNil(t, ui.output)
+			assert.Equal(t, tt.expectedColors, ui.enableColors, "color state mismatch")
+			assert.Equal(t, tt.expectedProgress, ui.enableProgress, "progress state mismatch")
+		})
 	}
 }
 
