@@ -144,7 +144,7 @@ func (w *YAMLWriter) Start(prefix, suffix string) error {
 	// Write YAML header
 	if _, err := fmt.Fprintf(
 		w.outFile, "prefix: %s\nsuffix: %s\nfiles:\n",
-		yamlQuoteString(prefix), yamlQuoteString(suffix),
+		gibidiutils.EscapeForYAML(prefix), gibidiutils.EscapeForYAML(suffix),
 	); err != nil {
 		return gibidiutils.WrapError(
 			err,
@@ -176,14 +176,14 @@ func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
 		return err
 	}
 
-	defer w.closeReader(req.Reader, req.Path)
+	defer gibidiutils.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
 	// Write YAML file entry start
 	if _, err := fmt.Fprintf(
 		w.outFile, "  - path: %s\n    language: %s\n    content: |\n",
-		yamlQuoteString(req.Path), language,
+		gibidiutils.EscapeForYAML(req.Path), language,
 	); err != nil {
 		return gibidiutils.WrapError(
 			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
@@ -212,7 +212,7 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	// Write YAML entry
 	if _, err := fmt.Fprintf(
 		w.outFile, "  - path: %s\n    language: %s\n    content: |\n",
-		yamlQuoteString(fileData.Path), fileData.Language,
+		gibidiutils.EscapeForYAML(fileData.Path), fileData.Language,
 	); err != nil {
 		return gibidiutils.WrapError(
 			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
@@ -258,33 +258,6 @@ func (w *YAMLWriter) streamYAMLContent(reader io.Reader, path string) error {
 		).WithFilePath(path)
 	}
 	return nil
-}
-
-// closeReader safely closes a reader if it implements io.Closer.
-func (w *YAMLWriter) closeReader(reader io.Reader, path string) {
-	if closer, ok := reader.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
-			gibidiutils.LogError(
-				"Failed to close file reader",
-				gibidiutils.WrapError(
-					err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOClose,
-					"failed to close file reader",
-				).WithFilePath(path),
-			)
-		}
-	}
-}
-
-// yamlQuoteString quotes a string for YAML output if needed.
-func yamlQuoteString(s string) string {
-	if s == "" {
-		return `""`
-	}
-	// Simple YAML quoting - use double quotes if string contains special characters
-	if strings.ContainsAny(s, "\n\r\t:\"'\\") {
-		return fmt.Sprintf(`"%s"`, strings.ReplaceAll(s, `"`, `\"`))
-	}
-	return s
 }
 
 // startYAMLWriter handles YAML format output with streaming support.

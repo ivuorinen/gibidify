@@ -27,42 +27,60 @@ func GetBaseName(absPath string) string {
 	return baseName
 }
 
-// ValidateSourcePath validates a source directory path for security.
-// It ensures the path exists, is a directory, and doesn't contain path traversal attempts.
-//
-//revive:disable-next-line:function-length
-func ValidateSourcePath(path string) error {
-	if path == "" {
-		return NewStructuredError(ErrorTypeValidation, CodeValidationRequired, "source path is required", "", nil)
-	}
-
-	// Check for path traversal patterns before cleaning
+// checkPathTraversal checks for path traversal patterns and returns an error if found.
+func checkPathTraversal(path, context string) error {
 	if strings.Contains(path, "..") {
 		return NewStructuredError(
 			ErrorTypeValidation,
 			CodeValidationPath,
-			"path traversal attempt detected in source path",
+			fmt.Sprintf("path traversal attempt detected in %s", context),
 			path,
 			map[string]interface{}{
 				"original_path": path,
 			},
 		)
 	}
+	return nil
+}
 
-	// Clean and get absolute path
+// cleanAndResolveAbsPath cleans a path and resolves it to an absolute path.
+func cleanAndResolveAbsPath(path, context string) (string, error) {
 	cleaned := filepath.Clean(path)
 	abs, err := filepath.Abs(cleaned)
 	if err != nil {
-		return NewStructuredError(
+		return "", NewStructuredError(
 			ErrorTypeFileSystem,
 			CodeFSPathResolution,
-			"cannot resolve source path",
+			fmt.Sprintf("cannot resolve %s", context),
 			path,
 			map[string]interface{}{
 				"error": err.Error(),
 			},
 		)
 	}
+	return abs, nil
+}
+
+// ValidateSourcePath validates a source directory path for security.
+// It ensures the path exists, is a directory, and doesn't contain path traversal attempts.
+//
+//revive:disable-next-line:function-length
+func ValidateSourcePath(path string) error {
+	if path == "" {
+		return NewValidationError(CodeValidationRequired, "source path is required")
+	}
+
+	// Check for path traversal patterns before cleaning
+	if err := checkPathTraversal(path, "source path"); err != nil {
+		return err
+	}
+
+	// Clean and get absolute path
+	abs, err := cleanAndResolveAbsPath(path, "source path")
+	if err != nil {
+		return err
+	}
+	cleaned := filepath.Clean(path)
 
 	// Get current working directory to ensure we're not escaping it for relative paths
 	if !filepath.IsAbs(path) {
@@ -112,7 +130,7 @@ func ValidateSourcePath(path string) error {
 	info, err := os.Stat(cleaned)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return NewStructuredError(ErrorTypeFileSystem, CodeFSNotFound, "source directory does not exist", path, nil)
+			return NewFileSystemError(CodeFSNotFound, "source directory does not exist").WithFilePath(path)
 		}
 		return NewStructuredError(
 			ErrorTypeFileSystem,
@@ -144,37 +162,18 @@ func ValidateSourcePath(path string) error {
 // It ensures the path doesn't contain path traversal attempts and the parent directory exists.
 func ValidateDestinationPath(path string) error {
 	if path == "" {
-		return NewStructuredError(ErrorTypeValidation, CodeValidationRequired, "destination path is required", "", nil)
+		return NewValidationError(CodeValidationRequired, "destination path is required")
 	}
 
 	// Check for path traversal patterns before cleaning
-	if strings.Contains(path, "..") {
-		return NewStructuredError(
-			ErrorTypeValidation,
-			CodeValidationPath,
-			"path traversal attempt detected in destination path",
-			path,
-			map[string]interface{}{
-				"original_path": path,
-			},
-		)
+	if err := checkPathTraversal(path, "destination path"); err != nil {
+		return err
 	}
 
-	// Clean and validate the path
-	cleaned := filepath.Clean(path)
-
 	// Get absolute path to ensure it's not trying to escape current working directory
-	abs, err := filepath.Abs(cleaned)
+	abs, err := cleanAndResolveAbsPath(path, "destination path")
 	if err != nil {
-		return NewStructuredError(
-			ErrorTypeFileSystem,
-			CodeFSPathResolution,
-			"cannot resolve destination path",
-			path,
-			map[string]interface{}{
-				"error": err.Error(),
-			},
-		)
+		return err
 	}
 
 	// Ensure the destination is not a directory
@@ -237,17 +236,5 @@ func ValidateConfigPath(path string) error {
 	}
 
 	// Check for path traversal patterns before cleaning
-	if strings.Contains(path, "..") {
-		return NewStructuredError(
-			ErrorTypeValidation,
-			CodeValidationPath,
-			"path traversal attempt detected in config path",
-			path,
-			map[string]interface{}{
-				"original_path": path,
-			},
-		)
-	}
-
-	return nil
+	return checkPathTraversal(path, "config path")
 }

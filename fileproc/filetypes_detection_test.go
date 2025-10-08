@@ -4,10 +4,9 @@ import (
 	"testing"
 )
 
-// TestFileTypeRegistry_LanguageDetection tests the language detection functionality.
-func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
-	// Create a fresh registry instance for testing to avoid global state pollution
-	registry := &FileTypeRegistry{
+// newTestRegistry creates a fresh registry instance for testing to avoid global state pollution.
+func newTestRegistry() *FileTypeRegistry {
+	return &FileTypeRegistry{
 		imageExts:    getImageExtensions(),
 		binaryExts:   getBinaryExtensions(),
 		languageMap:  getLanguageMap(),
@@ -15,6 +14,11 @@ func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
 		resultCache:  make(map[string]FileTypeResult, 500),
 		maxCacheSize: 500,
 	}
+}
+
+// TestFileTypeRegistry_LanguageDetection tests the language detection functionality.
+func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
+	registry := newTestRegistry()
 
 	tests := []struct {
 		filename string
@@ -102,15 +106,7 @@ func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
 
 // TestFileTypeRegistry_ImageDetection tests the image detection functionality.
 func TestFileTypeRegistry_ImageDetection(t *testing.T) {
-	// Create a fresh registry instance for testing to avoid global state pollution
-	registry := &FileTypeRegistry{
-		imageExts:    getImageExtensions(),
-		binaryExts:   getBinaryExtensions(),
-		languageMap:  getLanguageMap(),
-		extCache:     make(map[string]string, 1000),
-		resultCache:  make(map[string]FileTypeResult, 500),
-		maxCacheSize: 500,
-	}
+	registry := newTestRegistry()
 
 	tests := []struct {
 		filename string
@@ -160,15 +156,7 @@ func TestFileTypeRegistry_ImageDetection(t *testing.T) {
 
 // TestFileTypeRegistry_BinaryDetection tests the binary detection functionality.
 func TestFileTypeRegistry_BinaryDetection(t *testing.T) {
-	// Create a fresh registry instance for testing to avoid global state pollution
-	registry := &FileTypeRegistry{
-		imageExts:    getImageExtensions(),
-		binaryExts:   getBinaryExtensions(),
-		languageMap:  getLanguageMap(),
-		extCache:     make(map[string]string, 1000),
-		resultCache:  make(map[string]FileTypeResult, 500),
-		maxCacheSize: 500,
-	}
+	registry := newTestRegistry()
 
 	tests := []struct {
 		filename string

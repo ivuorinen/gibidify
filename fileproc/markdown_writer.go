@@ -118,7 +118,7 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 		return err
 	}
 
-	defer w.closeReader(req.Reader, req.Path)
+	defer gibidiutils.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
@@ -167,43 +167,7 @@ func (w *MarkdownWriter) writeInline(req WriteRequest) error {
 
 // streamContent streams file content in chunks.
 func (w *MarkdownWriter) streamContent(reader io.Reader, path string) error {
-	buf := make([]byte, StreamChunkSize)
-	for {
-		n, err := reader.Read(buf)
-		if n > 0 {
-			if _, writeErr := w.outFile.Write(buf[:n]); writeErr != nil {
-				return gibidiutils.WrapError(
-					writeErr, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
-					"failed to write chunk",
-				).WithFilePath(path)
-			}
-		}
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return gibidiutils.WrapError(
-				err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileRead,
-				"failed to read chunk",
-			).WithFilePath(path)
-		}
-	}
-	return nil
-}
-
-// closeReader safely closes a reader if it implements io.Closer.
-func (w *MarkdownWriter) closeReader(reader io.Reader, path string) {
-	if closer, ok := reader.(io.Closer); ok {
-		if err := closer.Close(); err != nil {
-			gibidiutils.LogError(
-				"Failed to close file reader",
-				gibidiutils.WrapError(
-					err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOClose,
-					"failed to close file reader",
-				).WithFilePath(path),
-			)
-		}
-	}
+	return gibidiutils.StreamContent(reader, w.outFile, StreamChunkSize, path, nil)
 }
 
 // startMarkdownWriter handles Markdown format output with streaming support.
