@@ -74,11 +74,10 @@ jobs:
             echo "total_coverage is unset; previous step likely failed"
             exit 1
           fi
-          awk -v cov="$total_coverage" 'BEGIN{ if (cov < 60) exit 1; else exit 0 }'
-          if [ $? -nne 0 ]; 0 ]; then
+          awk -v cov="$total_coverage" 'BEGIN{ if (cov < 60) exit 1; else exit 0 }' || {
             echo "Coverage ($total_coverage%) is below the threshold (60%)"
             exit 1
-          fi
+          }
 
   build:
     name: Build Binaries
@@ -150,11 +149,12 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Log in to GitHub Container Registry
-        run: echo "${{ github.token }}" | docker login ghcr.io -u ${{ lower(github.actor) }} --password-stdin
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "$(echo "${{ github.actor }}" | tr '[:upper:]' '[:lower:]')" --password-stdin
 
       - name: Build and push Docker image
         run: |
+          repo="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
           docker buildx build --platform linux/amd64 \
-            --tag ghcr.io/${{ lower(github.repository) }}/gibidify:${{ github.ref_name }} \
-            --tag ghcr.io/${{ lower(github.repository) }}/gibidify:latest \
+            --tag ghcr.io/${repo}/gibidify:${{ github.ref_name }} \
+            --tag ghcr.io/${repo}/gibidify:latest \
             --push .
