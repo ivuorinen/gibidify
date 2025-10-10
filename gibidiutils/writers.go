@@ -120,7 +120,7 @@ func SafeUint64ToInt64WithDefault(value uint64, defaultValue int64) int64 {
 		}
 		return defaultValue
 	}
-	return int64(value)
+	return int64(value) //#nosec G115 -- Safe: value <= MaxInt64 checked above
 }
 
 // StreamLines provides line-based streaming for YAML content.

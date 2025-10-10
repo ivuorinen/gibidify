@@ -120,9 +120,12 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 
 	// Check for nil reader
 	if req.Reader == nil {
-		return gibidiutils.WrapError(
-			nil, gibidiutils.ErrorTypeValidation, gibidiutils.CodeValidationRequired,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeValidationRequired,
 			"nil reader in write request",
+			"",
+			nil,
 		).WithFilePath(req.Path)
 	}
 

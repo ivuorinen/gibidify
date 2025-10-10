@@ -81,7 +81,7 @@ func cleanAndResolveAbsPath(path, context string) (string, error) {
 	return abs, nil
 }
 
-// validateWorkingDirectoryBoundary checks if the given absolute path escapes the working directory.
+// evalSymlinksOrStructuredError wraps filepath.EvalSymlinks with structured error handling.
 func evalSymlinksOrStructuredError(path, context, original string) (string, error) {
 	eval, err := filepath.EvalSymlinks(path)
 	if err != nil {
@@ -100,6 +100,7 @@ func evalSymlinksOrStructuredError(path, context, original string) (string, erro
 	return eval, nil
 }
 
+// validateWorkingDirectoryBoundary checks if the given absolute path escapes the working directory.
 func validateWorkingDirectoryBoundary(abs, path string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
