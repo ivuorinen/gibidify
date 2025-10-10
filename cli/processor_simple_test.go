@@ -108,8 +108,8 @@ func TestProcessorSimple(t *testing.T) {
 		tempDir := t.TempDir()
 
 		// Create test files
-		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "test1.go"), []byte("package main"), 0o644))
-		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "test2.go"), []byte("package test"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "test1.go"), []byte("package main"), 0o600))
+		require.NoError(t, os.WriteFile(filepath.Join(tempDir, "test2.go"), []byte("package test"), 0o600))
 
 		// Set config so no files are ignored, and restore after test
 		origIgnoreDirs := viper.Get("ignoreDirectories")

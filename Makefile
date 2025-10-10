@@ -2,7 +2,7 @@
 	lint-verbose install-tools benchmark benchmark-collection \
 	benchmark-concurrency benchmark-format benchmark-processing \
 	build-benchmark check-all ci-lint ci-test dev-setup security \
-	security-full vuln-check
+	security-full vuln-check deps-update deps-check deps-tidy
 
 # Default target shows help
 .DEFAULT_GOAL := help
@@ -170,3 +170,29 @@ vuln-check:
 	@echo "Checking for dependency vulnerabilities..."
 	@go install golang.org/x/vuln/cmd/govulncheck@latest
 	@govulncheck ./...
+
+# Dependency management targets
+deps-check:
+	@echo "Checking for available dependency updates..."
+	@echo ""
+	@echo "Direct dependencies:"
+	@go list -u -m all | grep -v "indirect" | column -t
+	@echo ""
+	@echo "Note: Run 'make deps-update' to update all dependencies"
+
+deps-update:
+	@echo "Updating all dependencies to latest versions..."
+	@go get -u ./...
+	@go mod tidy
+	@echo ""
+	@echo "Dependencies updated successfully!"
+	@echo "Running tests to verify compatibility..."
+	@go test ./...
+	@echo ""
+	@echo "Update complete. Run 'make lint-fix && make test' to verify."
+
+deps-tidy:
+	@echo "Cleaning up dependencies..."
+	@go mod tidy
+	@go mod verify
+	@echo "Dependencies cleaned and verified successfully!"

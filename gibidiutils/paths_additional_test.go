@@ -60,7 +60,7 @@ func TestValidateSourcePath(t *testing.T) {
 	// Create a temp directory for testing
 	tempDir := t.TempDir()
 	tempFile := filepath.Join(tempDir, "test.txt")
-	require.NoError(t, os.WriteFile(tempFile, []byte("test"), 0o644))
+	require.NoError(t, os.WriteFile(tempFile, []byte("test"), 0o600))
 
 	tests := []struct {
 		name          string
@@ -177,7 +177,7 @@ func TestValidateDestinationPath(t *testing.T) {
 func TestValidateConfigPath(t *testing.T) {
 	tempDir := t.TempDir()
 	validConfig := filepath.Join(tempDir, "config.yaml")
-	require.NoError(t, os.WriteFile(validConfig, []byte("key: value"), 0o644))
+	require.NoError(t, os.WriteFile(validConfig, []byte("key: value"), 0o600))
 
 	tests := []struct {
 		name          string
@@ -320,7 +320,7 @@ func TestPathNormalization(t *testing.T) {
 	t.Run("source path normalization", func(t *testing.T) {
 		// Create nested directory
 		nestedDir := filepath.Join(tempDir, "a", "b", "c")
-		require.NoError(t, os.MkdirAll(nestedDir, 0o755))
+		require.NoError(t, os.MkdirAll(nestedDir, 0o750))
 
 		// Test path with redundant separators
 		redundantPath := tempDir + string(

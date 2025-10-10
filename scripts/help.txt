@@ -15,6 +15,11 @@ Security targets:
 	security-full - Run full security analysis with all tools
 	vuln-check    - Check for dependency vulnerabilities
 
+Dependency management:
+	deps-check    - Check for available dependency updates
+	deps-update   - Update all dependencies to latest versions
+	deps-tidy     - Clean up and verify dependencies
+
 Benchmark targets:
 	build-benchmark        - Build the benchmark binary
 	benchmark              - Run all benchmarks

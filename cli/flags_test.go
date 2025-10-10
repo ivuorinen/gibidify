@@ -309,14 +309,15 @@ func TestSetDefaultDestination(t *testing.T) {
 				assert.Contains(t, err.Error(), tt.expectedError)
 			} else {
 				assert.NoError(t, err)
-				if tt.expectedDest != "" {
+				switch {
+				case tt.expectedDest != "":
 					assert.Equal(t, tt.expectedDest, tt.flags.Destination)
-				} else if tt.flags.Format == "json" {
+				case tt.flags.Format == "json":
 					assert.True(
 						t, strings.HasSuffix(tt.flags.Destination, ".json"),
 						"expected %q to have suffix .json", tt.flags.Destination,
 					)
-				} else if tt.flags.Format == "markdown" {
+				case tt.flags.Format == "markdown":
 					assert.True(
 						t, strings.HasSuffix(tt.flags.Destination, ".markdown"),
 						"expected %q to have suffix .markdown", tt.flags.Destination,
