@@ -155,6 +155,6 @@ jobs:
         run: |
           repo="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
           docker buildx build --platform linux/amd64 \
-            --tag ghcr.io/${repo}/gibidify:${{ github.ref_name }} \
-            --tag ghcr.io/${repo}/gibidify:latest \
+            --tag "ghcr.io/${repo}/gibidify:${{ github.ref_name }}" \
+            --tag "ghcr.io/${repo}/gibidify:latest" \
             --push .
