@@ -15,6 +15,9 @@ PRINT_ALPACA: false # Print Alpaca logo in console
 SARIF_REPORTER: true # Generate SARIF report
 SHOW_SKIPPED_LINTERS: false # Show skipped linters in MegaLinter log
 
+GO_REVIVE_CLI_LINT_MODE: project
+
 DISABLE_LINTERS:
   - REPOSITORY_DEVSKIM
   - REPOSITORY_TRIVY
+  - GO_GOLANGCI_LINT

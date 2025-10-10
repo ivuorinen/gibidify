@@ -32,15 +32,15 @@ go build -o gibidify .
 
 ```bash
 ./gibidify \
-  -source <source_directory> \
-  -destination <output_file> \
-  -format markdown|json|yaml \
-  -concurrency <num_workers> \
-  --prefix="..." \
-  --suffix="..." \
-  --no-colors \
-  --no-progress \
-  --verbose
+	-source <source_directory> \
+	-destination <output_file> \
+	-format markdown|json|yaml \
+	-concurrency <num_workers> \
+	--prefix="..." \
+	--suffix="..." \
+	--no-colors \
+	--no-progress \
+	--verbose
 ```
 
 Flags:

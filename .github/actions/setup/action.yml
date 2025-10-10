@@ -1,0 +1,15 @@
+name: "Setup Go with Runner Hardening"
+description: "Reusable action to set up Go"
+inputs:
+  token:
+    description: "GitHub token for checkout (optional)"
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+      with:
+        go-version-file: "go.mod"
+        cache: true

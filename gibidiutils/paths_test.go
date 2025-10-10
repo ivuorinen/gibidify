@@ -1,4 +1,5 @@
-package utils
+// Package gibidiutils provides common utility functions for gibidify.
+package gibidiutils
 
 import (
 	"os"
@@ -138,7 +139,7 @@ func TestGetAbsolutePathSpecialCases(t *testing.T) {
 				target := filepath.Join(tmpDir, "target")
 				link := filepath.Join(tmpDir, "link")
 
-				if err := os.Mkdir(target, 0o755); err != nil {
+				if err := os.Mkdir(target, 0o750); err != nil {
 					t.Fatalf("Failed to create target directory: %v", err)
 				}
 				if err := os.Symlink(target, link); err != nil {
@@ -189,7 +190,10 @@ func TestGetAbsolutePathSpecialCases(t *testing.T) {
 	}
 }
 
-func TestGetAbsolutePathConcurrency(t *testing.T) {
+// TestGetAbsolutePathConcurrency verifies that GetAbsolutePath is safe for concurrent use.
+// The test intentionally does not use assertions - it will panic if there's a race condition.
+// Run with -race flag to detect concurrent access issues.
+func TestGetAbsolutePathConcurrency(_ *testing.T) {
 	// Test that GetAbsolutePath is safe for concurrent use
 	paths := []string{".", "..", "test.go", "subdir/file.txt", "/tmp/test"}
 	done := make(chan bool)
@@ -224,11 +228,9 @@ func TestGetAbsolutePathErrorFormatting(t *testing.T) {
 		if !strings.Contains(err.Error(), path) {
 			t.Errorf("Error message should contain original path: %v", err)
 		}
-	} else {
+	} else if !filepath.IsAbs(got) {
 		// Normal case - just verify we got a valid absolute path
-		if !filepath.IsAbs(got) {
-			t.Errorf("Expected absolute path, got: %v", got)
-		}
+		t.Errorf("Expected absolute path, got: %v", got)
 	}
 }
 

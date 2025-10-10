@@ -1,0 +1,14 @@
+{
+  "Exclude": [".git", "vendor", "node_modules", "README\\.md"],
+  "AllowedContentTypes": [],
+  "PassedFiles": [],
+  "Disable": {
+    "IndentSize": false,
+    "EndOfLine": false,
+    "InsertFinalNewline": false,
+    "TrimTrailingWhitespace": false,
+    "MaxLineLength": false
+  },
+  "SpacesAfterTabs": false,
+  "NoColor": false
+}

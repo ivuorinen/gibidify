@@ -5,7 +5,7 @@ import (
 	"runtime"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // Flags holds CLI flags values.
@@ -39,8 +39,10 @@ func ParseFlags() (*Flags, error) {
 	flag.StringVar(&flags.Prefix, "prefix", "", "Text to add at the beginning of the output file")
 	flag.StringVar(&flags.Suffix, "suffix", "", "Text to add at the end of the output file")
 	flag.StringVar(&flags.Format, "format", "markdown", "Output format (json, markdown, yaml)")
-	flag.IntVar(&flags.Concurrency, "concurrency", runtime.NumCPU(),
-		"Number of concurrent workers (default: number of CPU cores)")
+	flag.IntVar(
+		&flags.Concurrency, "concurrency", runtime.NumCPU(),
+		"Number of concurrent workers (default: number of CPU cores)",
+	)
 	flag.BoolVar(&flags.NoColors, "no-colors", false, "Disable colored output")
 	flag.BoolVar(&flags.NoProgress, "no-progress", false, "Disable progress bars")
 	flag.BoolVar(&flags.Verbose, "verbose", false, "Enable verbose output")
@@ -63,11 +65,11 @@ func ParseFlags() (*Flags, error) {
 // validate validates the CLI flags.
 func (f *Flags) validate() error {
 	if f.SourceDir == "" {
-		return NewCLIMissingSourceError()
+		return NewMissingSourceError()
 	}
 
 	// Validate source path for security
-	if err := utils.ValidateSourcePath(f.SourceDir); err != nil {
+	if err := gibidiutils.ValidateSourcePath(f.SourceDir); err != nil {
 		return err
 	}
 
@@ -77,28 +79,20 @@ func (f *Flags) validate() error {
 	}
 
 	// Validate concurrency
-	if err := config.ValidateConcurrency(f.Concurrency); err != nil {
-		return err
-	}
-
-	return nil
+	return config.ValidateConcurrency(f.Concurrency)
 }
 
 // setDefaultDestination sets the default destination if not provided.
 func (f *Flags) setDefaultDestination() error {
 	if f.Destination == "" {
-		absRoot, err := utils.GetAbsolutePath(f.SourceDir)
+		absRoot, err := gibidiutils.GetAbsolutePath(f.SourceDir)
 		if err != nil {
 			return err
 		}
-		baseName := utils.GetBaseName(absRoot)
+		baseName := gibidiutils.GetBaseName(absRoot)
 		f.Destination = baseName + "." + f.Format
 	}
 
 	// Validate destination path for security
-	if err := utils.ValidateDestinationPath(f.Destination); err != nil {
-		return err
-	}
-
-	return nil
+	return gibidiutils.ValidateDestinationPath(f.Destination)
 }

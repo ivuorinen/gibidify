@@ -1,12 +1,13 @@
 package fileproc
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/spf13/viper"
 
+	"github.com/ivuorinen/gibidify/gibidiutils"
 	"github.com/ivuorinen/gibidify/testutil"
-	"github.com/ivuorinen/gibidify/utils"
 )
 
 func TestResourceMonitor_FileCountLimit(t *testing.T) {
@@ -40,11 +41,12 @@ func TestResourceMonitor_FileCountLimit(t *testing.T) {
 	}
 
 	// Verify it's the correct error type
-	structErr, ok := err.(*utils.StructuredError)
+	var structErr *gibidiutils.StructuredError
+	ok := errors.As(err, &structErr)
 	if !ok {
 		t.Errorf("Expected StructuredError, got %T", err)
-	} else if structErr.Code != utils.CodeResourceLimitFiles {
-		t.Errorf("Expected error code %s, got %s", utils.CodeResourceLimitFiles, structErr.Code)
+	} else if structErr.Code != gibidiutils.CodeResourceLimitFiles {
+		t.Errorf("Expected error code %s, got %s", gibidiutils.CodeResourceLimitFiles, structErr.Code)
 	}
 }
 
@@ -79,10 +81,11 @@ func TestResourceMonitor_TotalSizeLimit(t *testing.T) {
 	}
 
 	// Verify it's the correct error type
-	structErr, ok := err.(*utils.StructuredError)
+	var structErr *gibidiutils.StructuredError
+	ok := errors.As(err, &structErr)
 	if !ok {
 		t.Errorf("Expected StructuredError, got %T", err)
-	} else if structErr.Code != utils.CodeResourceLimitTotalSize {
-		t.Errorf("Expected error code %s, got %s", utils.CodeResourceLimitTotalSize, structErr.Code)
+	} else if structErr.Code != gibidiutils.CodeResourceLimitTotalSize {
+		t.Errorf("Expected error code %s, got %s", gibidiutils.CodeResourceLimitTotalSize, structErr.Code)
 	}
 }

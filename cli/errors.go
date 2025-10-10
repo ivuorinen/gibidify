@@ -1,3 +1,4 @@
+// Package cli provides command-line interface utilities for gibidify.
 package cli
 
 import (
@@ -6,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // ErrorFormatter handles CLI-friendly error formatting with suggestions.
@@ -19,6 +20,11 @@ func NewErrorFormatter(ui *UIManager) *ErrorFormatter {
 	return &ErrorFormatter{ui: ui}
 }
 
+// Suggestion messages for error formatting.
+const (
+	suggestionCheckPermissions = "  %s Check file/directory permissions\n"
+)
+
 // FormatError formats an error with context and suggestions.
 func (ef *ErrorFormatter) FormatError(err error) {
 	if err == nil {
@@ -26,7 +32,8 @@ func (ef *ErrorFormatter) FormatError(err error) {
 	}
 
 	// Handle structured errors
-	if structErr, ok := err.(*utils.StructuredError); ok {
+	var structErr *gibidiutils.StructuredError
+	if errors.As(err, &structErr) {
 		ef.formatStructuredError(structErr)
 		return
 	}
@@ -36,12 +43,12 @@ func (ef *ErrorFormatter) FormatError(err error) {
 }
 
 // formatStructuredError formats a structured error with context and suggestions.
-func (ef *ErrorFormatter) formatStructuredError(err *utils.StructuredError) {
+func (ef *ErrorFormatter) formatStructuredError(err *gibidiutils.StructuredError) {
 	// Print main error
 	ef.ui.PrintError("Error: %s", err.Message)
 
 	// Print error type and code
-	if err.Type != utils.ErrorTypeUnknown || err.Code != "" {
+	if err.Type != gibidiutils.ErrorTypeUnknown || err.Code != "" {
 		ef.ui.PrintInfo("Type: %s, Code: %s", err.Type.String(), err.Code)
 	}
 
@@ -69,15 +76,15 @@ func (ef *ErrorFormatter) formatGenericError(err error) {
 }
 
 // provideSuggestions provides helpful suggestions based on the error.
-func (ef *ErrorFormatter) provideSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideSuggestions(err *gibidiutils.StructuredError) {
 	switch err.Type {
-	case utils.ErrorTypeFileSystem:
+	case gibidiutils.ErrorTypeFileSystem:
 		ef.provideFileSystemSuggestions(err)
-	case utils.ErrorTypeValidation:
+	case gibidiutils.ErrorTypeValidation:
 		ef.provideValidationSuggestions(err)
-	case utils.ErrorTypeProcessing:
+	case gibidiutils.ErrorTypeProcessing:
 		ef.provideProcessingSuggestions(err)
-	case utils.ErrorTypeIO:
+	case gibidiutils.ErrorTypeIO:
 		ef.provideIOSuggestions(err)
 	default:
 		ef.provideDefaultSuggestions()
@@ -85,17 +92,17 @@ func (ef *ErrorFormatter) provideSuggestions(err *utils.StructuredError) {
 }
 
 // provideFileSystemSuggestions provides suggestions for file system errors.
-func (ef *ErrorFormatter) provideFileSystemSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideFileSystemSuggestions(err *gibidiutils.StructuredError) {
 	filePath := err.FilePath
 
 	ef.ui.PrintWarning("Suggestions:")
 
 	switch err.Code {
-	case utils.CodeFSAccess:
+	case gibidiutils.CodeFSAccess:
 		ef.suggestFileAccess(filePath)
-	case utils.CodeFSPathResolution:
+	case gibidiutils.CodeFSPathResolution:
 		ef.suggestPathResolution(filePath)
-	case utils.CodeFSNotFound:
+	case gibidiutils.CodeFSNotFound:
 		ef.suggestFileNotFound(filePath)
 	default:
 		ef.suggestFileSystemGeneral(filePath)
@@ -103,91 +110,91 @@ func (ef *ErrorFormatter) provideFileSystemSuggestions(err *utils.StructuredErro
 }
 
 // provideValidationSuggestions provides suggestions for validation errors.
-func (ef *ErrorFormatter) provideValidationSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideValidationSuggestions(err *gibidiutils.StructuredError) {
 	ef.ui.PrintWarning("Suggestions:")
 
 	switch err.Code {
-	case utils.CodeValidationFormat:
-		ef.ui.printf("  • Use a supported format: markdown, json, yaml\n")
-		ef.ui.printf("  • Example: -format markdown\n")
-	case utils.CodeValidationSize:
-		ef.ui.printf("  • Increase file size limit in config.yaml\n")
-		ef.ui.printf("  • Use smaller files or exclude large files\n")
+	case gibidiutils.CodeValidationFormat:
+		ef.ui.printf("  %s Use a supported format: markdown, json, yaml\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Example: -format markdown\n", gibidiutils.IconBullet)
+	case gibidiutils.CodeValidationSize:
+		ef.ui.printf("  %s Increase file size limit in config.yaml\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Use smaller files or exclude large files\n", gibidiutils.IconBullet)
 	default:
-		ef.ui.printf("  • Check your command line arguments\n")
-		ef.ui.printf("  • Run with --help for usage information\n")
+		ef.ui.printf("  %s Check your command line arguments\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Run with --help for usage information\n", gibidiutils.IconBullet)
 	}
 }
 
 // provideProcessingSuggestions provides suggestions for processing errors.
-func (ef *ErrorFormatter) provideProcessingSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideProcessingSuggestions(err *gibidiutils.StructuredError) {
 	ef.ui.PrintWarning("Suggestions:")
 
 	switch err.Code {
-	case utils.CodeProcessingCollection:
-		ef.ui.printf("  • Check if the source directory exists and is readable\n")
-		ef.ui.printf("  • Verify directory permissions\n")
-	case utils.CodeProcessingFileRead:
-		ef.ui.printf("  • Check file permissions\n")
-		ef.ui.printf("  • Verify the file is not corrupted\n")
+	case gibidiutils.CodeProcessingCollection:
+		ef.ui.printf("  %s Check if the source directory exists and is readable\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify directory permissions\n", gibidiutils.IconBullet)
+	case gibidiutils.CodeProcessingFileRead:
+		ef.ui.printf("  %s Check file permissions\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify the file is not corrupted\n", gibidiutils.IconBullet)
 	default:
-		ef.ui.printf("  • Try reducing concurrency: -concurrency 1\n")
-		ef.ui.printf("  • Check available system resources\n")
+		ef.ui.printf("  %s Try reducing concurrency: -concurrency 1\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Check available system resources\n", gibidiutils.IconBullet)
 	}
 }
 
 // provideIOSuggestions provides suggestions for I/O errors.
-func (ef *ErrorFormatter) provideIOSuggestions(err *utils.StructuredError) {
+func (ef *ErrorFormatter) provideIOSuggestions(err *gibidiutils.StructuredError) {
 	ef.ui.PrintWarning("Suggestions:")
 
 	switch err.Code {
-	case utils.CodeIOFileCreate:
-		ef.ui.printf("  • Check if the destination directory exists\n")
-		ef.ui.printf("  • Verify write permissions for the output file\n")
-		ef.ui.printf("  • Ensure sufficient disk space\n")
-	case utils.CodeIOWrite:
-		ef.ui.printf("  • Check available disk space\n")
-		ef.ui.printf("  • Verify write permissions\n")
+	case gibidiutils.CodeIOFileCreate:
+		ef.ui.printf("  %s Check if the destination directory exists\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify write permissions for the output file\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Ensure sufficient disk space\n", gibidiutils.IconBullet)
+	case gibidiutils.CodeIOWrite:
+		ef.ui.printf("  %s Check available disk space\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify write permissions\n", gibidiutils.IconBullet)
 	default:
-		ef.ui.printf("  • Check file/directory permissions\n")
-		ef.ui.printf("  • Verify available disk space\n")
+		ef.ui.printf(suggestionCheckPermissions, gibidiutils.IconBullet)
+		ef.ui.printf("  %s Verify available disk space\n", gibidiutils.IconBullet)
 	}
 }
 
 // Helper methods for specific suggestions
 func (ef *ErrorFormatter) suggestFileAccess(filePath string) {
-	ef.ui.printf("  • Check if the path exists: %s\n", filePath)
-	ef.ui.printf("  • Verify read permissions\n")
+	ef.ui.printf("  %s Check if the path exists: %s\n", gibidiutils.IconBullet, filePath)
+	ef.ui.printf("  %s Verify read permissions\n", gibidiutils.IconBullet)
 	if filePath != "" {
 		if stat, err := os.Stat(filePath); err == nil {
-			ef.ui.printf("  • Path exists but may not be accessible\n")
-			ef.ui.printf("  • Mode: %s\n", stat.Mode())
+			ef.ui.printf("  %s Path exists but may not be accessible\n", gibidiutils.IconBullet)
+			ef.ui.printf("  %s Mode: %s\n", gibidiutils.IconBullet, stat.Mode())
 		}
 	}
 }
 
 func (ef *ErrorFormatter) suggestPathResolution(filePath string) {
-	ef.ui.printf("  • Use an absolute path instead of relative\n")
+	ef.ui.printf("  %s Use an absolute path instead of relative\n", gibidiutils.IconBullet)
 	if filePath != "" {
 		if abs, err := filepath.Abs(filePath); err == nil {
-			ef.ui.printf("  • Try: %s\n", abs)
+			ef.ui.printf("  %s Try: %s\n", gibidiutils.IconBullet, abs)
 		}
 	}
 }
 
 func (ef *ErrorFormatter) suggestFileNotFound(filePath string) {
-	ef.ui.printf("  • Check if the file/directory exists: %s\n", filePath)
+	ef.ui.printf("  %s Check if the file/directory exists: %s\n", gibidiutils.IconBullet, filePath)
 	if filePath != "" {
 		dir := filepath.Dir(filePath)
 		if entries, err := os.ReadDir(dir); err == nil {
-			ef.ui.printf("  • Similar files in %s:\n", dir)
+			ef.ui.printf("  %s Similar files in %s:\n", gibidiutils.IconBullet, dir)
 			count := 0
 			for _, entry := range entries {
 				if count >= 3 {
 					break
 				}
 				if strings.Contains(entry.Name(), filepath.Base(filePath)) {
-					ef.ui.printf("    - %s\n", entry.Name())
+					ef.ui.printf("    %s %s\n", gibidiutils.IconBullet, entry.Name())
 					count++
 				}
 			}
@@ -196,18 +203,18 @@ func (ef *ErrorFormatter) suggestFileNotFound(filePath string) {
 }
 
 func (ef *ErrorFormatter) suggestFileSystemGeneral(filePath string) {
-	ef.ui.printf("  • Check file/directory permissions\n")
-	ef.ui.printf("  • Verify the path is correct\n")
+	ef.ui.printf(suggestionCheckPermissions, gibidiutils.IconBullet)
+	ef.ui.printf("  %s Verify the path is correct\n", gibidiutils.IconBullet)
 	if filePath != "" {
-		ef.ui.printf("  • Path: %s\n", filePath)
+		ef.ui.printf("  %s Path: %s\n", gibidiutils.IconBullet, filePath)
 	}
 }
 
 // provideDefaultSuggestions provides general suggestions.
 func (ef *ErrorFormatter) provideDefaultSuggestions() {
-	ef.ui.printf("  • Check your command line arguments\n")
-	ef.ui.printf("  • Run with --help for usage information\n")
-	ef.ui.printf("  • Try with -concurrency 1 to reduce resource usage\n")
+	ef.ui.printf("  %s Check your command line arguments\n", gibidiutils.IconBullet)
+	ef.ui.printf("  %s Run with --help for usage information\n", gibidiutils.IconBullet)
+	ef.ui.printf("  %s Try with -concurrency 1 to reduce resource usage\n", gibidiutils.IconBullet)
 }
 
 // provideGenericSuggestions provides suggestions for generic errors.
@@ -219,14 +226,14 @@ func (ef *ErrorFormatter) provideGenericSuggestions(err error) {
 	// Pattern matching for common errors
 	switch {
 	case strings.Contains(errorMsg, "permission denied"):
-		ef.ui.printf("  • Check file/directory permissions\n")
-		ef.ui.printf("  • Try running with appropriate privileges\n")
+		ef.ui.printf(suggestionCheckPermissions, gibidiutils.IconBullet)
+		ef.ui.printf("  %s Try running with appropriate privileges\n", gibidiutils.IconBullet)
 	case strings.Contains(errorMsg, "no such file or directory"):
-		ef.ui.printf("  • Verify the file/directory path is correct\n")
-		ef.ui.printf("  • Check if the file exists\n")
+		ef.ui.printf("  %s Verify the file/directory path is correct\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Check if the file exists\n", gibidiutils.IconBullet)
 	case strings.Contains(errorMsg, "flag") && strings.Contains(errorMsg, "redefined"):
-		ef.ui.printf("  • This is likely a test environment issue\n")
-		ef.ui.printf("  • Try running the command directly instead of in tests\n")
+		ef.ui.printf("  %s This is likely a test environment issue\n", gibidiutils.IconBullet)
+		ef.ui.printf("  %s Try running the command directly instead of in tests\n", gibidiutils.IconBullet)
 	default:
 		ef.provideDefaultSuggestions()
 	}
@@ -234,16 +241,16 @@ func (ef *ErrorFormatter) provideGenericSuggestions(err error) {
 
 // CLI-specific error types
 
-// CLIMissingSourceError represents a missing source directory error.
-type CLIMissingSourceError struct{}
+// MissingSourceError represents a missing source directory error.
+type MissingSourceError struct{}
 
-func (e CLIMissingSourceError) Error() string {
+func (e MissingSourceError) Error() string {
 	return "source directory is required"
 }
 
-// NewCLIMissingSourceError creates a new CLI missing source error with suggestions.
-func NewCLIMissingSourceError() error {
-	return &CLIMissingSourceError{}
+// NewMissingSourceError creates a new CLI missing source error with suggestions.
+func NewMissingSourceError() error {
+	return &MissingSourceError{}
 }
 
 // IsUserError checks if an error is a user input error that should be handled gracefully.
@@ -253,16 +260,17 @@ func IsUserError(err error) bool {
 	}
 
 	// Check for specific user error types
-	var cliErr *CLIMissingSourceError
+	var cliErr *MissingSourceError
 	if errors.As(err, &cliErr) {
 		return true
 	}
 
 	// Check for structured errors that are user-facing
-	if structErr, ok := err.(*utils.StructuredError); ok {
-		return structErr.Type == utils.ErrorTypeValidation ||
-			structErr.Code == utils.CodeValidationFormat ||
-			structErr.Code == utils.CodeValidationSize
+	var structErr *gibidiutils.StructuredError
+	if errors.As(err, &structErr) {
+		return structErr.Type == gibidiutils.ErrorTypeValidation ||
+			structErr.Code == gibidiutils.CodeValidationFormat ||
+			structErr.Code == gibidiutils.CodeValidationSize
 	}
 
 	// Check error message patterns

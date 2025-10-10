@@ -31,10 +31,10 @@ func TestVerifyContentContains(t *testing.T) {
 			}
 		}()
 
-		// This would normally fail but we're just checking it doesn't panic
+		// This would normally fail, but we're just checking it doesn't panic
 		content := "test"
 		expected := []string{"not found"}
-		// Create a sub-test that we expect to fail
+		// Create a subtest that we expect to fail
 		t.Run("expected_failure", func(t *testing.T) {
 			t.Skip("Skipping actual failure test")
 			VerifyContentContains(t, content, expected)
@@ -59,7 +59,7 @@ func TestMustSucceed(t *testing.T) {
 			}
 		}()
 
-		// Create a sub-test that we expect to fail
+		// Create a subtest that we expect to fail
 		t.Run("expected_failure", func(t *testing.T) {
 			t.Skip("Skipping actual failure test")
 			MustSucceed(t, errors.New("test error"), "failed operation")

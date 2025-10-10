@@ -38,24 +38,24 @@ backpressure:
 # Resource limits for DoS protection and security
 resourceLimits:
   enabled: true
-  
+
   # File processing limits
   maxFiles: 10000                    # Maximum number of files to process
   maxTotalSize: 1073741824          # Maximum total size (1GB)
-  
+
   # Timeout limits (in seconds)
   fileProcessingTimeoutSec: 30       # Timeout for individual file processing
   overallTimeoutSec: 3600           # Overall processing timeout (1 hour)
-  
+
   # Concurrency limits
   maxConcurrentReads: 10            # Maximum concurrent file reading operations
-  
+
   # Rate limiting (0 = disabled)
   rateLimitFilesPerSec: 0           # Files per second rate limit
-  
+
   # Memory limits
   hardMemoryLimitMB: 512            # Hard memory limit (512MB)
-  
+
   # Safety features
   enableGracefulDegradation: true   # Enable graceful degradation on resource pressure
   enableResourceMonitoring: true    # Enable detailed resource monitoring

@@ -68,7 +68,11 @@ func runWriterTest(t *testing.T, format string) []byte {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fileproc.StartWriter(outFile, writeCh, doneCh, format, "PREFIX", "SUFFIX")
+		fileproc.StartWriter(outFile, writeCh, doneCh, fileproc.WriterConfig{
+			Format: format,
+			Prefix: "PREFIX",
+			Suffix: "SUFFIX",
+		})
 	}()
 
 	// Wait until writer signals completion

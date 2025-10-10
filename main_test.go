@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
@@ -14,13 +15,22 @@ const (
 	testFileCount = 1000
 )
 
+// TestMain configures test-time flags for packages.
+func TestMain(m *testing.M) {
+	// Inform packages that we're running under tests so they can adjust noisy logging.
+	// The config package will suppress the specific info-level message about missing config
+	// while still allowing tests to enable debug/info level logging when needed.
+	config.SetRunningInTest(true)
+	os.Exit(m.Run())
+}
+
 // TestIntegrationFullCLI simulates a full run of the CLI application using adaptive concurrency.
 func TestIntegrationFullCLI(t *testing.T) {
 	srcDir := setupTestFiles(t)
 	outFilePath := setupOutputFile(t)
 	setupCLIArgs(srcDir, outFilePath)
 
-	// Run the application with a background context.
+	// Run the application with the test context.
 	ctx := t.Context()
 	if runErr := run(ctx); runErr != nil {
 		t.Fatalf("Run failed: %v", runErr)
@@ -60,7 +70,7 @@ func setupCLIArgs(srcDir, outFilePath string) {
 // verifyOutput checks that the output file contains expected content.
 func verifyOutput(t *testing.T, outFilePath string) {
 	t.Helper()
-	data, err := os.ReadFile(outFilePath)
+	data, err := os.ReadFile(outFilePath) // #nosec G304 - test file path is controlled
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}

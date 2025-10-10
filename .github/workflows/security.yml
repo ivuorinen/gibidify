@@ -7,45 +7,37 @@ on:
     branches: [main, develop]
   schedule:
     # Run security scan weekly on Sundays at 00:00 UTC
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
 
-permissions:
-  security-events: write
-  contents: read
-  actions: read
+permissions: {}
 
 jobs:
   security:
     name: Security Analysis
     runs-on: ubuntu-latest
 
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Setup Go
-        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        uses: ./.github/actions/setup
         with:
-          go-version: '1.23'
-
-      - name: Cache Go modules
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          token: ${{ github.token }}
 
       # Security Scanning with gosec
       - name: Run gosec Security Scanner
         uses: securego/gosec@15d5c61e866bc2e2e8389376a31f1e5e09bde7d8 # v2.22.9
         with:
-          args: '-fmt sarif -out gosec-results.sarif ./...'
+          args: "-fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload gosec results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@df559355d593797519d70b90fc8edd5db049e7a2 # v3
+        uses: github/codeql-action/upload-sarif@e296a935590eb16afc0c0108289f68c87e2a89a5 # v4.30.7
         if: always()
         with:
           sarif_file: gosec-results.sarif
@@ -60,24 +52,17 @@ jobs:
         run: |
           if [ -s govulncheck-results.json ]; then
             echo "::warning::Vulnerability check completed. Check govulncheck-results.json for details."
-            if grep -q '"finding"' govulncheck-results.json; then
+            if grep -i -q '"finding"' govulncheck-results.json; then
               echo "::error::Vulnerabilities found in dependencies!"
               cat govulncheck-results.json
               exit 1
             fi
           fi
 
-      # Additional Security Linting
-      - name: Run security-focused golangci-lint
-        run: |
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          golangci-lint run --enable=gosec,gocritic,bodyclose,rowserrcheck,misspell,unconvert,unparam,unused \
-            --timeout=5m
-
       # Makefile Linting
       - name: Run checkmake on Makefile
         run: |
-          go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+          go install github.com/checkmake/checkmake/cmd/checkmake@latest
           checkmake --config=.checkmake Makefile
 
       # Shell Script Formatting Check
@@ -86,27 +71,11 @@ jobs:
           go install mvdan.cc/sh/v3/cmd/shfmt@latest
           shfmt -d .
 
-      # YAML Linting
       - name: Run YAML linting
-        run: |
-          go install github.com/excilsploft/yamllint@latest
-          yamllint -c .yamllint .
-
-      # Secrets Detection (basic patterns)
-      - name: Run secrets detection
-        run: |
-          echo "Scanning for potential secrets..."
-          # Look for common secret patterns
-          git log --all --full-history -- . | grep -i -E "(password|secret|key|token|api_key)" || true
-          find . -type f -name "*.go" -exec grep -H -i -E "(password|secret|key|token|api_key)\s*[:=]" {} \; || true
-
-      # Check for hardcoded IPs and URLs
-      - name: Check for hardcoded network addresses
-        run: |
-          echo "Scanning for hardcoded network addresses..."
-          find . -type f -name "*.go" -exec grep -H -E "([0-9]{1,3}\.){3}[0-9]{1,3}" {} \; || true
-          find . -type f -name "*.go" -exec grep -H -E "https?://[^/\s]+" {} \; | \
-            grep -v "example.com|localhost|127.0.0.1" || true
+        uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c # v3.1.1
+        with:
+          file_or_dir: .
+          strict: true
 
       # Docker Security (if Dockerfile exists)
       - name: Run Docker security scan
@@ -115,24 +84,9 @@ jobs:
           docker run --rm -v "$PWD":/workspace \
             aquasec/trivy:latest fs --security-checks vuln,config /workspace/Dockerfile || true
 
-      # SAST with CodeQL (if available)
-      - name: Initialize CodeQL
-        if: github.event_name != 'schedule'
-        uses: github/codeql-action/init@df559355d593797519d70b90fc8edd5db049e7a2 # v3
-        with:
-          languages: go
-
-      - name: Autobuild
-        if: github.event_name != 'schedule'
-        uses: github/codeql-action/autobuild@df559355d593797519d70b90fc8edd5db049e7a2 # v3
-
-      - name: Perform CodeQL Analysis
-        if: github.event_name != 'schedule'
-        uses: github/codeql-action/analyze@df559355d593797519d70b90fc8edd5db049e7a2 # v3
-
       # Upload artifacts for review
       - name: Upload security scan results
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
           name: security-scan-results

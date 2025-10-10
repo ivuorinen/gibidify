@@ -7,7 +7,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // ValidateFileProcessing checks if a file can be processed based on resource limits.
@@ -21,9 +21,9 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 
 	// Check if emergency stop is active
 	if rm.emergencyStopRequested {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitMemory,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeResourceLimitMemory,
 			"processing stopped due to emergency memory condition",
 			filePath,
 			map[string]interface{}{
@@ -35,9 +35,9 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 	// Check file count limit
 	currentFiles := atomic.LoadInt64(&rm.filesProcessed)
 	if int(currentFiles) >= rm.maxFiles {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitFiles,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeResourceLimitFiles,
 			"maximum file count limit exceeded",
 			filePath,
 			map[string]interface{}{
@@ -50,9 +50,9 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 	// Check total size limit
 	currentTotalSize := atomic.LoadInt64(&rm.totalSizeProcessed)
 	if currentTotalSize+fileSize > rm.maxTotalSize {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitTotalSize,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeResourceLimitTotalSize,
 			"maximum total size limit would be exceeded",
 			filePath,
 			map[string]interface{}{
@@ -65,9 +65,9 @@ func (rm *ResourceMonitor) ValidateFileProcessing(filePath string, fileSize int6
 
 	// Check overall timeout
 	if time.Since(rm.startTime) > rm.overallTimeout {
-		return utils.NewStructuredError(
-			utils.ErrorTypeValidation,
-			utils.CodeResourceLimitTimeout,
+		return gibidiutils.NewStructuredError(
+			gibidiutils.ErrorTypeValidation,
+			gibidiutils.CodeResourceLimitTimeout,
 			"overall processing timeout exceeded",
 			filePath,
 			map[string]interface{}{
@@ -88,7 +88,7 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := int64(m.Alloc)
+	currentMemory := gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	if currentMemory > rm.hardMemoryLimitBytes {
 		rm.mu.Lock()
@@ -108,14 +108,14 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 
 			// Check again after GC
 			runtime.ReadMemStats(&m)
-			currentMemory = int64(m.Alloc)
+			currentMemory = gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 			if currentMemory > rm.hardMemoryLimitBytes {
 				// Still over limit, activate emergency stop
 				rm.emergencyStopRequested = true
-				return utils.NewStructuredError(
-					utils.ErrorTypeValidation,
-					utils.CodeResourceLimitMemory,
+				return gibidiutils.NewStructuredError(
+					gibidiutils.ErrorTypeValidation,
+					gibidiutils.CodeResourceLimitMemory,
 					"hard memory limit exceeded, emergency stop activated",
 					"",
 					map[string]interface{}{
@@ -124,16 +124,15 @@ func (rm *ResourceMonitor) CheckHardMemoryLimit() error {
 						"emergency_stop":    true,
 					},
 				)
-			} else {
-				// Memory freed by GC, continue with degradation
-				rm.degradationActive = true
-				logrus.Info("Memory freed by garbage collection, continuing with degradation mode")
 			}
+			// Memory freed by GC, continue with degradation
+			rm.degradationActive = true
+			logrus.Info("Memory freed by garbage collection, continuing with degradation mode")
 		} else {
 			// No graceful degradation, hard stop
-			return utils.NewStructuredError(
-				utils.ErrorTypeValidation,
-				utils.CodeResourceLimitMemory,
+			return gibidiutils.NewStructuredError(
+				gibidiutils.ErrorTypeValidation,
+				gibidiutils.CodeResourceLimitMemory,
 				"hard memory limit exceeded",
 				"",
 				map[string]interface{}{

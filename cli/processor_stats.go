@@ -11,8 +11,12 @@ func (p *Processor) logFinalStats() {
 	// Log back-pressure stats
 	backpressureStats := p.backpressure.GetStats()
 	if backpressureStats.Enabled {
-		logrus.Infof("Back-pressure stats: processed=%d files, memory=%dMB/%dMB",
-			backpressureStats.FilesProcessed, backpressureStats.CurrentMemoryUsage/1024/1024, backpressureStats.MaxMemoryUsage/1024/1024)
+		logrus.Infof(
+			"Back-pressure stats: processed=%d files, memory=%dMB/%dMB",
+			backpressureStats.FilesProcessed,
+			backpressureStats.CurrentMemoryUsage/1024/1024,
+			backpressureStats.MaxMemoryUsage/1024/1024,
+		)
 	}
 
 	// Log resource monitoring stats

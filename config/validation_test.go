@@ -1,13 +1,14 @@
 package config_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // TestValidateConfig tests the configuration validation functionality.
@@ -112,21 +113,19 @@ func TestValidateConfig(t *testing.T) {
 				}
 
 				// Check that it's a structured error
-				var structErr *utils.StructuredError
+				var structErr *gibidiutils.StructuredError
 				if !errorAs(err, &structErr) {
 					t.Errorf("Expected structured error, got %T", err)
 					return
 				}
-				if structErr.Type != utils.ErrorTypeConfiguration {
-					t.Errorf("Expected error type %v, got %v", utils.ErrorTypeConfiguration, structErr.Type)
+				if structErr.Type != gibidiutils.ErrorTypeConfiguration {
+					t.Errorf("Expected error type %v, got %v", gibidiutils.ErrorTypeConfiguration, structErr.Type)
 				}
-				if structErr.Code != utils.CodeConfigValidation {
-					t.Errorf("Expected error code %v, got %v", utils.CodeConfigValidation, structErr.Code)
+				if structErr.Code != gibidiutils.CodeConfigValidation {
+					t.Errorf("Expected error code %v, got %v", gibidiutils.CodeConfigValidation, structErr.Code)
 				}
-			} else {
-				if err != nil {
-					t.Errorf("Expected no error but got: %v", err)
-				}
+			} else if err != nil {
+				t.Errorf("Expected no error but got: %v", err)
 			}
 		})
 	}
@@ -235,8 +234,9 @@ func errorAs(err error, target interface{}) bool {
 	if err == nil {
 		return false
 	}
-	if structErr, ok := err.(*utils.StructuredError); ok {
-		if ptr, ok := target.(**utils.StructuredError); ok {
+	var structErr *gibidiutils.StructuredError
+	if errors.As(err, &structErr) {
+		if ptr, ok := target.(**gibidiutils.StructuredError); ok {
 			*ptr = structErr
 			return true
 		}

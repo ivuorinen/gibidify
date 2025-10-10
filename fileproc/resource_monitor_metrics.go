@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // RecordFileProcessed records that a file has been successfully processed.
@@ -55,7 +57,7 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 		ProcessingDuration:  duration,
 		AverageFileSize:     avgFileSize,
 		ProcessingRate:      processingRate,
-		MemoryUsageMB:       int64(m.Alloc) / 1024 / 1024,
+		MemoryUsageMB:       gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, 0) / 1024 / 1024,
 		MaxMemoryUsageMB:    int64(rm.hardMemoryLimitMB),
 		ViolationsDetected:  violations,
 		DegradationActive:   rm.degradationActive,
@@ -67,8 +69,13 @@ func (rm *ResourceMonitor) GetMetrics() ResourceMetrics {
 // LogResourceInfo logs current resource limit configuration.
 func (rm *ResourceMonitor) LogResourceInfo() {
 	if rm.enabled {
-		logrus.Infof("Resource limits enabled: maxFiles=%d, maxTotalSize=%dMB, fileTimeout=%ds, overallTimeout=%ds",
-			rm.maxFiles, rm.maxTotalSize/1024/1024, int(rm.fileProcessingTimeout.Seconds()), int(rm.overallTimeout.Seconds()))
+		logrus.Infof(
+			"Resource limits enabled: maxFiles=%d, maxTotalSize=%dMB, fileTimeout=%ds, overallTimeout=%ds",
+			rm.maxFiles,
+			rm.maxTotalSize/1024/1024,
+			int(rm.fileProcessingTimeout.Seconds()),
+			int(rm.overallTimeout.Seconds()),
+		)
 		logrus.Infof("Resource limits: maxConcurrentReads=%d, rateLimitFPS=%d, hardMemoryMB=%d",
 			rm.maxConcurrentReads, rm.rateLimitFilesPerSec, rm.hardMemoryLimitMB)
 		logrus.Infof("Resource features: gracefulDegradation=%v, monitoring=%v",

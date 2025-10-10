@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/ivuorinen/gibidify/fileproc"
-	"github.com/ivuorinen/gibidify/utils"
+	"github.com/ivuorinen/gibidify/gibidiutils"
 )
 
 // Process executes the main file processing workflow.
@@ -16,7 +16,9 @@ func (p *Processor) Process(ctx context.Context) error {
 	defer overallCancel()
 
 	// Configure file type registry
-	p.configureFileTypes()
+	if err := p.configureFileTypes(); err != nil {
+		return err
+	}
 
 	// Print startup info with colors
 	p.ui.PrintHeader("🚀 Starting gibidify")
@@ -55,7 +57,7 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 		return err
 	}
 	defer func() {
-		utils.LogError("Error closing output file", outFile.Close())
+		gibidiutils.LogError("Error closing output file", outFile.Close())
 	}()
 
 	// Initialize back-pressure and channels
@@ -65,7 +67,11 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 	writerDone := make(chan struct{})
 
 	// Start writer
-	go fileproc.StartWriter(outFile, writeCh, writerDone, p.flags.Format, p.flags.Prefix, p.flags.Suffix)
+	go fileproc.StartWriter(outFile, writeCh, writerDone, fileproc.WriterConfig{
+		Format: p.flags.Format,
+		Prefix: p.flags.Prefix,
+		Suffix: p.flags.Suffix,
+	})
 
 	// Start workers
 	var wg sync.WaitGroup
@@ -92,9 +98,13 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 // createOutputFile creates the output file.
 func (p *Processor) createOutputFile() (*os.File, error) {
 	// Destination path has been validated in CLI flags validation for path traversal attempts
-	outFile, err := os.Create(p.flags.Destination) // #nosec G304 - destination is validated in flags.validate()
+	// #nosec G304 - destination is validated in flags.validate()
+	outFile, err := os.Create(p.flags.Destination)
 	if err != nil {
-		return nil, utils.WrapError(err, utils.ErrorTypeIO, utils.CodeIOFileCreate, "failed to create output file").WithFilePath(p.flags.Destination)
+		return nil, gibidiutils.WrapError(
+			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileCreate,
+			"failed to create output file",
+		).WithFilePath(p.flags.Destination)
 	}
 	return outFile, nil
 }

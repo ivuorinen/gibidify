@@ -30,15 +30,18 @@ func NewProcessor(flags *Flags) *Processor {
 }
 
 // configureFileTypes configures the file type registry.
-func (p *Processor) configureFileTypes() {
+func (p *Processor) configureFileTypes() error {
 	if config.GetFileTypesEnabled() {
-		fileproc.ConfigureFromSettings(
-			config.GetCustomImageExtensions(),
-			config.GetCustomBinaryExtensions(),
-			config.GetCustomLanguages(),
-			config.GetDisabledImageExtensions(),
-			config.GetDisabledBinaryExtensions(),
-			config.GetDisabledLanguageExtensions(),
-		)
+		if err := fileproc.ConfigureFromSettings(fileproc.RegistryConfig{
+			CustomImages:      config.GetCustomImageExtensions(),
+			CustomBinary:      config.GetCustomBinaryExtensions(),
+			CustomLanguages:   config.GetCustomLanguages(),
+			DisabledImages:    config.GetDisabledImageExtensions(),
+			DisabledBinary:    config.GetDisabledBinaryExtensions(),
+			DisabledLanguages: config.GetDisabledLanguageExtensions(),
+		}); err != nil {
+			return err
+		}
 	}
+	return nil
 }

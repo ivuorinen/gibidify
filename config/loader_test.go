@@ -79,15 +79,15 @@ func TestLoadConfigWithValidation(t *testing.T) {
 	configContent := `
 fileSizeLimit: 100
 ignoreDirectories:
-  - node_modules
-  - ""
-  - .git
+	- node_modules
+	- ""
+	- .git
 `
 
 	tempDir := t.TempDir()
 	configFile := tempDir + "/config.yaml"
 
-	err := os.WriteFile(configFile, []byte(configContent), 0o644)
+	err := os.WriteFile(configFile, []byte(configContent), 0o600)
 	if err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
@@ -104,7 +104,10 @@ ignoreDirectories:
 		t.Errorf("Expected default file size limit after validation failure, got %d", config.GetFileSizeLimit())
 	}
 	if containsString(config.GetIgnoredDirectories(), "") {
-		t.Errorf("Expected ignored directories not to contain empty string after validation failure, got %v", config.GetIgnoredDirectories())
+		t.Errorf(
+			"Expected ignored directories not to contain empty string after validation failure, got %v",
+			config.GetIgnoredDirectories(),
+		)
 	}
 }
 

@@ -12,3 +12,8 @@ megalinter-reports/*
 coverage.*
 *.out
 gibidify-benchmark
+gosec-report.json
+gosec-results.sarif
+govulncheck-report.json
+govulncheck-errors.log
+security-report.md

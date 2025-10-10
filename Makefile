@@ -1,4 +1,8 @@
-.PHONY: help install-tools lint lint-fix lint-verbose test coverage build clean all build-benchmark benchmark benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check check-all dev-setup
+.PHONY: all clean test test-coverage build coverage help lint lint-fix \
+	lint-verbose install-tools benchmark benchmark-collection \
+	benchmark-concurrency benchmark-format benchmark-processing \
+	build-benchmark check-all ci-lint ci-test dev-setup security \
+	security-full vuln-check deps-update deps-check deps-tidy
 
 # Default target shows help
 .DEFAULT_GOAL := help
@@ -6,7 +10,7 @@
 # All target runs full workflow
 all: lint test build
 
-# Help target  
+# Help target
 help:
 	@cat scripts/help.txt
 
@@ -16,6 +20,8 @@ install-tools:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 	@echo "Installing gofumpt..."
 	@go install mvdan.cc/gofumpt@latest
+	@echo "Installing golines..."
+	@go install github.com/segmentio/golines@latest
 	@echo "Installing goimports..."
 	@go install golang.org/x/tools/cmd/goimports@latest
 	@echo "Installing staticcheck..."
@@ -24,12 +30,19 @@ install-tools:
 	@go install github.com/securego/gosec/v2/cmd/gosec@latest
 	@echo "Installing gocyclo..."
 	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
+	@echo "Installing revive..."
+	@go install github.com/mgechev/revive@latest
 	@echo "Installing checkmake..."
-	@go install github.com/mrtazz/checkmake/cmd/checkmake@latest
+	@go install github.com/checkmake/checkmake/cmd/checkmake@latest
+	@echo "Installing shellcheck..."
+	@go install github.com/koalaman/shellcheck/cmd/shellcheck@latest
 	@echo "Installing shfmt..."
 	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
 	@echo "Installing yamllint (Go-based)..."
 	@go install github.com/excilsploft/yamllint@latest
+	@echo "Installing editorconfig-checker..."
+	@go install github.com/editorconfig-checker/editorconfig-checker/\
+		cmd/editorconfig-checker@latest
 	@echo "All tools installed successfully!"
 
 # Run linters
@@ -40,6 +53,8 @@ lint:
 lint-fix:
 	@echo "Running gofumpt..."
 	@gofumpt -l -w .
+	@echo "Running golines..."
+	@golines -w -m 120 --base-formatter="gofumpt" --shorten-comments .
 	@echo "Running goimports..."
 	@goimports -w -local github.com/ivuorinen/gibidify .
 	@echo "Running go fmt..."
@@ -47,31 +62,45 @@ lint-fix:
 	@echo "Running go mod tidy..."
 	@go mod tidy
 	@echo "Running shfmt formatting..."
-	@shfmt -w -i 2 -ci .
+	@shfmt -w -i 0 -ci .
 	@echo "Running golangci-lint with --fix..."
 	@golangci-lint run --fix ./...
 	@echo "Auto-fix completed. Running final lint check..."
 	@golangci-lint run ./...
+	@echo "Running revive..."
+	@revive -config revive.toml -formatter friendly ./...
 	@echo "Running checkmake..."
 	@checkmake --config=.checkmake Makefile
 	@echo "Running yamllint..."
-	@yamllint -c .yamllint .
+	@yamllint .
 
 # Run linters with verbose output
 lint-verbose:
 	@echo "Running golangci-lint (verbose)..."
 	@golangci-lint run -v ./...
 	@echo "Running checkmake (verbose)..."
-	@checkmake --config=.checkmake --format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
+	@checkmake --config=.checkmake \
+		--format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
 	@echo "Running shfmt check (verbose)..."
 	@shfmt -d .
 	@echo "Running yamllint (verbose)..."
-	@yamllint -c .yamllint -f parsable .
+	@yamllint .
 
 # Run tests
 test:
 	@echo "Running tests..."
 	@go test -race -v ./...
+
+# Run tests with coverage output
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -race -v -coverprofile=coverage.out -covermode=atomic ./...
+	@echo ""
+	@echo "Coverage summary:"
+	@go tool cover -func=coverage.out | grep total:
+	@echo ""
+	@echo "Full coverage report saved to: coverage.out"
+	@echo "To view HTML report, run: make coverage"
 
 # Run tests with coverage
 coverage:
@@ -94,8 +123,6 @@ clean:
 	@echo "Clean complete"
 
 # CI-specific targets
-.PHONY: ci-lint ci-test
-
 ci-lint:
 	@golangci-lint run --out-format=github-actions ./...
 
@@ -138,10 +165,34 @@ security:
 security-full:
 	@echo "Running full security analysis..."
 	@./scripts/security-scan.sh
-	@echo "Running additional security checks..."
-	@golangci-lint run --enable-all --disable=depguard,exhaustruct,ireturn,varnamelen,wrapcheck --timeout=10m
 
 vuln-check:
 	@echo "Checking for dependency vulnerabilities..."
 	@go install golang.org/x/vuln/cmd/govulncheck@latest
 	@govulncheck ./...
+
+# Dependency management targets
+deps-check:
+	@echo "Checking for available dependency updates..."
+	@echo ""
+	@echo "Direct dependencies:"
+	@go list -u -m all | grep -v "indirect" | column -t
+	@echo ""
+	@echo "Note: Run 'make deps-update' to update all dependencies"
+
+deps-update:
+	@echo "Updating all dependencies to latest versions..."
+	@go get -u ./...
+	@go mod tidy
+	@echo ""
+	@echo "Dependencies updated successfully!"
+	@echo "Running tests to verify compatibility..."
+	@go test ./...
+	@echo ""
+	@echo "Update complete. Run 'make lint-fix && make test' to verify."
+
+deps-tidy:
+	@echo "Cleaning up dependencies..."
+	@go mod tidy
+	@go mod verify
+	@echo "Dependencies cleaned and verified successfully!"
