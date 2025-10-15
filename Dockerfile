@@ -1,5 +1,5 @@
 # Build stage - builds the binary for the target architecture
-FROM --platform=$BUILDPLATFORM golang:1.25.2-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.3-alpine AS builder
 
 # Build arguments automatically set by buildx
 ARG TARGETOS
