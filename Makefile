@@ -16,34 +16,7 @@ help:
 
 # Install required tools
 install-tools:
-	@echo "Installing golangci-lint..."
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-	@echo "Installing gofumpt..."
-	@go install mvdan.cc/gofumpt@latest
-	@echo "Installing golines..."
-	@go install github.com/segmentio/golines@latest
-	@echo "Installing goimports..."
-	@go install golang.org/x/tools/cmd/goimports@latest
-	@echo "Installing staticcheck..."
-	@go install honnef.co/go/tools/cmd/staticcheck@latest
-	@echo "Installing gosec..."
-	@go install github.com/securego/gosec/v2/cmd/gosec@latest
-	@echo "Installing gocyclo..."
-	@go install github.com/fzipp/gocyclo/cmd/gocyclo@latest
-	@echo "Installing revive..."
-	@go install github.com/mgechev/revive@latest
-	@echo "Installing checkmake..."
-	@go install github.com/checkmake/checkmake/cmd/checkmake@latest
-	@echo "Installing shellcheck..."
-	@go install github.com/koalaman/shellcheck/cmd/shellcheck@latest
-	@echo "Installing shfmt..."
-	@go install mvdan.cc/sh/v3/cmd/shfmt@latest
-	@echo "Installing yamllint (Go-based)..."
-	@go install github.com/excilsploft/yamllint@latest
-	@echo "Installing editorconfig-checker..."
-	@go install github.com/editorconfig-checker/editorconfig-checker/\
-		cmd/editorconfig-checker@latest
-	@echo "All tools installed successfully!"
+	@./scripts/install-tools.sh
 
 # Run linters
 lint:
@@ -51,40 +24,11 @@ lint:
 
 # Run linters with auto-fix
 lint-fix:
-	@echo "Running gofumpt..."
-	@gofumpt -l -w .
-	@echo "Running golines..."
-	@golines -w -m 120 --base-formatter="gofumpt" --shorten-comments .
-	@echo "Running goimports..."
-	@goimports -w -local github.com/ivuorinen/gibidify .
-	@echo "Running go fmt..."
-	@go fmt ./...
-	@echo "Running go mod tidy..."
-	@go mod tidy
-	@echo "Running shfmt formatting..."
-	@shfmt -w -i 0 -ci .
-	@echo "Running golangci-lint with --fix..."
-	@golangci-lint run --fix ./...
-	@echo "Auto-fix completed. Running final lint check..."
-	@golangci-lint run ./...
-	@echo "Running revive..."
-	@revive -config revive.toml -formatter friendly ./...
-	@echo "Running checkmake..."
-	@checkmake --config=.checkmake Makefile
-	@echo "Running yamllint..."
-	@yamllint .
+	@./scripts/lint-fix.sh
 
 # Run linters with verbose output
 lint-verbose:
-	@echo "Running golangci-lint (verbose)..."
-	@golangci-lint run -v ./...
-	@echo "Running checkmake (verbose)..."
-	@checkmake --config=.checkmake \
-		--format="{{.Line}}:{{.Rule}}:{{.Violation}}" Makefile
-	@echo "Running shfmt check (verbose)..."
-	@shfmt -d .
-	@echo "Running yamllint (verbose)..."
-	@yamllint .
+	@./scripts/lint-verbose.sh
 
 # Run tests
 test:
@@ -93,14 +37,7 @@ test:
 
 # Run tests with coverage output
 test-coverage:
-	@echo "Running tests with coverage..."
-	@go test -race -v -coverprofile=coverage.out -covermode=atomic ./...
-	@echo ""
-	@echo "Coverage summary:"
-	@go tool cover -func=coverage.out | grep total:
-	@echo ""
-	@echo "Full coverage report saved to: coverage.out"
-	@echo "To view HTML report, run: make coverage"
+	@./scripts/test-coverage.sh
 
 # Run tests with coverage
 coverage:
@@ -173,23 +110,10 @@ vuln-check:
 
 # Dependency management targets
 deps-check:
-	@echo "Checking for available dependency updates..."
-	@echo ""
-	@echo "Direct dependencies:"
-	@go list -u -m all | grep -v "indirect" | column -t
-	@echo ""
-	@echo "Note: Run 'make deps-update' to update all dependencies"
+	@./scripts/deps-check.sh
 
 deps-update:
-	@echo "Updating all dependencies to latest versions..."
-	@go get -u ./...
-	@go mod tidy
-	@echo ""
-	@echo "Dependencies updated successfully!"
-	@echo "Running tests to verify compatibility..."
-	@go test ./...
-	@echo ""
-	@echo "Update complete. Run 'make lint-fix && make test' to verify."
+	@./scripts/deps-update.sh
 
 deps-tidy:
 	@echo "Cleaning up dependencies..."
