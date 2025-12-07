@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
 	go build -ldflags="-s -w" -o gibidify .
 
 # Runtime stage - minimal image with the binary
-FROM alpine:3.22.2
+FROM alpine:3.23.0
 
 # Install ca-certificates for HTTPS and create non-root user
 # hadolint ignore=DL3018
