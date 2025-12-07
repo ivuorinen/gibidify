@@ -108,6 +108,14 @@ func (bp *BackpressureManager) ApplyBackpressure(ctx context.Context) {
 		return
 	}
 
+	// Check for context cancellation before doing expensive operations
+	select {
+	case <-ctx.Done():
+		return
+	default:
+		// Continue with backpressure logic
+	}
+
 	// Force garbage collection to free up memory
 	runtime.GC()
 
