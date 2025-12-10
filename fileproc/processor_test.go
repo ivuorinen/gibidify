@@ -106,15 +106,15 @@ func TestProcessFile(t *testing.T) {
 	ch := make(chan fileproc.WriteRequest, 1)
 	var wg sync.WaitGroup
 	wg.Go(func() {
+		defer close(ch)
 		fileproc.ProcessFile(tmpFile.Name(), ch, "")
 	})
-	wg.Wait()
-	close(ch)
 
 	var result string
 	for req := range ch {
 		result = req.Content
 	}
+	wg.Wait()
 
 	if !strings.Contains(result, tmpFile.Name()) {
 		t.Errorf("Output does not contain file path: %s", tmpFile.Name())

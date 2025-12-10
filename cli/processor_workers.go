@@ -50,8 +50,11 @@ func (p *Processor) worker(
 
 // processFile processes a single file with resource monitoring and metrics collection.
 func (p *Processor) processFile(ctx context.Context, filePath string, writeCh chan fileproc.WriteRequest) {
-	// Create file processing context with timeout
-	fileCtx, fileCancel := p.resourceMonitor.CreateFileProcessingContext(ctx)
+	// Create file processing context with timeout (resourceMonitor may be nil)
+	fileCtx, fileCancel := ctx, func() {}
+	if p.resourceMonitor != nil {
+		fileCtx, fileCancel = p.resourceMonitor.CreateFileProcessingContext(ctx)
+	}
 	defer fileCancel()
 
 	// Track concurrency
@@ -68,6 +71,10 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 		// Record skipped file
 		p.recordFileResult(filePath, 0, "", false, true, "emergency stop active", nil)
 
+		if p.ui != nil {
+			p.ui.UpdateProgress(1)
+		}
+
 		return
 	}
 
@@ -77,6 +84,10 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 
 		// Record error
 		p.recordFileResult(filePath, 0, "", false, false, "", err)
+
+		if p.ui != nil {
+			p.ui.UpdateProgress(1)
+		}
 
 		return
 	}
