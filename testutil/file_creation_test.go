@@ -5,10 +5,31 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 func TestCreateTestFile(t *testing.T) {
-	tests := []struct {
+	tests := createTestFileTestCases()
+
+	for _, tt := range tests {
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runCreateTestFileTest(t, tt.dir, tt.filename, tt.content)
+			},
+		)
+	}
+}
+
+// createTestFileTestCases creates test cases for TestCreateTestFile.
+func createTestFileTestCases() []struct {
+	name     string
+	dir      string
+	filename string
+	content  []byte
+	wantErr  bool
+} {
+	return []struct {
 		name     string
 		dir      string
 		filename string
@@ -42,55 +63,88 @@ func TestCreateTestFile(t *testing.T) {
 		{
 			name:     "create file with special characters",
 			filename: "special-file_123.go",
-			content:  []byte("package main"),
+			content:  []byte(shared.LiteralPackageMain),
 			wantErr:  false,
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Use a temporary directory for each test
-			tempDir := t.TempDir()
-			if tt.dir == "" {
-				tt.dir = tempDir
-			}
+// runCreateTestFileTest runs a single test case for CreateTestFile.
+func runCreateTestFileTest(t *testing.T, dir, filename string, content []byte) {
+	t.Helper()
 
-			// Create subdirectory if needed
-			if strings.Contains(tt.filename, "/") {
-				subdir := filepath.Join(tt.dir, filepath.Dir(tt.filename))
-				if err := os.MkdirAll(subdir, DirPermission); err != nil {
-					t.Fatalf("Failed to create subdirectory: %v", err)
-				}
-			}
+	tempDir := t.TempDir()
+	if dir == "" {
+		dir = tempDir
+	}
 
-			// Test CreateTestFile
-			filePath := CreateTestFile(t, tt.dir, tt.filename, tt.content)
+	createSubdirectoryIfNeeded(t, dir, filename)
+	filePath := CreateTestFile(t, dir, filename, content)
+	verifyCreatedFile(t, filePath, content)
+}
 
-			// Verify file exists
-			info, err := os.Stat(filePath)
-			if err != nil {
-				t.Fatalf("Created file does not exist: %v", err)
-			}
+// createSubdirectoryIfNeeded creates subdirectory if the filename contains a path separator.
+func createSubdirectoryIfNeeded(t *testing.T, dir, filename string) {
+	t.Helper()
 
-			// Verify it's a regular file
-			if !info.Mode().IsRegular() {
-				t.Errorf("Created path is not a regular file")
-			}
+	if strings.ContainsRune(filename, filepath.Separator) {
+		subdir := filepath.Join(dir, filepath.Dir(filename))
+		if err := os.MkdirAll(subdir, shared.TestDirPermission); err != nil {
+			t.Fatalf("Failed to create subdirectory: %v", err)
+		}
+	}
+}
 
-			// Verify permissions
-			if info.Mode().Perm() != FilePermission {
-				t.Errorf("File permissions = %v, want %v", info.Mode().Perm(), FilePermission)
-			}
+// verifyCreatedFile verifies that the created file has correct properties.
+func verifyCreatedFile(t *testing.T, filePath string, expectedContent []byte) {
+	t.Helper()
 
-			// Verify content
-			readContent, err := os.ReadFile(filePath) // #nosec G304 - test file path is controlled
-			if err != nil {
-				t.Fatalf("Failed to read created file: %v", err)
-			}
-			if string(readContent) != string(tt.content) {
-				t.Errorf("File content = %q, want %q", readContent, tt.content)
-			}
-		})
+	info := verifyFileExists(t, filePath)
+	verifyFileType(t, info)
+	verifyFilePermissions(t, info)
+	verifyFileContent(t, filePath, expectedContent)
+}
+
+// verifyFileExists verifies that the file exists and returns its info.
+func verifyFileExists(t *testing.T, filePath string) os.FileInfo {
+	t.Helper()
+
+	info, err := os.Stat(filePath)
+	if err != nil {
+		t.Fatalf("Created file does not exist: %v", err)
+	}
+
+	return info
+}
+
+// verifyFileType verifies that the file is a regular file.
+func verifyFileType(t *testing.T, info os.FileInfo) {
+	t.Helper()
+
+	if !info.Mode().IsRegular() {
+		t.Error("Created path is not a regular file")
+	}
+}
+
+// verifyFilePermissions verifies that the file has correct permissions.
+func verifyFilePermissions(t *testing.T, info os.FileInfo) {
+	t.Helper()
+
+	if info.Mode().Perm() != shared.TestFilePermission {
+		t.Errorf("File permissions = %v, want %v", info.Mode().Perm(), shared.TestFilePermission)
+	}
+}
+
+// verifyFileContent verifies that the file has the expected content.
+func verifyFileContent(t *testing.T, filePath string, expectedContent []byte) {
+	t.Helper()
+
+	readContent, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read created file: %v", err)
+	}
+	if string(readContent) != string(expectedContent) {
+		t.Errorf("File content = %q, want %q", readContent, expectedContent)
 	}
 }
 
@@ -118,37 +172,56 @@ func TestCreateTempOutputFile(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			file, path := CreateTempOutputFile(t, tt.pattern)
-			defer CloseFile(t, file)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				file, path := CreateTempOutputFile(t, tt.pattern)
+				defer CloseFile(t, file)
 
-			// Verify file exists
-			info, err := os.Stat(path)
-			if err != nil {
-				t.Fatalf("Temp file does not exist: %v", err)
-			}
+				// Verify file exists
+				info, err := os.Stat(path)
+				if err != nil {
+					t.Fatalf("Temp file does not exist: %v", err)
+				}
 
-			// Verify it's a regular file
-			if !info.Mode().IsRegular() {
-				t.Errorf("Created path is not a regular file")
-			}
+				// Verify it's a regular file
+				if !info.Mode().IsRegular() {
+					t.Error("Created path is not a regular file")
+				}
 
-			// Verify we can write to it
-			testContent := []byte("test content")
-			if _, err := file.Write(testContent); err != nil {
-				t.Errorf("Failed to write to temp file: %v", err)
-			}
+				// Verify we can write to it
+				testContent := []byte("test content")
+				if _, err := file.Write(testContent); err != nil {
+					t.Errorf("Failed to write to temp file: %v", err)
+				}
 
-			// Verify the path is in a temp directory (any temp directory)
-			if !strings.Contains(path, os.TempDir()) {
-				t.Errorf("Temp file not in temp directory: %s", path)
-			}
-		})
+				// Verify the path is in a temp directory (any temp directory)
+				if !strings.Contains(path, os.TempDir()) {
+					t.Errorf("Temp file not in temp directory: %s", path)
+				}
+			},
+		)
 	}
 }
 
 func TestCreateTestDirectory(t *testing.T) {
-	tests := []struct {
+	tests := createTestDirectoryTestCases()
+
+	for _, tt := range tests {
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runCreateTestDirectoryTest(t, tt.parent, tt.dir)
+			},
+		)
+	}
+}
+
+// createTestDirectoryTestCases creates test cases for TestCreateTestDirectory.
+func createTestDirectoryTestCases() []struct {
+	name   string
+	parent string
+	dir    string
+} {
+	return []struct {
 		name   string
 		parent string
 		dir    string
@@ -166,53 +239,107 @@ func TestCreateTestDirectory(t *testing.T) {
 			dir:  "nested/dir",
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tempDir := t.TempDir()
-			if tt.parent == "" {
-				tt.parent = tempDir
-			}
+// runCreateTestDirectoryTest runs a single test case for CreateTestDirectory.
+func runCreateTestDirectoryTest(t *testing.T, parent, dir string) {
+	t.Helper()
 
-			// For nested directories, create parent first
-			if strings.Contains(tt.dir, "/") {
-				parentPath := filepath.Join(tt.parent, filepath.Dir(tt.dir))
-				if err := os.MkdirAll(parentPath, DirPermission); err != nil {
-					t.Fatalf("Failed to create parent directory: %v", err)
-				}
-				tt.dir = filepath.Base(tt.dir)
-				tt.parent = parentPath
-			}
+	tempDir := t.TempDir()
+	if parent == "" {
+		parent = tempDir
+	}
 
-			dirPath := CreateTestDirectory(t, tt.parent, tt.dir)
+	parent, dir = prepareNestedDirectoryPath(t, parent, dir)
+	dirPath := CreateTestDirectory(t, parent, dir)
+	verifyCreatedDirectory(t, dirPath)
+}
 
-			// Verify directory exists
-			info, err := os.Stat(dirPath)
-			if err != nil {
-				t.Fatalf("Created directory does not exist: %v", err)
-			}
+// prepareNestedDirectoryPath prepares parent and directory paths for nested directories.
+func prepareNestedDirectoryPath(t *testing.T, parent, dir string) (parentPath, fullPath string) {
+	t.Helper()
 
-			// Verify it's a directory
-			if !info.IsDir() {
-				t.Errorf("Created path is not a directory")
-			}
+	if strings.Contains(dir, "/") {
+		parentPath := filepath.Join(parent, filepath.Dir(dir))
+		if err := os.MkdirAll(parentPath, shared.TestDirPermission); err != nil {
+			t.Fatalf("Failed to create parent directory: %v", err)
+		}
 
-			// Verify permissions
-			if info.Mode().Perm() != DirPermission {
-				t.Errorf("Directory permissions = %v, want %v", info.Mode().Perm(), DirPermission)
-			}
+		return parentPath, filepath.Base(dir)
+	}
 
-			// Verify we can create files in it
-			testFile := filepath.Join(dirPath, "test.txt")
-			if err := os.WriteFile(testFile, []byte("test"), FilePermission); err != nil {
-				t.Errorf("Cannot create file in directory: %v", err)
-			}
-		})
+	return parent, dir
+}
+
+// verifyCreatedDirectory verifies that the created directory has correct properties.
+func verifyCreatedDirectory(t *testing.T, dirPath string) {
+	t.Helper()
+
+	info := verifyDirectoryExists(t, dirPath)
+	verifyIsDirectory(t, info)
+	verifyDirectoryPermissions(t, info)
+	verifyDirectoryUsability(t, dirPath)
+}
+
+// verifyDirectoryExists verifies that the directory exists and returns its info.
+func verifyDirectoryExists(t *testing.T, dirPath string) os.FileInfo {
+	t.Helper()
+
+	info, err := os.Stat(dirPath)
+	if err != nil {
+		t.Fatalf("Created directory does not exist: %v", err)
+	}
+
+	return info
+}
+
+// verifyIsDirectory verifies that the path is a directory.
+func verifyIsDirectory(t *testing.T, info os.FileInfo) {
+	t.Helper()
+
+	if !info.IsDir() {
+		t.Error("Created path is not a directory")
+	}
+}
+
+// verifyDirectoryPermissions verifies that the directory has correct permissions.
+func verifyDirectoryPermissions(t *testing.T, info os.FileInfo) {
+	t.Helper()
+
+	if info.Mode().Perm() != shared.TestDirPermission {
+		t.Errorf("Directory permissions = %v, want %v", info.Mode().Perm(), shared.TestDirPermission)
+	}
+}
+
+// verifyDirectoryUsability verifies that files can be created in the directory.
+func verifyDirectoryUsability(t *testing.T, dirPath string) {
+	t.Helper()
+
+	testFile := filepath.Join(dirPath, "test.txt")
+	if err := os.WriteFile(testFile, []byte("test"), shared.TestFilePermission); err != nil {
+		t.Errorf("Cannot create file in directory: %v", err)
 	}
 }
 
 func TestCreateTestFiles(t *testing.T) {
-	tests := []struct {
+	tests := createTestFilesTestCases()
+
+	for _, tt := range tests {
+		t.Run(
+			tt.name, func(t *testing.T) {
+				runTestFilesTest(t, tt.fileSpecs, tt.wantCount)
+			},
+		)
+	}
+}
+
+// createTestFilesTestCases creates test cases for TestCreateTestFiles.
+func createTestFilesTestCases() []struct {
+	name      string
+	fileSpecs []FileSpec
+	wantCount int
+} {
+	return []struct {
 		name      string
 		fileSpecs []FileSpec
 		wantCount int
@@ -221,7 +348,7 @@ func TestCreateTestFiles(t *testing.T) {
 			name: "create multiple files",
 			fileSpecs: []FileSpec{
 				{Name: "file1.txt", Content: "content1"},
-				{Name: "file2.go", Content: "package main"},
+				{Name: "file2.go", Content: shared.LiteralPackageMain},
 				{Name: "file3.json", Content: `{"key": "value"}`},
 			},
 			wantCount: 3,
@@ -229,7 +356,7 @@ func TestCreateTestFiles(t *testing.T) {
 		{
 			name: "create files with subdirectories",
 			fileSpecs: []FileSpec{
-				{Name: "src/main.go", Content: "package main"},
+				{Name: "src/main.go", Content: shared.LiteralPackageMain},
 				{Name: "test/test.go", Content: "package test"},
 			},
 			wantCount: 2,
@@ -248,39 +375,56 @@ func TestCreateTestFiles(t *testing.T) {
 			wantCount: 2,
 		},
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rootDir := t.TempDir()
+// runTestFilesTest runs a single test case for CreateTestFiles.
+func runTestFilesTest(t *testing.T, fileSpecs []FileSpec, wantCount int) {
+	t.Helper()
 
-			// Create necessary subdirectories
-			for _, spec := range tt.fileSpecs {
-				if strings.Contains(spec.Name, "/") {
-					subdir := filepath.Join(rootDir, filepath.Dir(spec.Name))
-					if err := os.MkdirAll(subdir, DirPermission); err != nil {
-						t.Fatalf("Failed to create subdirectory: %v", err)
-					}
-				}
+	rootDir := t.TempDir()
+
+	createNecessarySubdirectories(t, rootDir, fileSpecs)
+	createdFiles := CreateTestFiles(t, rootDir, fileSpecs)
+	verifyCreatedFilesCount(t, createdFiles, wantCount)
+	verifyCreatedFilesContent(t, createdFiles, fileSpecs)
+}
+
+// createNecessarySubdirectories creates subdirectories for file specs that need them.
+func createNecessarySubdirectories(t *testing.T, rootDir string, fileSpecs []FileSpec) {
+	t.Helper()
+
+	for _, spec := range fileSpecs {
+		if strings.Contains(spec.Name, "/") {
+			subdir := filepath.Join(rootDir, filepath.Dir(spec.Name))
+			if err := os.MkdirAll(subdir, shared.TestDirPermission); err != nil {
+				t.Fatalf("Failed to create subdirectory: %v", err)
 			}
+		}
+	}
+}
 
-			createdFiles := CreateTestFiles(t, rootDir, tt.fileSpecs)
+// verifyCreatedFilesCount verifies the count of created files.
+func verifyCreatedFilesCount(t *testing.T, createdFiles []string, wantCount int) {
+	t.Helper()
 
-			// Verify count
-			if len(createdFiles) != tt.wantCount {
-				t.Errorf("Created %d files, want %d", len(createdFiles), tt.wantCount)
-			}
+	if len(createdFiles) != wantCount {
+		t.Errorf("Created %d files, want %d", len(createdFiles), wantCount)
+	}
+}
 
-			// Verify each file
-			for i, filePath := range createdFiles {
-				content, err := os.ReadFile(filePath) // #nosec G304 - test file path is controlled
-				if err != nil {
-					t.Errorf("Failed to read file %s: %v", filePath, err)
-					continue
-				}
-				if string(content) != tt.fileSpecs[i].Content {
-					t.Errorf("File %s content = %q, want %q", filePath, content, tt.fileSpecs[i].Content)
-				}
-			}
-		})
+// verifyCreatedFilesContent verifies the content of created files.
+func verifyCreatedFilesContent(t *testing.T, createdFiles []string, fileSpecs []FileSpec) {
+	t.Helper()
+
+	for i, filePath := range createdFiles {
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			t.Errorf("Failed to read file %s: %v", filePath, err)
+
+			continue
+		}
+		if string(content) != fileSpecs[i].Content {
+			t.Errorf("File %s content = %q, want %q", filePath, content, fileSpecs[i].Content)
+		}
 	}
 }

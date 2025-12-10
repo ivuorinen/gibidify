@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 const minExtensionLength = 2
@@ -52,9 +54,9 @@ func initRegistry() *FileTypeRegistry {
 		imageExts:    getImageExtensions(),
 		binaryExts:   getBinaryExtensions(),
 		languageMap:  getLanguageMap(),
-		extCache:     make(map[string]string, 1000),        // Cache for extension normalization
-		resultCache:  make(map[string]FileTypeResult, 500), // Cache for type results
-		maxCacheSize: 500,
+		extCache:     make(map[string]string, shared.FileTypeRegistryMaxCacheSize),
+		resultCache:  make(map[string]FileTypeResult, shared.FileTypeRegistryMaxCacheSize),
+		maxCacheSize: shared.FileTypeRegistryMaxCacheSize,
 	}
 }
 
@@ -63,25 +65,28 @@ func getRegistry() *FileTypeRegistry {
 	registryOnce.Do(func() {
 		registry = initRegistry()
 	})
+
 	return registry
 }
 
-// GetDefaultRegistry returns the default file type registry.
-func GetDefaultRegistry() *FileTypeRegistry {
+// DefaultRegistry returns the default file type registry.
+func DefaultRegistry() *FileTypeRegistry {
 	return getRegistry()
 }
 
-// GetStats returns a copy of the current registry statistics.
-func (r *FileTypeRegistry) GetStats() RegistryStats {
+// Stats returns a copy of the current registry statistics.
+func (r *FileTypeRegistry) Stats() RegistryStats {
 	r.cacheMutex.RLock()
 	defer r.cacheMutex.RUnlock()
+
 	return r.stats
 }
 
-// GetCacheInfo returns current cache size information.
-func (r *FileTypeRegistry) GetCacheInfo() (extCacheSize, resultCacheSize, maxCacheSize int) {
+// CacheInfo returns current cache size information.
+func (r *FileTypeRegistry) CacheInfo() (extCacheSize, resultCacheSize, maxCacheSize int) {
 	r.cacheMutex.RLock()
 	defer r.cacheMutex.RUnlock()
+
 	return len(r.extCache), len(r.resultCache), r.maxCacheSize
 }
 
@@ -101,7 +106,9 @@ func normalizeExtension(filename string) string {
 func isSpecialFile(filename string, extensions map[string]bool) bool {
 	if filepath.Ext(filename) == "" {
 		basename := strings.ToLower(filepath.Base(filename))
+
 		return extensions[basename]
 	}
+
 	return false
 }

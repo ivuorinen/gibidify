@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import "strings"
@@ -14,9 +15,9 @@ func IsBinary(filename string) bool {
 	return getRegistry().IsBinary(filename)
 }
 
-// GetLanguage returns the language identifier for the given filename based on its extension.
-func GetLanguage(filename string) string {
-	return getRegistry().GetLanguage(filename)
+// Language returns the language identifier for the given filename based on its extension.
+func Language(filename string) string {
+	return getRegistry().Language(filename)
 }
 
 // Registry methods for detection
@@ -24,21 +25,24 @@ func GetLanguage(filename string) string {
 // IsImage checks if the file extension indicates an image file.
 func (r *FileTypeRegistry) IsImage(filename string) bool {
 	result := r.getFileTypeResult(filename)
+
 	return result.IsImage
 }
 
 // IsBinary checks if the file extension indicates a binary file.
 func (r *FileTypeRegistry) IsBinary(filename string) bool {
 	result := r.getFileTypeResult(filename)
+
 	return result.IsBinary
 }
 
-// GetLanguage returns the language identifier for the given filename based on its extension.
-func (r *FileTypeRegistry) GetLanguage(filename string) string {
+// Language returns the language identifier for the given filename based on its extension.
+func (r *FileTypeRegistry) Language(filename string) string {
 	if len(filename) < minExtensionLength {
 		return ""
 	}
 	result := r.getFileTypeResult(filename)
+
 	return result.Language
 }
 

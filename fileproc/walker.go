@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ivuorinen/gibidify/gibidiutils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // Walker defines an interface for scanning directories.
@@ -30,13 +30,16 @@ func NewProdWalker() *ProdWalker {
 // Walk scans the given root directory recursively and returns a slice of file paths
 // that are not ignored based on .gitignore/.ignore files, the configuration, or the default binary/image filter.
 func (w *ProdWalker) Walk(root string) ([]string, error) {
-	absRoot, err := gibidiutils.GetAbsolutePath(root)
+	absRoot, err := shared.AbsolutePath(root)
 	if err != nil {
-		return nil, gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSPathResolution,
+		return nil, shared.WrapError(
+			err,
+			shared.ErrorTypeFileSystem,
+			shared.CodeFSPathResolution,
 			"failed to resolve root path",
 		).WithFilePath(root)
 	}
+
 	return w.walkDir(absRoot, []ignoreRule{})
 }
 
@@ -50,8 +53,10 @@ func (w *ProdWalker) walkDir(currentDir string, parentRules []ignoreRule) ([]str
 
 	entries, err := os.ReadDir(currentDir)
 	if err != nil {
-		return nil, gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeFileSystem, gibidiutils.CodeFSAccess,
+		return nil, shared.WrapError(
+			err,
+			shared.ErrorTypeFileSystem,
+			shared.CodeFSAccess,
 			"failed to read directory",
 		).WithFilePath(currentDir)
 	}
@@ -69,8 +74,10 @@ func (w *ProdWalker) walkDir(currentDir string, parentRules []ignoreRule) ([]str
 		if entry.IsDir() {
 			subFiles, err := w.walkDir(fullPath, rules)
 			if err != nil {
-				return nil, gibidiutils.WrapError(
-					err, gibidiutils.ErrorTypeProcessing, gibidiutils.CodeProcessingTraversal,
+				return nil, shared.WrapError(
+					err,
+					shared.ErrorTypeProcessing,
+					shared.CodeProcessingTraversal,
 					"failed to traverse subdirectory",
 				).WithFilePath(fullPath)
 			}

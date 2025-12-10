@@ -9,38 +9,60 @@ import (
 	"strings"
 
 	"github.com/ivuorinen/gibidify/benchmark"
-	"github.com/ivuorinen/gibidify/gibidiutils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 var (
-	sourceDir       = flag.String("source", "", "Source directory to benchmark (uses temp files if empty)")
-	benchmarkType   = flag.String("type", "all", "Benchmark type: all, collection, processing, concurrency, format")
-	format          = flag.String("format", "json", "Output format for processing benchmarks")
-	concurrency     = flag.Int("concurrency", runtime.NumCPU(), "Concurrency level for processing benchmarks")
-	concurrencyList = flag.String("concurrency-list", "1,2,4,8", "Comma-separated list of concurrency levels")
-	formatList      = flag.String("format-list", "json,yaml,markdown", "Comma-separated list of formats")
-	numFiles        = flag.Int("files", 100, "Number of files to create for benchmarks")
+	sourceDir = flag.String(
+		shared.CLIArgSource, "", "Source directory to benchmark (uses temp files if empty)",
+	)
+	benchmarkType = flag.String(
+		"type", shared.CLIArgAll, "Benchmark type: all, collection, processing, concurrency, format",
+	)
+	format = flag.String(
+		shared.CLIArgFormat, shared.FormatJSON, "Output format for processing benchmarks",
+	)
+	concurrency = flag.Int(
+		shared.CLIArgConcurrency, runtime.NumCPU(), "Concurrency level for processing benchmarks",
+	)
+	concurrencyList = flag.String(
+		"concurrency-list", shared.TestConcurrencyList, "Comma-separated list of concurrency levels",
+	)
+	formatList = flag.String(
+		"format-list", shared.TestFormatList, "Comma-separated list of formats",
+	)
+	numFiles = flag.Int("files", shared.BenchmarkDefaultFileCount, "Number of files to create for benchmarks")
 )
 
 func main() {
 	flag.Parse()
 
 	if err := runBenchmarks(); err != nil {
+		//goland:noinspection GoUnhandledErrorResult
 		_, _ = fmt.Fprintf(os.Stderr, "Benchmark failed: %v\n", err)
 		os.Exit(1)
 	}
 }
 
 func runBenchmarks() error {
-	fmt.Printf("Running gibidify benchmarks...\n")
-	fmt.Printf("Source: %s\n", getSourceDescription())
-	fmt.Printf("Type: %s\n", *benchmarkType)
-	fmt.Printf("CPU cores: %d\n", runtime.NumCPU())
-	fmt.Println()
+	//nolint:errcheck // Benchmark informational output, errors don't affect benchmark results
+	_, _ = fmt.Println("Running gibidify benchmarks...")
+	//nolint:errcheck // Benchmark informational output, errors don't affect benchmark results
+	_, _ = fmt.Printf("Source: %s\n", getSourceDescription())
+	//nolint:errcheck // Benchmark informational output, errors don't affect benchmark results
+	_, _ = fmt.Printf("Type: %s\n", *benchmarkType)
+	//nolint:errcheck // Benchmark informational output, errors don't affect benchmark results
+	_, _ = fmt.Printf("CPU cores: %d\n", runtime.NumCPU())
+	//nolint:errcheck // Benchmark informational output, errors don't affect benchmark results
+	_, _ = fmt.Println()
 
 	switch *benchmarkType {
-	case "all":
-		return benchmark.RunAllBenchmarks(*sourceDir)
+	case shared.CLIArgAll:
+		if err := benchmark.RunAllBenchmarks(*sourceDir); err != nil {
+			return fmt.Errorf("benchmark failed: %w", err)
+		}
+
+		return nil
 	case "collection":
 		return runCollectionBenchmark()
 	case "processing":
@@ -50,81 +72,79 @@ func runBenchmarks() error {
 	case "format":
 		return runFormatBenchmark()
 	default:
-		return gibidiutils.NewValidationError(
-			gibidiutils.CodeValidationFormat,
-			"invalid benchmark type: "+*benchmarkType,
-		)
+		return shared.NewValidationError(shared.CodeValidationFormat, "invalid benchmark type: "+*benchmarkType)
 	}
 }
 
 func runCollectionBenchmark() error {
-	fmt.Println("Running file collection benchmark...")
+	//nolint:errcheck // Benchmark status message, errors don't affect benchmark results
+	_, _ = fmt.Println(shared.BenchmarkMsgRunningCollection)
 	result, err := benchmark.FileCollectionBenchmark(*sourceDir, *numFiles)
 	if err != nil {
-		return gibidiutils.WrapError(
+		return shared.WrapError(
 			err,
-			gibidiutils.ErrorTypeProcessing,
-			gibidiutils.CodeProcessingCollection,
-			"file collection benchmark failed",
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingCollection,
+			shared.BenchmarkMsgFileCollectionFailed,
 		)
 	}
 	benchmark.PrintResult(result)
+
 	return nil
 }
 
 func runProcessingBenchmark() error {
-	fmt.Printf("Running file processing benchmark (format: %s, concurrency: %d)...\n", *format, *concurrency)
+	//nolint:errcheck // Benchmark status message, errors don't affect benchmark results
+	_, _ = fmt.Printf("Running file processing benchmark (format: %s, concurrency: %d)...\n", *format, *concurrency)
 	result, err := benchmark.FileProcessingBenchmark(*sourceDir, *format, *concurrency)
 	if err != nil {
-		return gibidiutils.WrapError(
+		return shared.WrapError(
 			err,
-			gibidiutils.ErrorTypeProcessing,
-			gibidiutils.CodeProcessingCollection,
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingCollection,
 			"file processing benchmark failed",
 		)
 	}
 	benchmark.PrintResult(result)
+
 	return nil
 }
 
 func runConcurrencyBenchmark() error {
 	concurrencyLevels, err := parseConcurrencyList(*concurrencyList)
 	if err != nil {
-		return gibidiutils.WrapError(
-			err,
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationFormat,
-			"invalid concurrency list",
-		)
+		return shared.WrapError(
+			err, shared.ErrorTypeValidation, shared.CodeValidationFormat, "invalid concurrency list")
 	}
 
-	fmt.Printf("Running concurrency benchmark (format: %s, levels: %v)...\n", *format, concurrencyLevels)
+	//nolint:errcheck // Benchmark status message, errors don't affect benchmark results
+	_, _ = fmt.Printf("Running concurrency benchmark (format: %s, levels: %v)...\n", *format, concurrencyLevels)
 	suite, err := benchmark.ConcurrencyBenchmark(*sourceDir, *format, concurrencyLevels)
 	if err != nil {
-		return gibidiutils.WrapError(
+		return shared.WrapError(
 			err,
-			gibidiutils.ErrorTypeProcessing,
-			gibidiutils.CodeProcessingCollection,
-			"concurrency benchmark failed",
+			shared.ErrorTypeProcessing,
+			shared.CodeProcessingCollection,
+			shared.BenchmarkMsgConcurrencyFailed,
 		)
 	}
 	benchmark.PrintSuite(suite)
+
 	return nil
 }
 
 func runFormatBenchmark() error {
 	formats := parseFormatList(*formatList)
-	fmt.Printf("Running format benchmark (formats: %v)...\n", formats)
+	//nolint:errcheck // Benchmark status message, errors don't affect benchmark results
+	_, _ = fmt.Printf("Running format benchmark (formats: %v)...\n", formats)
 	suite, err := benchmark.FormatBenchmark(*sourceDir, formats)
 	if err != nil {
-		return gibidiutils.WrapError(
-			err,
-			gibidiutils.ErrorTypeProcessing,
-			gibidiutils.CodeProcessingCollection,
-			"format benchmark failed",
+		return shared.WrapError(
+			err, shared.ErrorTypeProcessing, shared.CodeProcessingCollection, shared.BenchmarkMsgFormatFailed,
 		)
 	}
 	benchmark.PrintSuite(suite)
+
 	return nil
 }
 
@@ -132,6 +152,7 @@ func getSourceDescription() string {
 	if *sourceDir == "" {
 		return fmt.Sprintf("temporary files (%d files)", *numFiles)
 	}
+
 	return *sourceDir
 }
 
@@ -143,28 +164,24 @@ func parseConcurrencyList(list string) ([]int, error) {
 		part = strings.TrimSpace(part)
 		var level int
 		if _, err := fmt.Sscanf(part, "%d", &level); err != nil {
-			return nil, gibidiutils.WrapErrorf(
+			return nil, shared.WrapErrorf(
 				err,
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationFormat,
+				shared.ErrorTypeValidation,
+				shared.CodeValidationFormat,
 				"invalid concurrency level: %s",
 				part,
 			)
 		}
 		if level <= 0 {
-			return nil, gibidiutils.NewValidationError(
-				gibidiutils.CodeValidationFormat,
-				"concurrency level must be positive: "+part,
+			return nil, shared.NewValidationError(
+				shared.CodeValidationFormat, "concurrency level must be positive: "+part,
 			)
 		}
 		levels = append(levels, level)
 	}
 
 	if len(levels) == 0 {
-		return nil, gibidiutils.NewValidationError(
-			gibidiutils.CodeValidationFormat,
-			"no valid concurrency levels found",
-		)
+		return nil, shared.NewValidationError(shared.CodeValidationFormat, "no valid concurrency levels found")
 	}
 
 	return levels, nil

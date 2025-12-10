@@ -1,10 +1,12 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // WaitForRateLimit waits for rate limiting if enabled.
@@ -15,22 +17,29 @@ func (rm *ResourceMonitor) WaitForRateLimit(ctx context.Context) error {
 
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		return fmt.Errorf("context canceled while waiting for rate limit: %w", ctx.Err())
 	case <-rm.rateLimitChan:
 		return nil
 	case <-time.After(time.Second): // Fallback timeout
-		logrus.Warn("Rate limiting timeout exceeded, continuing without rate limit")
+		logger := shared.GetLogger()
+		logger.Warn("Rate limiting timeout exceeded, continuing without rate limit")
+
 		return nil
 	}
 }
 
 // rateLimiterRefill refills the rate limiting channel periodically.
 func (rm *ResourceMonitor) rateLimiterRefill() {
-	for range rm.rateLimiter.C {
+	for {
 		select {
-		case rm.rateLimitChan <- struct{}{}:
-		default:
-			// Channel is full, skip
+		case <-rm.done:
+			return
+		case <-rm.rateLimiter.C:
+			select {
+			case rm.rateLimitChan <- struct{}{}:
+			default:
+				// Channel is full, skip
+			}
 		}
 	}
 }

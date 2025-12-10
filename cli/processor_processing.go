@@ -1,12 +1,14 @@
+// Package cli provides command-line interface functionality for gibidify.
 package cli
 
 import (
 	"context"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/ivuorinen/gibidify/fileproc"
-	"github.com/ivuorinen/gibidify/gibidiutils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // Process executes the main file processing workflow.
@@ -16,9 +18,7 @@ func (p *Processor) Process(ctx context.Context) error {
 	defer overallCancel()
 
 	// Configure file type registry
-	if err := p.configureFileTypes(); err != nil {
-		return err
-	}
+	p.configureFileTypes()
 
 	// Print startup info with colors
 	p.ui.PrintHeader("🚀 Starting gibidify")
@@ -31,23 +31,32 @@ func (p *Processor) Process(ctx context.Context) error {
 	p.resourceMonitor.LogResourceInfo()
 	p.backpressure.LogBackpressureInfo()
 
-	// Collect files with progress indication
+	// Collect files with progress indication and timing
 	p.ui.PrintInfo("📁 Collecting files...")
+	collectionStart := time.Now()
 	files, err := p.collectFiles()
+	collectionTime := time.Since(collectionStart)
+	p.metricsCollector.RecordPhaseTime(shared.MetricsPhaseCollection, collectionTime)
+
 	if err != nil {
 		return err
 	}
 
 	// Show collection results
-	p.ui.PrintSuccess("Found %d files to process", len(files))
+	p.ui.PrintSuccess(shared.CLIMsgFoundFilesToProcess, len(files))
 
 	// Pre-validate file collection against resource limits
 	if err := p.validateFileCollection(files); err != nil {
 		return err
 	}
 
-	// Process files with overall timeout
-	return p.processFiles(overallCtx, files)
+	// Process files with overall timeout and timing
+	processingStart := time.Now()
+	err = p.processFiles(overallCtx, files)
+	processingTime := time.Since(processingStart)
+	p.metricsCollector.RecordPhaseTime(shared.MetricsPhaseProcessing, processingTime)
+
+	return err
 }
 
 // processFiles processes the collected files.
@@ -57,7 +66,7 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 		return err
 	}
 	defer func() {
-		gibidiutils.LogError("Error closing output file", outFile.Close())
+		shared.LogError("Error closing output file", outFile.Close())
 	}()
 
 	// Initialize back-pressure and channels
@@ -67,11 +76,7 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 	writerDone := make(chan struct{})
 
 	// Start writer
-	go fileproc.StartWriter(outFile, writeCh, writerDone, fileproc.WriterConfig{
-		Format: p.flags.Format,
-		Prefix: p.flags.Prefix,
-		Suffix: p.flags.Suffix,
-	})
+	go fileproc.StartWriter(outFile, writeCh, writerDone, p.flags.Format, p.flags.Prefix, p.flags.Suffix)
 
 	// Start workers
 	var wg sync.WaitGroup
@@ -83,28 +88,41 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 	// Send files to workers
 	if err := p.sendFiles(ctx, files, fileCh); err != nil {
 		p.ui.FinishProgress()
+
 		return err
 	}
 
-	// Wait for completion
+	// Wait for completion with timing
+	writingStart := time.Now()
 	p.waitForCompletion(&wg, writeCh, writerDone)
+	writingTime := time.Since(writingStart)
+	p.metricsCollector.RecordPhaseTime(shared.MetricsPhaseWriting, writingTime)
+
 	p.ui.FinishProgress()
 
+	// Final cleanup with timing
+	finalizeStart := time.Now()
 	p.logFinalStats()
+	finalizeTime := time.Since(finalizeStart)
+	p.metricsCollector.RecordPhaseTime(shared.MetricsPhaseFinalize, finalizeTime)
+
 	p.ui.PrintSuccess("Processing completed. Output saved to %s", p.flags.Destination)
+
 	return nil
 }
 
 // createOutputFile creates the output file.
 func (p *Processor) createOutputFile() (*os.File, error) {
 	// Destination path has been validated in CLI flags validation for path traversal attempts
-	// #nosec G304 - destination is validated in flags.validate()
-	outFile, err := os.Create(p.flags.Destination)
+	outFile, err := os.Create(p.flags.Destination) // #nosec G304 - destination is validated in flags.validate()
 	if err != nil {
-		return nil, gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileCreate,
+		return nil, shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOFileCreate,
 			"failed to create output file",
 		).WithFilePath(p.flags.Destination)
 	}
+
 	return outFile, nil
 }

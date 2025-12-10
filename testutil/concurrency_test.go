@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ivuorinen/gibidify/shared"
 )
 
-// Test thread safety of functions that might be called concurrently
+// Test thread safety of functions that might be called concurrently.
 func TestConcurrentOperations(t *testing.T) {
 	tempDir := t.TempDir()
 	done := make(chan bool)
@@ -34,7 +36,7 @@ func TestConcurrentOperations(t *testing.T) {
 	}
 }
 
-// Benchmarks
+// Benchmarks.
 func BenchmarkCreateTestFile(b *testing.B) {
 	tempDir := b.TempDir()
 	content := []byte("benchmark content")
@@ -44,7 +46,7 @@ func BenchmarkCreateTestFile(b *testing.B) {
 		// Use a unique filename for each iteration to avoid conflicts
 		filename := "bench" + string(rune(i%26+'a')) + ".txt"
 		filePath := filepath.Join(tempDir, filename)
-		if err := os.WriteFile(filePath, content, FilePermission); err != nil {
+		if err := os.WriteFile(filePath, content, shared.TestFilePermission); err != nil {
 			b.Fatalf("Failed to write file: %v", err)
 		}
 	}
@@ -64,7 +66,7 @@ func BenchmarkCreateTestFiles(b *testing.B) {
 
 		for _, spec := range specs {
 			filePath := filepath.Join(tempDir, spec.Name)
-			if err := os.WriteFile(filePath, []byte(spec.Content), FilePermission); err != nil {
+			if err := os.WriteFile(filePath, []byte(spec.Content), shared.TestFilePermission); err != nil {
 				b.Fatalf("Failed to write file: %v", err)
 			}
 		}

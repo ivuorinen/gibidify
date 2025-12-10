@@ -2,103 +2,66 @@
 package fileproc
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/ivuorinen/gibidify/gibidiutils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
-// WriterConfig holds configuration for the writer.
-type WriterConfig struct {
-	Format string
-	Prefix string
-	Suffix string
-}
+// startFormatWriter handles generic writer orchestration for any format.
+// This eliminates code duplication across format-specific writer functions.
+// Uses the FormatWriter interface defined in formats.go.
+func startFormatWriter(
+	outFile *os.File,
+	writeCh <-chan WriteRequest,
+	done chan<- struct{},
+	prefix, suffix string,
+	writerFactory func(*os.File) FormatWriter,
+) {
+	defer close(done)
 
-// Validate checks if the WriterConfig is valid.
-func (c WriterConfig) Validate() error {
-	if c.Format == "" {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationFormat,
-			"format cannot be empty",
-			"",
-			nil,
-		)
+	writer := writerFactory(outFile)
+
+	// Start writing
+	if err := writer.Start(prefix, suffix); err != nil {
+		shared.LogError("Failed to start writer", err)
+
+		return
 	}
 
-	switch c.Format {
-	case "markdown", "json", "yaml":
-		return nil
-	default:
-		context := map[string]any{
-			"format": c.Format,
+	// Process files
+	for req := range writeCh {
+		if err := writer.WriteFile(req); err != nil {
+			shared.LogError("Failed to write file", err)
 		}
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationFormat,
-			fmt.Sprintf("unsupported format: %s", c.Format),
-			"",
-			context,
-		)
+	}
+
+	// Close writer
+	if err := writer.Close(); err != nil {
+		shared.LogError("Failed to close writer", err)
 	}
 }
 
 // StartWriter writes the output in the specified format with memory optimization.
-func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, config WriterConfig) {
-	// Validate config
-	if err := config.Validate(); err != nil {
-		gibidiutils.LogError("Invalid writer configuration", err)
-		close(done)
-		return
-	}
-
-	// Validate outFile is not nil
-	if outFile == nil {
-		err := gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeIO,
-			gibidiutils.CodeIOFileWrite,
-			"output file is nil",
-			"",
-			nil,
-		)
-		gibidiutils.LogError("Failed to write output", err)
-		close(done)
-		return
-	}
-
-	// Validate outFile is accessible
-	if _, err := outFile.Stat(); err != nil {
-		structErr := gibidiutils.WrapError(
-			err,
-			gibidiutils.ErrorTypeIO,
-			gibidiutils.CodeIOFileWrite,
-			"failed to stat output file",
-		)
-		gibidiutils.LogError("Failed to validate output file", structErr)
-		close(done)
-		return
-	}
-
-	switch config.Format {
-	case "markdown":
-		startMarkdownWriter(outFile, writeCh, done, config.Prefix, config.Suffix)
-	case "json":
-		startJSONWriter(outFile, writeCh, done, config.Prefix, config.Suffix)
-	case "yaml":
-		startYAMLWriter(outFile, writeCh, done, config.Prefix, config.Suffix)
+func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, format, prefix, suffix string) {
+	switch format {
+	case shared.FormatMarkdown:
+		startMarkdownWriter(outFile, writeCh, done, prefix, suffix)
+	case shared.FormatJSON:
+		startJSONWriter(outFile, writeCh, done, prefix, suffix)
+	case shared.FormatYAML:
+		startYAMLWriter(outFile, writeCh, done, prefix, suffix)
 	default:
-		context := map[string]interface{}{
-			"format": config.Format,
+		context := map[string]any{
+			"format": format,
 		}
-		err := gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationFormat,
-			fmt.Sprintf("unsupported format: %s", config.Format),
+		err := shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeValidationFormat,
+			"unsupported format: "+format,
 			"",
 			context,
 		)
-		gibidiutils.LogError("Failed to encode output", err)
+		shared.LogError("Failed to encode output", err)
 		close(done)
 	}
 }

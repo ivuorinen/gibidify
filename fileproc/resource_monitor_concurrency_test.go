@@ -10,7 +10,7 @@ import (
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
-func TestResourceMonitor_ConcurrentReadsLimit(t *testing.T) {
+func TestResourceMonitorConcurrentReadsLimit(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
 	// Set a low concurrent reads limit for testing
@@ -58,7 +58,7 @@ func TestResourceMonitor_ConcurrentReadsLimit(t *testing.T) {
 	rm.ReleaseReadSlot()
 }
 
-func TestResourceMonitor_TimeoutContexts(t *testing.T) {
+func TestResourceMonitorTimeoutContexts(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
 	// Set short timeouts for testing

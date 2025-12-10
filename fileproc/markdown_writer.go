@@ -1,18 +1,17 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
-	"strings"
 
-	"github.com/ivuorinen/gibidify/gibidiutils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // MarkdownWriter handles Markdown format output with streaming support.
 type MarkdownWriter struct {
 	outFile *os.File
+	suffix  string
 }
 
 // NewMarkdownWriter creates a new markdown writer.
@@ -20,18 +19,17 @@ func NewMarkdownWriter(outFile *os.File) *MarkdownWriter {
 	return &MarkdownWriter{outFile: outFile}
 }
 
-// Start writes the markdown header.
-func (w *MarkdownWriter) Start(prefix, _ string) error {
+// Start writes the markdown header and stores the suffix for later use.
+func (w *MarkdownWriter) Start(prefix, suffix string) error {
+	// Store suffix for use in Close method
+	w.suffix = suffix
+
 	if prefix != "" {
 		if _, err := fmt.Fprintf(w.outFile, "# %s\n\n", prefix); err != nil {
-			return gibidiutils.WrapError(
-				err,
-				gibidiutils.ErrorTypeIO,
-				gibidiutils.CodeIOWrite,
-				"failed to write prefix",
-			)
+			return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write prefix")
 		}
 	}
+
 	return nil
 }
 
@@ -40,71 +38,15 @@ func (w *MarkdownWriter) WriteFile(req WriteRequest) error {
 	if req.IsStream {
 		return w.writeStreaming(req)
 	}
+
 	return w.writeInline(req)
 }
 
-// Close writes the markdown footer.
-func (w *MarkdownWriter) Close(suffix string) error {
-	if suffix != "" {
-		if _, err := fmt.Fprintf(w.outFile, "\n# %s\n", suffix); err != nil {
-			return gibidiutils.WrapError(
-				err,
-				gibidiutils.ErrorTypeIO,
-				gibidiutils.CodeIOWrite,
-				"failed to write suffix",
-			)
-		}
-	}
-	return nil
-}
-
-// validateMarkdownPath validates a file path for markdown output.
-func validateMarkdownPath(path string) error {
-	trimmed := strings.TrimSpace(path)
-	if trimmed == "" {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationRequired,
-			"file path cannot be empty",
-			"",
-			nil,
-		)
-	}
-
-	// Reject absolute paths
-	if filepath.IsAbs(trimmed) {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationPath,
-			"absolute paths are not allowed",
-			trimmed,
-			map[string]any{"path": trimmed},
-		)
-	}
-
-	// Clean and validate path components
-	cleaned := filepath.Clean(trimmed)
-	if filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, "/") {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationPath,
-			"path must be relative",
-			trimmed,
-			map[string]any{"path": trimmed, "cleaned": cleaned},
-		)
-	}
-
-	// Check for path traversal in components
-	components := strings.Split(filepath.ToSlash(cleaned), "/")
-	for _, component := range components {
-		if component == ".." {
-			return gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationPath,
-				"path traversal not allowed",
-				trimmed,
-				map[string]any{"path": trimmed, "cleaned": cleaned},
-			)
+// Close writes the markdown footer using the suffix stored in Start.
+func (w *MarkdownWriter) Close() error {
+	if w.suffix != "" {
+		if _, err := fmt.Fprintf(w.outFile, "\n# %s\n", w.suffix); err != nil {
+			return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write suffix")
 		}
 	}
 
@@ -113,44 +55,32 @@ func validateMarkdownPath(path string) error {
 
 // writeStreaming writes a large file in streaming chunks.
 func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
-	// Validate path before use
-	if err := validateMarkdownPath(req.Path); err != nil {
-		return err
-	}
-
-	// Check for nil reader
-	if req.Reader == nil {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationRequired,
-			"nil reader in write request",
-			"",
-			nil,
-		).WithFilePath(req.Path)
-	}
-
-	defer gibidiutils.SafeCloseReader(req.Reader, req.Path)
+	defer shared.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
 	// Write file header
-	safePath := gibidiutils.EscapeForMarkdown(req.Path)
-	if _, err := fmt.Fprintf(w.outFile, "## File: `%s`\n```%s\n", safePath, language); err != nil {
-		return gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+	if _, err := fmt.Fprintf(w.outFile, "## File: `%s`\n```%s\n", req.Path, language); err != nil {
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
 			"failed to write file header",
 		).WithFilePath(req.Path)
 	}
 
 	// Stream file content in chunks
-	if err := w.streamContent(req.Reader, req.Path); err != nil {
-		return err
+	chunkSize := shared.FileProcessingStreamChunkSize
+	if err := shared.StreamContent(req.Reader, w.outFile, chunkSize, req.Path, nil); err != nil {
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "streaming content for markdown file")
 	}
 
 	// Write file footer
 	if _, err := w.outFile.WriteString("\n```\n\n"); err != nil {
-		return gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
 			"failed to write file footer",
 		).WithFilePath(req.Path)
 	}
@@ -160,55 +90,24 @@ func (w *MarkdownWriter) writeStreaming(req WriteRequest) error {
 
 // writeInline writes a small file directly from content.
 func (w *MarkdownWriter) writeInline(req WriteRequest) error {
-	// Validate path before use
-	if err := validateMarkdownPath(req.Path); err != nil {
-		return err
-	}
-
 	language := detectLanguage(req.Path)
-	safePath := gibidiutils.EscapeForMarkdown(req.Path)
-	formatted := fmt.Sprintf("## File: `%s`\n```%s\n%s\n```\n\n", safePath, language, req.Content)
+	formatted := fmt.Sprintf("## File: `%s`\n```%s\n%s\n```\n\n", req.Path, language, req.Content)
 
 	if _, err := w.outFile.WriteString(formatted); err != nil {
-		return gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
 			"failed to write inline content",
 		).WithFilePath(req.Path)
 	}
+
 	return nil
 }
 
-// streamContent streams file content in chunks.
-func (w *MarkdownWriter) streamContent(reader io.Reader, path string) error {
-	return gibidiutils.StreamContent(reader, w.outFile, StreamChunkSize, path, nil)
-}
-
 // startMarkdownWriter handles Markdown format output with streaming support.
-func startMarkdownWriter(
-	outFile *os.File,
-	writeCh <-chan WriteRequest,
-	done chan<- struct{},
-	prefix, suffix string,
-) {
-	defer close(done)
-
-	writer := NewMarkdownWriter(outFile)
-
-	// Start writing
-	if err := writer.Start(prefix, suffix); err != nil {
-		gibidiutils.LogError("Failed to write markdown prefix", err)
-		return
-	}
-
-	// Process files
-	for req := range writeCh {
-		if err := writer.WriteFile(req); err != nil {
-			gibidiutils.LogError("Failed to write markdown file", err)
-		}
-	}
-
-	// Close writer
-	if err := writer.Close(suffix); err != nil {
-		gibidiutils.LogError("Failed to write markdown suffix", err)
-	}
+func startMarkdownWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
+	startFormatWriter(outFile, writeCh, done, prefix, suffix, func(f *os.File) FormatWriter {
+		return NewMarkdownWriter(f)
+	})
 }

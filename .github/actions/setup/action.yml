@@ -1,3 +1,4 @@
+---
 name: "Setup Go with Runner Hardening"
 description: "Reusable action to set up Go"
 inputs:

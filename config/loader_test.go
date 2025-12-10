@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/config"
+	"github.com/ivuorinen/gibidify/shared"
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
@@ -26,14 +27,14 @@ func TestDefaultConfig(t *testing.T) {
 	testutil.ResetViperConfig(t, tmpDir)
 
 	// Check defaults
-	defaultSizeLimit := config.GetFileSizeLimit()
+	defaultSizeLimit := config.FileSizeLimit()
 	if defaultSizeLimit != defaultFileSizeLimit {
 		t.Errorf("Expected default file size limit of 5242880, got %d", defaultSizeLimit)
 	}
 
-	ignoredDirs := config.GetIgnoredDirectories()
+	ignoredDirs := config.IgnoredDirectories()
 	if len(ignoredDirs) == 0 {
-		t.Errorf("Expected some default ignored directories, got none")
+		t.Error("Expected some default ignored directories, got none")
 	}
 
 	// Restore Viper state
@@ -76,13 +77,11 @@ ignoreDirectories:
 // TestLoadConfigWithValidation tests that invalid config files fall back to defaults.
 func TestLoadConfigWithValidation(t *testing.T) {
 	// Create a temporary config file with invalid content
-	configContent := `
-fileSizeLimit: 100
-ignoreDirectories:
-	- node_modules
-	- ""
-	- .git
-`
+	configContent := "fileSizeLimit: 100\n" +
+		"ignoreDirectories:\n" +
+		"- node_modules\n" +
+		"- \"\"\n" +
+		"- .git\n"
 
 	tempDir := t.TempDir()
 	configFile := tempDir + "/config.yaml"
@@ -100,13 +99,13 @@ ignoreDirectories:
 	config.LoadConfig()
 
 	// Should have fallen back to defaults due to validation failure
-	if config.GetFileSizeLimit() != int64(config.DefaultFileSizeLimit) {
-		t.Errorf("Expected default file size limit after validation failure, got %d", config.GetFileSizeLimit())
+	if config.FileSizeLimit() != int64(shared.ConfigFileSizeLimitDefault) {
+		t.Errorf("Expected default file size limit after validation failure, got %d", config.FileSizeLimit())
 	}
-	if containsString(config.GetIgnoredDirectories(), "") {
+	if containsString(config.IgnoredDirectories(), "") {
 		t.Errorf(
 			"Expected ignored directories not to contain empty string after validation failure, got %v",
-			config.GetIgnoredDirectories(),
+			config.IgnoredDirectories(),
 		)
 	}
 }
@@ -119,5 +118,6 @@ func containsString(slice []string, item string) bool {
 			return true
 		}
 	}
+
 	return false
 }

@@ -3,16 +3,13 @@ package fileproc
 
 import (
 	"context"
-	"math"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/gibidiutils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // BackpressureManager manages memory usage and applies back-pressure when needed.
@@ -31,11 +28,11 @@ type BackpressureManager struct {
 // NewBackpressureManager creates a new back-pressure manager with configuration.
 func NewBackpressureManager() *BackpressureManager {
 	return &BackpressureManager{
-		enabled:             config.GetBackpressureEnabled(),
-		maxMemoryUsage:      config.GetMaxMemoryUsage(),
-		memoryCheckInterval: config.GetMemoryCheckInterval(),
-		maxPendingFiles:     config.GetMaxPendingFiles(),
-		maxPendingWrites:    config.GetMaxPendingWrites(),
+		enabled:             config.BackpressureEnabled(),
+		maxMemoryUsage:      config.MaxMemoryUsage(),
+		memoryCheckInterval: config.MemoryCheckInterval(),
+		maxPendingFiles:     config.MaxPendingFiles(),
+		maxPendingWrites:    config.MaxPendingWrites(),
 		lastMemoryCheck:     time.Now(),
 	}
 }
@@ -45,38 +42,52 @@ func (bp *BackpressureManager) CreateChannels() (chan string, chan WriteRequest)
 	var fileCh chan string
 	var writeCh chan WriteRequest
 
+	logger := shared.GetLogger()
 	if bp.enabled {
 		// Use buffered channels with configured limits
 		fileCh = make(chan string, bp.maxPendingFiles)
 		writeCh = make(chan WriteRequest, bp.maxPendingWrites)
-		logrus.Debugf("Created buffered channels: files=%d, writes=%d", bp.maxPendingFiles, bp.maxPendingWrites)
+		logger.Debugf("Created buffered channels: files=%d, writes=%d", bp.maxPendingFiles, bp.maxPendingWrites)
 	} else {
 		// Use unbuffered channels (default behavior)
 		fileCh = make(chan string)
 		writeCh = make(chan WriteRequest)
-		logrus.Debug("Created unbuffered channels (back-pressure disabled)")
+		logger.Debug("Created unbuffered channels (back-pressure disabled)")
 	}
 
 	return fileCh, writeCh
 }
 
 // ShouldApplyBackpressure checks if back-pressure should be applied.
-func (bp *BackpressureManager) ShouldApplyBackpressure(_ context.Context) bool {
+func (bp *BackpressureManager) ShouldApplyBackpressure(ctx context.Context) bool {
+	// Check for context cancellation first
+	select {
+	case <-ctx.Done():
+		return false // No need for backpressure if canceled
+	default:
+	}
+
 	if !bp.enabled {
 		return false
 	}
 
 	// Check if we should evaluate memory usage
 	filesProcessed := atomic.AddInt64(&bp.filesProcessed, 1)
-	// Avoid divide by zero - if interval is 0, check every file
-	if bp.memoryCheckInterval > 0 && int(filesProcessed)%bp.memoryCheckInterval != 0 {
+
+	// Guard against zero or negative interval to avoid modulo-by-zero panic
+	interval := bp.memoryCheckInterval
+	if interval <= 0 {
+		interval = 1
+	}
+
+	if int(filesProcessed)%interval != 0 {
 		return false
 	}
 
 	// Get current memory usage
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	currentMemory := gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, math.MaxInt64)
+	currentMemory := shared.SafeUint64ToInt64WithDefault(m.Alloc, 0)
 
 	bp.mu.Lock()
 	defer bp.mu.Unlock()
@@ -84,18 +95,22 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(_ context.Context) bool {
 	bp.lastMemoryCheck = time.Now()
 
 	// Check if we're over the memory limit
+	logger := shared.GetLogger()
 	if currentMemory > bp.maxMemoryUsage {
 		if !bp.memoryWarningLogged {
-			logrus.Warnf("Memory usage (%d bytes) exceeds limit (%d bytes), applying back-pressure",
-				currentMemory, bp.maxMemoryUsage)
+			logger.Warnf(
+				"Memory usage (%d bytes) exceeds limit (%d bytes), applying back-pressure",
+				currentMemory, bp.maxMemoryUsage,
+			)
 			bp.memoryWarningLogged = true
 		}
+
 		return true
 	}
 
 	// Reset warning flag if we're back under the limit
 	if bp.memoryWarningLogged && currentMemory < bp.maxMemoryUsage*8/10 { // 80% of limit
-		logrus.Infof("Memory usage normalized (%d bytes), removing back-pressure", currentMemory)
+		logger.Infof("Memory usage normalized (%d bytes), removing back-pressure", currentMemory)
 		bp.memoryWarningLogged = false
 	}
 
@@ -106,14 +121,6 @@ func (bp *BackpressureManager) ShouldApplyBackpressure(_ context.Context) bool {
 func (bp *BackpressureManager) ApplyBackpressure(ctx context.Context) {
 	if !bp.enabled {
 		return
-	}
-
-	// Check for context cancellation before doing expensive operations
-	select {
-	case <-ctx.Done():
-		return
-	default:
-		// Continue with backpressure logic
 	}
 
 	// Force garbage collection to free up memory
@@ -130,11 +137,12 @@ func (bp *BackpressureManager) ApplyBackpressure(ctx context.Context) {
 	// Log memory usage after GC
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	logrus.Debugf("Applied back-pressure: memory after GC = %d bytes", m.Alloc)
+	logger := shared.GetLogger()
+	logger.Debugf("Applied back-pressure: memory after GC = %d bytes", m.Alloc)
 }
 
-// GetStats returns current back-pressure statistics.
-func (bp *BackpressureManager) GetStats() BackpressureStats {
+// Stats returns current back-pressure statistics.
+func (bp *BackpressureManager) Stats() BackpressureStats {
 	bp.mu.RLock()
 	defer bp.mu.RUnlock()
 
@@ -144,7 +152,7 @@ func (bp *BackpressureManager) GetStats() BackpressureStats {
 	return BackpressureStats{
 		Enabled:             bp.enabled,
 		FilesProcessed:      atomic.LoadInt64(&bp.filesProcessed),
-		CurrentMemoryUsage:  gibidiutils.SafeUint64ToInt64WithDefault(m.Alloc, math.MaxInt64),
+		CurrentMemoryUsage:  shared.SafeUint64ToInt64WithDefault(m.Alloc, 0),
 		MaxMemoryUsage:      bp.maxMemoryUsage,
 		MemoryWarningActive: bp.memoryWarningLogged,
 		LastMemoryCheck:     bp.lastMemoryCheck,
@@ -171,9 +179,11 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 		return
 	}
 
-	// Check if file channel is getting full (>=90% capacity)
-	if bp.maxPendingFiles > 0 && len(fileCh) >= bp.maxPendingFiles*9/10 {
-		logrus.Debugf("File channel is %d%% full, waiting for space", len(fileCh)*100/bp.maxPendingFiles)
+	logger := shared.GetLogger()
+	// Check if file channel is getting full (>90% capacity)
+	fileCap := cap(fileCh)
+	if fileCap > 0 && len(fileCh) > fileCap*9/10 {
+		logger.Debugf("File channel is %d%% full, waiting for space", len(fileCh)*100/fileCap)
 
 		// Wait a bit for the channel to drain
 		select {
@@ -183,9 +193,10 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 		}
 	}
 
-	// Check if write channel is getting full (>=90% capacity)
-	if bp.maxPendingWrites > 0 && len(writeCh) >= bp.maxPendingWrites*9/10 {
-		logrus.Debugf("Write channel is %d%% full, waiting for space", len(writeCh)*100/bp.maxPendingWrites)
+	// Check if write channel is getting full (>90% capacity)
+	writeCap := cap(writeCh)
+	if writeCap > 0 && len(writeCh) > writeCap*9/10 {
+		logger.Debugf("Write channel is %d%% full, waiting for space", len(writeCh)*100/writeCap)
 
 		// Wait a bit for the channel to drain
 		select {
@@ -198,10 +209,13 @@ func (bp *BackpressureManager) WaitForChannelSpace(ctx context.Context, fileCh c
 
 // LogBackpressureInfo logs back-pressure configuration and status.
 func (bp *BackpressureManager) LogBackpressureInfo() {
+	logger := shared.GetLogger()
 	if bp.enabled {
-		logrus.Infof("Back-pressure enabled: maxMemory=%dMB, fileBuffer=%d, writeBuffer=%d, checkInterval=%d",
-			bp.maxMemoryUsage/1024/1024, bp.maxPendingFiles, bp.maxPendingWrites, bp.memoryCheckInterval)
+		logger.Infof(
+			"Back-pressure enabled: maxMemory=%dMB, fileBuffer=%d, writeBuffer=%d, checkInterval=%d",
+			bp.maxMemoryUsage/int64(shared.BytesPerMB), bp.maxPendingFiles, bp.maxPendingWrites, bp.memoryCheckInterval,
+		)
 	} else {
-		logrus.Info("Back-pressure disabled")
+		logger.Info("Back-pressure disabled")
 	}
 }

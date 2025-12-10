@@ -3,399 +3,665 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/fatih/color"
-	"github.com/stretchr/testify/assert"
-
-	"github.com/ivuorinen/gibidify/gibidiutils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 func TestNewErrorFormatter(t *testing.T) {
-	ui := &UIManager{
-		output: &bytes.Buffer{},
+	ui := NewUIManager()
+	formatter := NewErrorFormatter(ui)
+
+	if formatter == nil {
+		t.Error("NewErrorFormatter() returned nil")
+
+		return
 	}
-
-	ef := NewErrorFormatter(ui)
-
-	assert.NotNil(t, ef)
-	assert.Equal(t, ui, ef.ui)
+	if formatter.ui != ui {
+		t.Error("NewErrorFormatter() did not set ui manager correctly")
+	}
 }
 
-func TestFormatError(t *testing.T) {
+func TestErrorFormatterFormatError(t *testing.T) {
 	tests := []struct {
 		name           string
 		err            error
-		expectedOutput []string
-		notExpected    []string
+		expectedOutput []string // Substrings that should be present in output
 	}{
 		{
 			name:           "nil error",
 			err:            nil,
-			expectedOutput: []string{},
+			expectedOutput: []string{}, // Should produce no output
 		},
 		{
-			name: "structured error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeFileSystem,
-				gibidiutils.CodeFSNotFound,
-				testErrFileNotFound,
-				"/test/file.txt",
-				map[string]interface{}{"size": 1024},
-			),
-			expectedOutput: []string{
-				gibidiutils.IconError + testErrorSuffix,
-				"FileSystem",
-				testErrFileNotFound,
-				"/test/file.txt",
-				"NOT_FOUND",
+			name: "structured error with context",
+			err: &shared.StructuredError{
+				Type:     shared.ErrorTypeFileSystem,
+				Code:     shared.CodeFSAccess,
+				Message:  shared.TestErrCannotAccessFile,
+				FilePath: shared.TestPathBase,
+				Context: map[string]any{
+					"permission": "0000",
+					"owner":      "root",
+				},
 			},
-		},
-		{
-			name:           "generic error",
-			err:            errors.New("something went wrong"),
-			expectedOutput: []string{gibidiutils.IconError + testErrorSuffix, "something went wrong"},
-		},
-		{
-			name: "wrapped structured error",
-			err: gibidiutils.WrapError(
-				errors.New("inner error"),
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationRequired,
-				"validation failed",
-			),
 			expectedOutput: []string{
-				gibidiutils.IconError + testErrorSuffix,
-				"validation failed",
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
-			prev := color.NoColor
-			color.NoColor = true
-			t.Cleanup(func() { color.NoColor = prev })
-
-			ef := NewErrorFormatter(ui)
-			ef.FormatError(tt.err)
-
-			output := buf.String()
-			for _, expected := range tt.expectedOutput {
-				assert.Contains(t, output, expected)
-			}
-			for _, notExpected := range tt.notExpected {
-				assert.NotContains(t, output, notExpected)
-			}
-		})
-	}
-}
-
-func TestFormatStructuredError(t *testing.T) {
-	tests := []struct {
-		name           string
-		err            *gibidiutils.StructuredError
-		expectedOutput []string
-	}{
-		{
-			name: "filesystem error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeFileSystem,
-				gibidiutils.CodeFSPermission,
-				testErrPermissionDenied,
-				"/etc/shadow",
-				nil,
-			),
-			expectedOutput: []string{
-				"FileSystem",
-				testErrPermissionDenied,
-				"/etc/shadow",
-				"PERMISSION_DENIED",
-				testSuggestionsHeader,
+				"✗ Error: " + shared.TestErrCannotAccessFile,
+				"Type: FileSystem, Code: ACCESS_DENIED",
+				"File: " + shared.TestPathBase,
+				"Context:",
+				"permission: 0000",
+				"owner: root",
+				shared.TestSuggestionsWarning,
+				"Check if the path exists",
 			},
 		},
 		{
 			name: "validation error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationFormat,
-				testErrInvalidFormat,
-				"",
-				map[string]interface{}{"format": "xml"},
-			),
+			err: &shared.StructuredError{
+				Type:    shared.ErrorTypeValidation,
+				Code:    shared.CodeValidationFormat,
+				Message: "invalid output format",
+			},
 			expectedOutput: []string{
-				"Validation",
-				testErrInvalidFormat,
-				"FORMAT",
-				testSuggestionsHeader,
+				"✗ Error: invalid output format",
+				"Type: Validation, Code: FORMAT",
+				shared.TestSuggestionsWarning,
+				"Use a supported format: markdown, json, yaml",
 			},
 		},
 		{
 			name: "processing error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeProcessing,
-				gibidiutils.CodeProcessingFileRead,
-				"failed to read file",
-				"large.bin",
-				nil,
-			),
+			err: &shared.StructuredError{
+				Type:    shared.ErrorTypeProcessing,
+				Code:    shared.CodeProcessingCollection,
+				Message: "failed to collect files",
+			},
 			expectedOutput: []string{
-				"Processing",
-				"failed to read file",
-				"large.bin",
-				"FILE_READ",
-				testSuggestionsHeader,
+				"✗ Error: failed to collect files",
+				"Type: Processing, Code: COLLECTION",
+				shared.TestSuggestionsWarning,
+				"Check if the source directory exists",
 			},
 		},
 		{
-			name: "IO error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeIO,
-				gibidiutils.CodeIOFileWrite,
-				"disk full",
-				"/output/result.txt",
-				nil,
-			),
+			name: "I/O error",
+			err: &shared.StructuredError{
+				Type:    shared.ErrorTypeIO,
+				Code:    shared.CodeIOFileCreate,
+				Message: "cannot create output file",
+			},
 			expectedOutput: []string{
-				"IO",
-				"disk full",
-				"/output/result.txt",
-				"FILE_WRITE",
-				testSuggestionsHeader,
+				"✗ Error: cannot create output file",
+				"Type: IO, Code: FILE_CREATE",
+				shared.TestSuggestionsWarning,
+				"Check if the destination directory exists",
+			},
+		},
+		{
+			name: "generic error with permission denied",
+			err:  errors.New("permission denied: access to /secret/file"),
+			expectedOutput: []string{
+				"✗ Error: permission denied: access to /secret/file",
+				shared.TestSuggestionsWarning,
+				shared.TestSuggestCheckPermissions,
+				"Try running with appropriate privileges",
+			},
+		},
+		{
+			name: "generic error with file not found",
+			err:  errors.New("no such file or directory"),
+			expectedOutput: []string{
+				"✗ Error: no such file or directory",
+				shared.TestSuggestionsWarning,
+				"Verify the file/directory path is correct",
+				"Check if the file exists",
+			},
+		},
+		{
+			name: "generic error with flag redefined",
+			err:  errors.New("flag provided but not defined: -invalid"),
+			expectedOutput: []string{
+				"✗ Error: flag provided but not defined: -invalid",
+				shared.TestSuggestionsWarning,
+				shared.TestSuggestCheckArguments,
+				"Run with --help for usage information",
+			},
+		},
+		{
+			name: "unknown generic error",
+			err:  errors.New("some unknown error"),
+			expectedOutput: []string{
+				"✗ Error: some unknown error",
+				shared.TestSuggestionsWarning,
+				shared.TestSuggestCheckArguments,
+				"Run with --help for usage information",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
+			// Capture output
+			ui, output := createTestUI()
+			formatter := NewErrorFormatter(ui)
+
+			formatter.FormatError(tt.err)
+
+			outputStr := output.String()
+
+			// For nil error, output should be empty
+			if tt.err == nil {
+				if outputStr != "" {
+					t.Errorf("Expected no output for nil error, got: %s", outputStr)
+				}
+
+				return
 			}
-			prev := color.NoColor
-			color.NoColor = true
-			t.Cleanup(func() { color.NoColor = prev })
 
-			ef := &ErrorFormatter{ui: ui}
-			ef.formatStructuredError(tt.err)
-
-			output := buf.String()
+			// Check that all expected substrings are present
 			for _, expected := range tt.expectedOutput {
-				assert.Contains(t, output, expected)
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf(shared.TestMsgOutputMissingSubstring, expected, outputStr)
+				}
 			}
 		})
 	}
 }
 
-func TestFormatGenericError(t *testing.T) {
-	buf := &bytes.Buffer{}
-	ui := &UIManager{
-		enableColors: false,
-		output:       buf,
+func TestErrorFormatterSuggestFileAccess(t *testing.T) {
+	ui, output := createTestUI()
+	formatter := NewErrorFormatter(ui)
+
+	// Create a temporary file to test with existing file
+	tempDir := t.TempDir()
+	tempFile, err := os.Create(filepath.Join(tempDir, "testfile"))
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	prev := color.NoColor
-	color.NoColor = true
-	t.Cleanup(func() { color.NoColor = prev })
+	if err := tempFile.Close(); err != nil {
+		t.Errorf("Failed to close temp file: %v", err)
+	}
 
-	ef := &ErrorFormatter{ui: ui}
-	ef.formatGenericError(errors.New("generic error message"))
-
-	output := buf.String()
-	assert.Contains(t, output, gibidiutils.IconError+testErrorSuffix)
-	assert.Contains(t, output, "generic error message")
-}
-
-func TestProvideSuggestions(t *testing.T) {
 	tests := []struct {
 		name           string
-		err            *gibidiutils.StructuredError
-		expectedSugges []string
+		filePath       string
+		expectedOutput []string
 	}{
 		{
-			name: "filesystem permission error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeFileSystem,
-				gibidiutils.CodeFSPermission,
-				testErrPermissionDenied,
-				"/root/file",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckPerms,
-				testSuggestVerifyPath,
+			name:     shared.TestErrEmptyFilePath,
+			filePath: "",
+			expectedOutput: []string{
+				shared.TestSuggestCheckExists,
+				"Verify read permissions",
 			},
 		},
 		{
-			name: "filesystem not found error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeFileSystem,
-				gibidiutils.CodeFSNotFound,
-				testErrFileNotFound,
-				"/missing/file",
-				nil,
-			),
-			expectedSugges: []string{
-				"Check if the file/directory exists: /missing/file",
+			name:     "existing file",
+			filePath: tempFile.Name(),
+			expectedOutput: []string{
+				shared.TestSuggestCheckExists,
+				"Path exists but may not be accessible",
+				"Mode:",
 			},
 		},
 		{
-			name: "validation format error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationFormat,
-				"unsupported format",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestFormat,
-				testSuggestFormatEx,
+			name:     "nonexistent file",
+			filePath: "/nonexistent/file",
+			expectedOutput: []string{
+				shared.TestSuggestCheckExists,
+				"Verify read permissions",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output.Reset()
+			formatter.suggestFileAccess(tt.filePath)
+
+			outputStr := output.String()
+			for _, expected := range tt.expectedOutput {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf(shared.TestMsgOutputMissingSubstring, expected, outputStr)
+				}
+			}
+		})
+	}
+}
+
+func TestErrorFormatterSuggestFileNotFound(t *testing.T) {
+	// Create a test directory with some files
+	tempDir := t.TempDir()
+	testFiles := []string{"similar-file.txt", "another-similar.go", "different.md"}
+	for _, filename := range testFiles {
+		file, err := os.Create(filepath.Join(tempDir, filename))
+		if err != nil {
+			t.Fatalf("Failed to create test file %s: %v", filename, err)
+		}
+		if err := file.Close(); err != nil {
+			t.Errorf("Failed to close test file %s: %v", filename, err)
+		}
+	}
+
+	ui, output := createTestUI()
+	formatter := NewErrorFormatter(ui)
+
+	tests := []struct {
+		name           string
+		filePath       string
+		expectedOutput []string
+	}{
+		{
+			name:     shared.TestErrEmptyFilePath,
+			filePath: "",
+			expectedOutput: []string{
+				shared.TestSuggestCheckFileExists,
 			},
 		},
 		{
-			name: "validation path error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationPath,
-				"invalid path",
-				"../../etc",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
-				testSuggestHelp,
+			name:     "file with similar matches",
+			filePath: tempDir + "/similar",
+			expectedOutput: []string{
+				shared.TestSuggestCheckFileExists,
+				"Similar files in",
+				"similar-file.txt",
 			},
 		},
 		{
-			name: "processing file read error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeProcessing,
-				gibidiutils.CodeProcessingFileRead,
-				"read error",
-				"corrupted.dat",
-				nil,
-			),
-			expectedSugges: []string{
-				"Check file permissions",
-				"Verify the file is not corrupted",
+			name:     "nonexistent directory",
+			filePath: "/nonexistent/dir/file.txt",
+			expectedOutput: []string{
+				shared.TestSuggestCheckFileExists,
 			},
 		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output.Reset()
+			formatter.suggestFileNotFound(tt.filePath)
+
+			outputStr := output.String()
+			for _, expected := range tt.expectedOutput {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf(shared.TestMsgOutputMissingSubstring, expected, outputStr)
+				}
+			}
+		})
+	}
+}
+
+func TestErrorFormatterProvideSuggestions(t *testing.T) {
+	ui, output := createTestUI()
+	formatter := NewErrorFormatter(ui)
+
+	tests := []struct {
+		name              string
+		err               *shared.StructuredError
+		expectSuggestions []string
+	}{
 		{
-			name: "IO file write error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeIO,
-				gibidiutils.CodeIOFileWrite,
-				"write failed",
-				"/output.txt",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckPerms,
-				testSuggestDiskSpace,
+			name: "filesystem error",
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeFileSystem,
+				Code: shared.CodeFSAccess,
 			},
+			expectSuggestions: []string{shared.TestSuggestionsPlain, "Check if the path exists"},
+		},
+		{
+			name: "validation error",
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeValidation,
+				Code: shared.CodeValidationFormat,
+			},
+			expectSuggestions: []string{shared.TestSuggestionsPlain, "Use a supported format"},
+		},
+		{
+			name: "processing error",
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeProcessing,
+				Code: shared.CodeProcessingCollection,
+			},
+			expectSuggestions: []string{shared.TestSuggestionsPlain, "Check if the source directory exists"},
+		},
+		{
+			name: "I/O error",
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeIO,
+				Code: shared.CodeIOWrite,
+			},
+			expectSuggestions: []string{shared.TestSuggestionsPlain, "Check available disk space"},
 		},
 		{
 			name: "unknown error type",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeUnknown,
-				"UNKNOWN",
-				"unknown error",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeUnknown,
+			},
+			expectSuggestions: []string{"Check your command line arguments"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output.Reset()
+			formatter.provideSuggestions(tt.err)
+
+			outputStr := output.String()
+			for _, expected := range tt.expectSuggestions {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf(shared.TestMsgOutputMissingSubstring, expected, outputStr)
+				}
+			}
+		})
+	}
+}
+
+func TestMissingSourceError(t *testing.T) {
+	err := NewCLIMissingSourceError()
+
+	if err == nil {
+		t.Error("NewCLIMissingSourceError() returned nil")
+
+		return
+	}
+
+	expectedMsg := "source directory is required"
+	if err.Error() != expectedMsg {
+		t.Errorf("MissingSourceError.Error() = %v, want %v", err.Error(), expectedMsg)
+	}
+
+	// Test type assertion
+	var cliErr *MissingSourceError
+	if !errors.As(err, &cliErr) {
+		t.Error("NewCLIMissingSourceError() did not return *MissingSourceError type")
+	}
+}
+
+func TestIsUserError(t *testing.T) {
+	tests := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "CLI missing source error",
+			err:      NewCLIMissingSourceError(),
+			expected: true,
+		},
+		{
+			name: "validation structured error",
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeValidation,
+			},
+			expected: true,
+		},
+		{
+			name: "validation format structured error",
+			err: &shared.StructuredError{
+				Code: shared.CodeValidationFormat,
+			},
+			expected: true,
+		},
+		{
+			name: "validation size structured error",
+			err: &shared.StructuredError{
+				Code: shared.CodeValidationSize,
+			},
+			expected: true,
+		},
+		{
+			name: "non-validation structured error",
+			err: &shared.StructuredError{
+				Type: shared.ErrorTypeFileSystem,
+			},
+			expected: false,
+		},
+		{
+			name:     "generic error with flag keyword",
+			err:      errors.New("flag provided but not defined"),
+			expected: true,
+		},
+		{
+			name:     "generic error with usage keyword",
+			err:      errors.New("usage: command [options]"),
+			expected: true,
+		},
+		{
+			name:     "generic error with invalid argument",
+			err:      errors.New("invalid argument provided"),
+			expected: true,
+		},
+		{
+			name:     "generic error with file not found",
+			err:      errors.New("file not found"),
+			expected: true,
+		},
+		{
+			name:     "generic error with permission denied",
+			err:      errors.New("permission denied"),
+			expected: true,
+		},
+		{
+			name:     "system error not user-facing",
+			err:      errors.New("internal system error"),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsUserError(tt.err)
+			if result != tt.expected {
+				t.Errorf("IsUserError(%v) = %v, want %v", tt.err, result, tt.expected)
+			}
+		})
+	}
+}
+
+// Helper functions for testing
+
+// createTestUI creates a UIManager with captured output for testing.
+func createTestUI() (*UIManager, *bytes.Buffer) {
+	output := &bytes.Buffer{}
+	ui := &UIManager{
+		enableColors:   false, // Disable colors for consistent testing
+		enableProgress: false, // Disable progress for testing
+		output:         output,
+	}
+
+	return ui, output
+}
+
+// TestErrorFormatterIntegration tests the complete error formatting workflow.
+func TestErrorFormatterIntegration(t *testing.T) {
+	ui, output := createTestUI()
+	formatter := NewErrorFormatter(ui)
+
+	// Test a complete workflow with a complex structured error
+	structuredErr := &shared.StructuredError{
+		Type:     shared.ErrorTypeFileSystem,
+		Code:     shared.CodeFSNotFound,
+		Message:  "source directory not found",
+		FilePath: "/missing/directory",
+		Context: map[string]any{
+			"attempted_path": "/missing/directory",
+			"current_dir":    "/working/dir",
+		},
+	}
+
+	formatter.FormatError(structuredErr)
+	outputStr := output.String()
+
+	// Verify all components are present
+	expectedComponents := []string{
+		"✗ Error: source directory not found",
+		"Type: FileSystem, Code: NOT_FOUND",
+		"File: /missing/directory",
+		"Context:",
+		"attempted_path: /missing/directory",
+		"current_dir: /working/dir",
+		shared.TestSuggestionsWarning,
+		"Check if the file/directory exists",
+	}
+
+	for _, expected := range expectedComponents {
+		if !strings.Contains(outputStr, expected) {
+			t.Errorf("Integration test output missing expected component: %q\nFull output:\n%s", expected, outputStr)
+		}
+	}
+}
+
+// TestErrorFormatter_SuggestPathResolution tests the suggestPathResolution function.
+func TestErrorFormatterSuggestPathResolution(t *testing.T) {
+	tests := []struct {
+		name           string
+		filePath       string
+		expectedOutput []string
+	}{
+		{
+			name:     "with file path",
+			filePath: "relative/path/file.txt",
+			expectedOutput: []string{
+				shared.TestSuggestUseAbsolutePath,
+				"Try:",
+			},
+		},
+		{
+			name:     shared.TestErrEmptyFilePath,
+			filePath: "",
+			expectedOutput: []string{
+				shared.TestSuggestUseAbsolutePath,
+			},
+		},
+		{
+			name:     "current directory reference",
+			filePath: "./file.txt",
+			expectedOutput: []string{
+				shared.TestSuggestUseAbsolutePath,
+				"Try:",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
-			prev := color.NoColor
-			color.NoColor = true
-			t.Cleanup(func() { color.NoColor = prev })
+			ui, output := createTestUI()
+			formatter := NewErrorFormatter(ui)
 
-			ef := &ErrorFormatter{ui: ui}
-			ef.provideSuggestions(tt.err)
+			// Call the method
+			formatter.suggestPathResolution(tt.filePath)
 
-			output := buf.String()
-			for _, suggestion := range tt.expectedSugges {
-				assert.Contains(t, output, suggestion)
+			// Check output
+			outputStr := output.String()
+			for _, expected := range tt.expectedOutput {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf("suggestPathResolution output missing: %q\nFull output: %q", expected, outputStr)
+				}
 			}
 		})
 	}
 }
 
-func TestProvideFileSystemSuggestions(t *testing.T) {
+// TestErrorFormatter_SuggestFileSystemGeneral tests the suggestFileSystemGeneral function.
+func TestErrorFormatterSuggestFileSystemGeneral(t *testing.T) {
 	tests := []struct {
 		name           string
-		err            *gibidiutils.StructuredError
-		expectedSugges []string
+		filePath       string
+		expectedOutput []string
 	}{
 		{
-			name: testErrPermissionDenied,
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeFileSystem,
-				gibidiutils.CodeFSPermission,
-				testErrPermissionDenied,
-				"/root/secret",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckPerms,
-				testSuggestVerifyPath,
+			name:     "with file path",
+			filePath: "/path/to/file.txt",
+			expectedOutput: []string{
+				shared.TestSuggestCheckPermissions,
+				shared.TestSuggestVerifyPath,
+				"Path: /path/to/file.txt",
 			},
 		},
 		{
-			name: "path resolution error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeFileSystem,
-				gibidiutils.CodeFSPathResolution,
-				"path error",
-				"../../../etc",
-				nil,
-			),
-			expectedSugges: []string{
-				"Use an absolute path instead of relative",
+			name:     shared.TestErrEmptyFilePath,
+			filePath: "",
+			expectedOutput: []string{
+				shared.TestSuggestCheckPermissions,
+				shared.TestSuggestVerifyPath,
 			},
 		},
 		{
-			name: testErrFileNotFound,
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeFileSystem,
-				gibidiutils.CodeFSNotFound,
-				"not found",
-				"/missing.txt",
-				nil,
-			),
-			expectedSugges: []string{
-				"Check if the file/directory exists: /missing.txt",
+			name:     "relative path",
+			filePath: "../parent/file.txt",
+			expectedOutput: []string{
+				shared.TestSuggestCheckPermissions,
+				shared.TestSuggestVerifyPath,
+				"Path: ../parent/file.txt",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ui, output := createTestUI()
+			formatter := NewErrorFormatter(ui)
+
+			// Call the method
+			formatter.suggestFileSystemGeneral(tt.filePath)
+
+			// Check output
+			outputStr := output.String()
+			for _, expected := range tt.expectedOutput {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf("suggestFileSystemGeneral output missing: %q\nFull output: %q", expected, outputStr)
+				}
+			}
+
+			// When no file path is provided, should not contain "Path:" line
+			if tt.filePath == "" && strings.Contains(outputStr, "Path:") {
+				t.Error("suggestFileSystemGeneral should not include Path line when filePath is empty")
+			}
+		})
+	}
+}
+
+// TestErrorFormatter_SuggestionFunctions_Integration tests the integration of suggestion functions.
+func TestErrorFormatterSuggestionFunctionsIntegration(t *testing.T) {
+	// Test that suggestion functions work as part of the full error formatting workflow
+	tests := []struct {
+		name                string
+		err                 *shared.StructuredError
+		expectedSuggestions []string
+	}{
+		{
+			name: "filesystem path resolution error",
+			err: &shared.StructuredError{
+				Type:     shared.ErrorTypeFileSystem,
+				Code:     shared.CodeFSPathResolution,
+				Message:  "path resolution failed",
+				FilePath: "relative/path",
+			},
+			expectedSuggestions: []string{
+				shared.TestSuggestUseAbsolutePath,
+				"Try:",
 			},
 		},
 		{
-			name: "default filesystem error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeFileSystem,
-				"OTHER_FS_ERROR",
-				testErrOther,
-				"/some/path",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckPerms,
-				testSuggestVerifyPath,
+			name: "filesystem unknown error",
+			err: &shared.StructuredError{
+				Type:     shared.ErrorTypeFileSystem,
+				Code:     "UNKNOWN_FS_ERROR", // This will trigger default case
+				Message:  "unknown filesystem error",
+				FilePath: "/some/path",
+			},
+			expectedSuggestions: []string{
+				shared.TestSuggestCheckPermissions,
+				shared.TestSuggestVerifyPath,
 				"Path: /some/path",
 			},
 		},
@@ -403,561 +669,76 @@ func TestProvideFileSystemSuggestions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
+			ui, output := createTestUI()
+			formatter := NewErrorFormatter(ui)
 
-			ef := &ErrorFormatter{ui: ui}
-			ef.provideFileSystemSuggestions(tt.err)
+			// Format the error (which should include suggestions)
+			formatter.FormatError(tt.err)
 
-			output := buf.String()
-			for _, suggestion := range tt.expectedSugges {
-				assert.Contains(t, output, suggestion)
-			}
-		})
-	}
-}
-
-func TestProvideValidationSuggestions(t *testing.T) {
-	tests := []struct {
-		name           string
-		err            *gibidiutils.StructuredError
-		expectedSugges []string
-	}{
-		{
-			name: "format validation",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationFormat,
-				testErrInvalidFormat,
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestFormat,
-				testSuggestFormatEx,
-			},
-		},
-		{
-			name: "path validation",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationPath,
-				"invalid path",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
-				testSuggestHelp,
-			},
-		},
-		{
-			name: "size validation",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationSize,
-				"size error",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				"Increase file size limit in config.yaml",
-				"Use smaller files or exclude large files",
-			},
-		},
-		{
-			name: "required validation",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationRequired,
-				"required",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
-				testSuggestHelp,
-			},
-		},
-		{
-			name: "default validation",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				"OTHER_VALIDATION",
-				"other",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
-				testSuggestHelp,
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
-
-			ef := &ErrorFormatter{ui: ui}
-			ef.provideValidationSuggestions(tt.err)
-
-			output := buf.String()
-			for _, suggestion := range tt.expectedSugges {
-				assert.Contains(t, output, suggestion)
+			// Check that expected suggestions are present
+			outputStr := output.String()
+			for _, expected := range tt.expectedSuggestions {
+				if !strings.Contains(outputStr, expected) {
+					t.Errorf("Integrated suggestion missing: %q\nFull output: %q", expected, outputStr)
+				}
 			}
 		})
 	}
 }
 
-func TestProvideProcessingSuggestions(t *testing.T) {
-	tests := []struct {
-		name           string
-		err            *gibidiutils.StructuredError
-		expectedSugges []string
-	}{
-		{
-			name: "file read error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeProcessing,
-				gibidiutils.CodeProcessingFileRead,
-				"read error",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				"Check file permissions",
-				"Verify the file is not corrupted",
-			},
-		},
-		{
-			name: "collection error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeProcessing,
-				gibidiutils.CodeProcessingCollection,
-				"collection error",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				"Check if the source directory exists and is readable",
-				"Verify directory permissions",
-			},
-		},
-		{
-			name: testErrEncoding,
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeProcessing,
-				gibidiutils.CodeProcessingEncode,
-				testErrEncoding,
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				"Try reducing concurrency: -concurrency 1",
-				"Check available system resources",
-			},
-		},
-		{
-			name: "default processing",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeProcessing,
-				"OTHER",
-				testErrOther,
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				"Try reducing concurrency: -concurrency 1",
-				"Check available system resources",
-			},
-		},
+// Benchmarks for error formatting performance
+
+// BenchmarkErrorFormatterFormatError benchmarks the FormatError method.
+func BenchmarkErrorFormatterFormatError(b *testing.B) {
+	ui, _ := createTestUI()
+	formatter := NewErrorFormatter(ui)
+	err := &shared.StructuredError{
+		Type:     shared.ErrorTypeFileSystem,
+		Code:     shared.CodeFSAccess,
+		Message:  shared.TestErrCannotAccessFile,
+		FilePath: shared.TestPathBase,
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
-
-			ef := &ErrorFormatter{ui: ui}
-			ef.provideProcessingSuggestions(tt.err)
-
-			output := buf.String()
-			for _, suggestion := range tt.expectedSugges {
-				assert.Contains(t, output, suggestion)
-			}
-		})
+	b.ResetTimer()
+	for b.Loop() {
+		formatter.FormatError(err)
 	}
 }
 
-func TestProvideIOSuggestions(t *testing.T) {
-	tests := []struct {
-		name           string
-		err            *gibidiutils.StructuredError
-		expectedSugges []string
-	}{
-		{
-			name: "file create error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeIO,
-				gibidiutils.CodeIOFileCreate,
-				"create error",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				"Check if the destination directory exists",
-				"Verify write permissions for the output file",
-				"Ensure sufficient disk space",
-			},
-		},
-		{
-			name: "file write error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeIO,
-				gibidiutils.CodeIOFileWrite,
-				"write error",
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckPerms,
-				testSuggestDiskSpace,
-			},
-		},
-		{
-			name: testErrEncoding,
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeIO,
-				gibidiutils.CodeIOEncoding,
-				testErrEncoding,
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckPerms,
-				testSuggestDiskSpace,
-			},
-		},
-		{
-			name: "default IO error",
-			err: gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeIO,
-				"OTHER",
-				testErrOther,
-				"",
-				nil,
-			),
-			expectedSugges: []string{
-				testSuggestCheckPerms,
-				testSuggestDiskSpace,
-			},
+// BenchmarkErrorFormatterFormatErrorWithContext benchmarks error formatting with context.
+func BenchmarkErrorFormatterFormatErrorWithContext(b *testing.B) {
+	ui, _ := createTestUI()
+	formatter := NewErrorFormatter(ui)
+	err := &shared.StructuredError{
+		Type:     shared.ErrorTypeValidation,
+		Code:     shared.CodeValidationFormat,
+		Message:  "validation failed",
+		FilePath: shared.TestPathBase,
+		Context: map[string]any{
+			"field": "format",
+			"value": "invalid",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
-
-			ef := &ErrorFormatter{ui: ui}
-			ef.provideIOSuggestions(tt.err)
-
-			output := buf.String()
-			for _, suggestion := range tt.expectedSugges {
-				assert.Contains(t, output, suggestion)
-			}
-		})
+	b.ResetTimer()
+	for b.Loop() {
+		formatter.FormatError(err)
 	}
 }
 
-func TestProvideGenericSuggestions(t *testing.T) {
-	tests := []struct {
-		name           string
-		err            error
-		expectedSugges []string
-	}{
-		{
-			name: "permission error",
-			err:  errors.New("permission denied accessing file"),
-			expectedSugges: []string{
-				testSuggestCheckPerms,
-				"Try running with appropriate privileges",
-			},
-		},
-		{
-			name: "not found error",
-			err:  errors.New("no such file or directory"),
-			expectedSugges: []string{
-				"Verify the file/directory path is correct",
-				"Check if the file exists",
-			},
-		},
-		{
-			name: "memory error",
-			err:  errors.New("out of memory"),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
-				testSuggestHelp,
-				testSuggestReduceConcur,
-			},
-		},
-		{
-			name: "timeout error",
-			err:  errors.New("operation timed out"),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
-				testSuggestHelp,
-				testSuggestReduceConcur,
-			},
-		},
-		{
-			name: "connection error",
-			err:  errors.New("connection refused"),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
-				testSuggestHelp,
-				testSuggestReduceConcur,
-			},
-		},
-		{
-			name: "default error",
-			err:  errors.New("unknown error occurred"),
-			expectedSugges: []string{
-				testSuggestCheckArgs,
-				testSuggestHelp,
-				testSuggestReduceConcur,
-			},
-		},
+// BenchmarkErrorFormatterProvideSuggestions benchmarks suggestion generation.
+func BenchmarkErrorFormatterProvideSuggestions(b *testing.B) {
+	ui, _ := createTestUI()
+	formatter := NewErrorFormatter(ui)
+	err := &shared.StructuredError{
+		Type:     shared.ErrorTypeFileSystem,
+		Code:     shared.CodeFSAccess,
+		Message:  shared.TestErrCannotAccessFile,
+		FilePath: shared.TestPathBase,
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
-
-			ef := &ErrorFormatter{ui: ui}
-			ef.provideGenericSuggestions(tt.err)
-
-			output := buf.String()
-			for _, suggestion := range tt.expectedSugges {
-				assert.Contains(t, output, suggestion)
-			}
-		})
-	}
-}
-
-func TestMissingSourceError(t *testing.T) {
-	err := &MissingSourceError{}
-
-	assert.Equal(t, "source directory is required", err.Error())
-}
-
-func TestNewMissingSourceErrorType(t *testing.T) {
-	err := NewMissingSourceError()
-
-	assert.NotNil(t, err)
-	assert.Equal(t, "source directory is required", err.Error())
-
-	var msErr *MissingSourceError
-	ok := errors.As(err, &msErr)
-	assert.True(t, ok)
-	assert.NotNil(t, msErr)
-}
-
-// Test error formatting with colors enabled
-func TestFormatErrorWithColors(t *testing.T) {
-	buf := &bytes.Buffer{}
-	ui := &UIManager{
-		enableColors: true,
-		output:       buf,
-	}
-	prev := color.NoColor
-	color.NoColor = false
-	t.Cleanup(func() { color.NoColor = prev })
-
-	ef := NewErrorFormatter(ui)
-	err := gibidiutils.NewStructuredError(
-		gibidiutils.ErrorTypeValidation,
-		gibidiutils.CodeValidationFormat,
-		testErrInvalidFormat,
-		"",
-		nil,
-	)
-
-	ef.FormatError(err)
-
-	output := buf.String()
-	// When colors are enabled, some output may go directly to stdout
-	// Check for suggestions that are captured in the buffer
-	assert.Contains(t, output, testSuggestFormat)
-	assert.Contains(t, output, testSuggestFormatEx)
-}
-
-// Test wrapped error handling
-func TestFormatWrappedError(t *testing.T) {
-	buf := &bytes.Buffer{}
-	ui := &UIManager{
-		enableColors: false,
-		output:       buf,
-	}
-
-	ef := NewErrorFormatter(ui)
-
-	innerErr := errors.New("inner error")
-	wrappedErr := gibidiutils.WrapError(
-		innerErr,
-		gibidiutils.ErrorTypeProcessing,
-		gibidiutils.CodeProcessingFileRead,
-		"wrapper message",
-	)
-
-	ef.FormatError(wrappedErr)
-
-	output := buf.String()
-	assert.Contains(t, output, "wrapper message")
-}
-
-// Test all suggestion paths get called
-func TestSuggestionPathCoverage(t *testing.T) {
-	buf := &bytes.Buffer{}
-	ui := &UIManager{
-		enableColors: false,
-		output:       buf,
-	}
-	ef := &ErrorFormatter{ui: ui}
-
-	// Test all error types
-	errorTypes := []gibidiutils.ErrorType{
-		gibidiutils.ErrorTypeFileSystem,
-		gibidiutils.ErrorTypeValidation,
-		gibidiutils.ErrorTypeProcessing,
-		gibidiutils.ErrorTypeIO,
-		gibidiutils.ErrorTypeConfiguration,
-		gibidiutils.ErrorTypeUnknown,
-	}
-
-	for _, errType := range errorTypes {
-		t.Run(errType.String(), func(t *testing.T) {
-			buf.Reset()
-			err := gibidiutils.NewStructuredError(
-				errType,
-				"TEST_CODE",
-				"test error",
-				"/test/path",
-				nil,
-			)
-			ef.provideSuggestions(err)
-
-			output := buf.String()
-			// Should have some suggestion output
-			assert.NotEmpty(t, output)
-		})
-	}
-}
-
-// Test suggestion helper functions with various inputs
-func TestSuggestHelpers(t *testing.T) {
-	tests := []struct {
-		name     string
-		testFunc func(*ErrorFormatter)
-	}{
-		{
-			name: "suggestFileAccess",
-			testFunc: func(ef *ErrorFormatter) {
-				ef.suggestFileAccess("/root/file")
-			},
-		},
-		{
-			name: "suggestPathResolution",
-			testFunc: func(ef *ErrorFormatter) {
-				ef.suggestPathResolution("../../../etc")
-			},
-		},
-		{
-			name: "suggestFileNotFound",
-			testFunc: func(ef *ErrorFormatter) {
-				ef.suggestFileNotFound("/missing")
-			},
-		},
-		{
-			name: "suggestFileSystemGeneral",
-			testFunc: func(ef *ErrorFormatter) {
-				ef.suggestFileSystemGeneral("/path")
-			},
-		},
-		{
-			name: "provideDefaultSuggestions",
-			testFunc: func(ef *ErrorFormatter) {
-				ef.provideDefaultSuggestions()
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
-			ef := &ErrorFormatter{ui: ui}
-
-			tt.testFunc(ef)
-
-			output := buf.String()
-			// Each should produce some output
-			assert.NotEmpty(t, output)
-			// Should contain bullet point
-			assert.Contains(t, output, gibidiutils.IconBullet)
-		})
-	}
-}
-
-// Test edge cases in error message analysis
-func TestGenericSuggestionsEdgeCases(t *testing.T) {
-	tests := []struct {
-		name string
-		err  error
-	}{
-		{"empty message", errors.New("")},
-		{"very long message", errors.New(strings.Repeat("error ", 100))},
-		{"special characters", errors.New("error!@#$%^&*()")},
-		{"newlines", errors.New("error\nwith\nnewlines")},
-		{"unicode", errors.New("error with 中文 characters")},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			buf := &bytes.Buffer{}
-			ui := &UIManager{
-				enableColors: false,
-				output:       buf,
-			}
-			ef := &ErrorFormatter{ui: ui}
-
-			// Should not panic
-			ef.provideGenericSuggestions(tt.err)
-
-			output := buf.String()
-			// Should have some output
-			assert.NotEmpty(t, output)
-		})
+	b.ResetTimer()
+	for b.Loop() {
+		formatter.provideSuggestions(err)
 	}
 }

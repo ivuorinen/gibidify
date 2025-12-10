@@ -1,14 +1,8 @@
 # checkmake configuration
-# See: https://github.com/checkmake/checkmake#configuration
+# See: https://github.com/mrtazz/checkmake#configuration
 
 [rules.timestampexpansion]
 disabled = true
 
 [rules.maxbodylength]
-disabled = true
-
-[rules.minphony]
-disabled = true
-
-[rules.phonydeclared]
 disabled = true

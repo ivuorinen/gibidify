@@ -2,31 +2,34 @@ package fileproc
 
 import (
 	"testing"
+
+	"github.com/ivuorinen/gibidify/shared"
 )
 
-// newTestRegistry creates a fresh registry instance for testing to avoid global state pollution.
-func newTestRegistry() *FileTypeRegistry {
+// createTestRegistry creates a fresh FileTypeRegistry instance for testing.
+// This helper reduces code duplication and ensures consistent registry initialization.
+func createTestRegistry() *FileTypeRegistry {
 	return &FileTypeRegistry{
 		imageExts:    getImageExtensions(),
 		binaryExts:   getBinaryExtensions(),
 		languageMap:  getLanguageMap(),
-		extCache:     make(map[string]string, 1000),
-		resultCache:  make(map[string]FileTypeResult, 500),
-		maxCacheSize: 500,
+		extCache:     make(map[string]string, shared.FileTypeRegistryMaxCacheSize),
+		resultCache:  make(map[string]FileTypeResult, shared.FileTypeRegistryMaxCacheSize),
+		maxCacheSize: shared.FileTypeRegistryMaxCacheSize,
 	}
 }
 
 // TestFileTypeRegistry_LanguageDetection tests the language detection functionality.
-func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
-	registry := newTestRegistry()
+func TestFileTypeRegistryLanguageDetection(t *testing.T) {
+	registry := createTestRegistry()
 
 	tests := []struct {
 		filename string
 		expected string
 	}{
 		// Programming languages
-		{"main.go", "go"},
-		{"script.py", "python"},
+		{shared.TestFileMainGo, "go"},
+		{shared.TestFileScriptPy, "python"},
 		{"app.js", "javascript"},
 		{"component.tsx", "typescript"},
 		{"service.ts", "typescript"},
@@ -96,17 +99,17 @@ func TestFileTypeRegistry_LanguageDetection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.filename, func(t *testing.T) {
-			result := registry.GetLanguage(tt.filename)
+			result := registry.Language(tt.filename)
 			if result != tt.expected {
-				t.Errorf("GetLanguage(%q) = %q, expected %q", tt.filename, result, tt.expected)
+				t.Errorf("Language(%q) = %q, expected %q", tt.filename, result, tt.expected)
 			}
 		})
 	}
 }
 
 // TestFileTypeRegistry_ImageDetection tests the image detection functionality.
-func TestFileTypeRegistry_ImageDetection(t *testing.T) {
-	registry := newTestRegistry()
+func TestFileTypeRegistryImageDetection(t *testing.T) {
+	registry := createTestRegistry()
 
 	tests := []struct {
 		filename string
@@ -114,7 +117,7 @@ func TestFileTypeRegistry_ImageDetection(t *testing.T) {
 	}{
 		// Common image formats
 		{"photo.png", true},
-		{"image.jpg", true},
+		{shared.TestFileImageJPG, true},
 		{"picture.jpeg", true},
 		{"animation.gif", true},
 		{"bitmap.bmp", true},
@@ -155,8 +158,8 @@ func TestFileTypeRegistry_ImageDetection(t *testing.T) {
 }
 
 // TestFileTypeRegistry_BinaryDetection tests the binary detection functionality.
-func TestFileTypeRegistry_BinaryDetection(t *testing.T) {
-	registry := newTestRegistry()
+func TestFileTypeRegistryBinaryDetection(t *testing.T) {
+	registry := createTestRegistry()
 
 	tests := []struct {
 		filename string
@@ -214,7 +217,7 @@ func TestFileTypeRegistry_BinaryDetection(t *testing.T) {
 
 		// Non-binary files
 		{"document.txt", false},
-		{"script.py", false},
+		{shared.TestFileScriptPy, false},
 		{"config.json", false},
 		{"style.css", false},
 		{"page.html", false},

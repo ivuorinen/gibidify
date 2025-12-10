@@ -2,11 +2,13 @@ package fileproc
 
 import (
 	"testing"
+
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // TestFileTypeRegistry_EdgeCases tests edge cases and boundary conditions.
-func TestFileTypeRegistry_EdgeCases(t *testing.T) {
-	registry := GetDefaultRegistry()
+func TestFileTypeRegistryEdgeCases(t *testing.T) {
+	registry := DefaultRegistry()
 
 	// Test various edge cases for filename handling
 	edgeCases := []struct {
@@ -35,19 +37,19 @@ func TestFileTypeRegistry_EdgeCases(t *testing.T) {
 			// These should not panic
 			_ = registry.IsImage(tc.filename)
 			_ = registry.IsBinary(tc.filename)
-			_ = registry.GetLanguage(tc.filename)
+			_ = registry.Language(tc.filename)
 
 			// Global functions should also not panic
 			_ = IsImage(tc.filename)
 			_ = IsBinary(tc.filename)
-			_ = GetLanguage(tc.filename)
+			_ = Language(tc.filename)
 		})
 	}
 }
 
 // TestFileTypeRegistry_MinimumExtensionLength tests the minimum extension length requirement.
-func TestFileTypeRegistry_MinimumExtensionLength(t *testing.T) {
-	registry := GetDefaultRegistry()
+func TestFileTypeRegistryMinimumExtensionLength(t *testing.T) {
+	registry := DefaultRegistry()
 
 	tests := []struct {
 		filename string
@@ -65,18 +67,18 @@ func TestFileTypeRegistry_MinimumExtensionLength(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.filename, func(t *testing.T) {
-			result := registry.GetLanguage(tt.filename)
+			result := registry.Language(tt.filename)
 			if result != tt.expected {
-				t.Errorf("GetLanguage(%q) = %q, expected %q", tt.filename, result, tt.expected)
+				t.Errorf("Language(%q) = %q, expected %q", tt.filename, result, tt.expected)
 			}
 		})
 	}
 }
 
-// Benchmark tests for performance validation
-func BenchmarkFileTypeRegistry_IsImage(b *testing.B) {
-	registry := GetDefaultRegistry()
-	filename := "test.png"
+// Benchmark tests for performance validation.
+func BenchmarkFileTypeRegistryIsImage(b *testing.B) {
+	registry := DefaultRegistry()
+	filename := shared.TestFilePNG
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -84,9 +86,9 @@ func BenchmarkFileTypeRegistry_IsImage(b *testing.B) {
 	}
 }
 
-func BenchmarkFileTypeRegistry_IsBinary(b *testing.B) {
-	registry := GetDefaultRegistry()
-	filename := "test.exe"
+func BenchmarkFileTypeRegistryIsBinary(b *testing.B) {
+	registry := DefaultRegistry()
+	filename := shared.TestFileEXE
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -94,35 +96,35 @@ func BenchmarkFileTypeRegistry_IsBinary(b *testing.B) {
 	}
 }
 
-func BenchmarkFileTypeRegistry_GetLanguage(b *testing.B) {
-	registry := GetDefaultRegistry()
-	filename := "test.go"
+func BenchmarkFileTypeRegistryLanguage(b *testing.B) {
+	registry := DefaultRegistry()
+	filename := shared.TestFileGo
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = registry.GetLanguage(filename)
+		_ = registry.Language(filename)
 	}
 }
 
-func BenchmarkFileTypeRegistry_GlobalFunctions(b *testing.B) {
-	filename := "test.go"
+func BenchmarkFileTypeRegistryGlobalFunctions(b *testing.B) {
+	filename := shared.TestFileGo
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = IsImage(filename)
 		_ = IsBinary(filename)
-		_ = GetLanguage(filename)
+		_ = Language(filename)
 	}
 }
 
-func BenchmarkFileTypeRegistry_ConcurrentAccess(b *testing.B) {
-	filename := "test.go"
+func BenchmarkFileTypeRegistryConcurrentAccess(b *testing.B) {
+	filename := shared.TestFileGo
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_ = IsImage(filename)
 			_ = IsBinary(filename)
-			_ = GetLanguage(filename)
+			_ = Language(filename)
 		}
 	})
 }

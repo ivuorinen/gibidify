@@ -10,7 +10,7 @@ import (
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
-func TestResourceMonitor_RateLimiting(t *testing.T) {
+func TestResourceMonitorRateLimiting(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
 	// Enable rate limiting with a low rate for testing
