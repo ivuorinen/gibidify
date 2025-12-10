@@ -354,7 +354,6 @@ main() {
   fi
 
   exit $exit_code
-  return 0
 }
 
 # Run main function

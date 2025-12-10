@@ -57,7 +57,7 @@ else
 fi
 
 echo "Running editorconfig-checker..."
-if ! eclint *.go *.md benchmark/ cli/ cmd/ config/ fileproc/ gibidiutils/ metrics/ shared/ templates/ testutil/ scripts/ Makefile; then
+if ! eclint ./*.go ./*.md benchmark/ cli/ cmd/ config/ fileproc/ metrics/ shared/ templates/ testutil/ scripts/ Makefile; then
   exit_code=1
 fi
 
