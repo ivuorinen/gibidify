@@ -13,9 +13,7 @@ output.json
 output.txt
 output.yaml
 gosec-report.json
-gosec-results.sarif
 govulncheck-report.json
-govulncheck-errors.log
 security-report.md
 gosec*.log
 pr.txt

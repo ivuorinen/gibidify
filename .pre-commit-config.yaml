@@ -3,7 +3,7 @@
 # For more hooks, see https://pre-commit.com/hooks.html
 repos:
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 3.6.0
+    rev: 3.4.0
     hooks:
       - id: editorconfig-checker
         alias: ec
@@ -25,8 +25,3 @@ repos:
         alias: fmt
       - id: go-sec-mod
         alias: sec
-
-  - repo: https://github.com/shellcheck-py/shellcheck-py
-    rev: v0.11.0.1
-    hooks:
-      - id: shellcheck

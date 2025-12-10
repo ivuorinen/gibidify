@@ -1,14 +1,12 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/ivuorinen/gibidify/gibidiutils"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 // YAMLWriter handles YAML format output with streaming support.
@@ -21,152 +19,18 @@ func NewYAMLWriter(outFile *os.File) *YAMLWriter {
 	return &YAMLWriter{outFile: outFile}
 }
 
-const (
-	maxPathLength     = 4096 // Maximum total path length
-	maxFilenameLength = 255  // Maximum individual filename component length
-)
-
-// validatePathComponents validates individual path components for security issues.
-func validatePathComponents(trimmed, cleaned string, components []string) error {
-	for i, component := range components {
-		// Reject path components that are exactly ".." (path traversal)
-		if component == ".." {
-			return gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationPath,
-				"path traversal not allowed",
-				trimmed,
-				map[string]any{
-					"path":              trimmed,
-					"cleaned":           cleaned,
-					"invalid_component": component,
-					"component_index":   i,
-				},
-			)
-		}
-
-		// Reject empty components (e.g., from "foo//bar")
-		if component == "" && i > 0 && i < len(components)-1 {
-			return gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationPath,
-				"path contains empty component",
-				trimmed,
-				map[string]any{
-					"path":            trimmed,
-					"cleaned":         cleaned,
-					"component_index": i,
-				},
-			)
-		}
-
-		// Enforce maximum filename length for each component
-		if len(component) > maxFilenameLength {
-			return gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationPath,
-				"path component exceeds maximum length",
-				trimmed,
-				map[string]any{
-					"component":        component,
-					"component_length": len(component),
-					"max_length":       maxFilenameLength,
-					"component_index":  i,
-				},
-			)
-		}
-	}
-	return nil
-}
-
-// validatePath validates and sanitizes a file path for safe output.
-// It rejects absolute paths, path traversal attempts, empty paths, and overly long paths.
-func validatePath(path string) error {
-	// Reject empty paths
-	trimmed := strings.TrimSpace(path)
-	if trimmed == "" {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationRequired,
-			"file path cannot be empty",
-			"",
-			nil,
-		)
-	}
-
-	// Enforce maximum path length to prevent resource abuse
-	if len(trimmed) > maxPathLength {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationPath,
-			"path exceeds maximum length",
-			trimmed,
-			map[string]any{
-				"path_length": len(trimmed),
-				"max_length":  maxPathLength,
-			},
-		)
-	}
-
-	// Reject absolute paths
-	if filepath.IsAbs(trimmed) {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationPath,
-			"absolute paths are not allowed",
-			trimmed,
-			map[string]any{"path": trimmed},
-		)
-	}
-
-	// Validate original trimmed path components before cleaning
-	origComponents := strings.Split(filepath.ToSlash(trimmed), "/")
-	for _, comp := range origComponents {
-		if comp == "" || comp == "." || comp == ".." {
-			return gibidiutils.NewStructuredError(
-				gibidiutils.ErrorTypeValidation,
-				gibidiutils.CodeValidationPath,
-				"invalid or traversal path component in original path",
-				trimmed,
-				map[string]any{"path": trimmed, "component": comp},
-			)
-		}
-	}
-
-	// Clean the path to normalize it
-	cleaned := filepath.Clean(trimmed)
-
-	// After cleaning, ensure it's still relative and doesn't start with /
-	if filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, "/") {
-		return gibidiutils.NewStructuredError(
-			gibidiutils.ErrorTypeValidation,
-			gibidiutils.CodeValidationPath,
-			"path must be relative",
-			trimmed,
-			map[string]any{"path": trimmed, "cleaned": cleaned},
-		)
-	}
-
-	// Split into components and validate each one
-	// Use ToSlash to normalize for cross-platform validation
-	components := strings.Split(filepath.ToSlash(cleaned), "/")
-	return validatePathComponents(trimmed, cleaned, components)
-}
-
 // Start writes the YAML header.
 func (w *YAMLWriter) Start(prefix, suffix string) error {
 	// Write YAML header
 	if _, err := fmt.Fprintf(
-		w.outFile, "prefix: %s\nsuffix: %s\nfiles:\n",
-		gibidiutils.EscapeForYAML(prefix), gibidiutils.EscapeForYAML(suffix),
+		w.outFile,
+		"prefix: %s\nsuffix: %s\nfiles:\n",
+		shared.EscapeForYAML(prefix),
+		shared.EscapeForYAML(suffix),
 	); err != nil {
-		return gibidiutils.WrapError(
-			err,
-			gibidiutils.ErrorTypeIO,
-			gibidiutils.CodeIOWrite,
-			"failed to write YAML header",
-		)
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write YAML header")
 	}
+
 	return nil
 }
 
@@ -175,6 +39,7 @@ func (w *YAMLWriter) WriteFile(req WriteRequest) error {
 	if req.IsStream {
 		return w.writeStreaming(req)
 	}
+
 	return w.writeInline(req)
 }
 
@@ -185,45 +50,39 @@ func (w *YAMLWriter) Close() error {
 
 // writeStreaming writes a large file as YAML in streaming chunks.
 func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
-	// Validate path before using it
-	if err := validatePath(req.Path); err != nil {
-		return err
-	}
-
-	// Check for nil reader
-	if req.Reader == nil {
-		return gibidiutils.WrapError(
-			nil, gibidiutils.ErrorTypeValidation, gibidiutils.CodeValidationRequired,
-			"nil reader in write request",
-		).WithFilePath(req.Path)
-	}
-
-	defer gibidiutils.SafeCloseReader(req.Reader, req.Path)
+	defer shared.SafeCloseReader(req.Reader, req.Path)
 
 	language := detectLanguage(req.Path)
 
 	// Write YAML file entry start
 	if _, err := fmt.Fprintf(
-		w.outFile, "  - path: %s\n    language: %s\n    content: |\n",
-		gibidiutils.EscapeForYAML(req.Path), language,
+		w.outFile,
+		shared.YAMLFmtFileEntry,
+		shared.EscapeForYAML(req.Path),
+		language,
 	); err != nil {
-		return gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
 			"failed to write YAML file start",
 		).WithFilePath(req.Path)
 	}
 
 	// Stream content with YAML indentation
-	return w.streamYAMLContent(req.Reader, req.Path)
+	if err := shared.StreamLines(
+		req.Reader, w.outFile, req.Path, func(line string) string {
+			return "      " + line
+		},
+	); err != nil {
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "streaming YAML content")
+	}
+
+	return nil
 }
 
 // writeInline writes a small file directly as YAML.
 func (w *YAMLWriter) writeInline(req WriteRequest) error {
-	// Validate path before using it
-	if err := validatePath(req.Path); err != nil {
-		return err
-	}
-
 	language := detectLanguage(req.Path)
 	fileData := FileData{
 		Path:     req.Path,
@@ -233,11 +92,15 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 
 	// Write YAML entry
 	if _, err := fmt.Fprintf(
-		w.outFile, "  - path: %s\n    language: %s\n    content: |\n",
-		gibidiutils.EscapeForYAML(fileData.Path), fileData.Language,
+		w.outFile,
+		shared.YAMLFmtFileEntry,
+		shared.EscapeForYAML(fileData.Path),
+		fileData.Language,
 	); err != nil {
-		return gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
 			"failed to write YAML entry start",
 		).WithFilePath(req.Path)
 	}
@@ -246,8 +109,10 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	lines := strings.Split(fileData.Content, "\n")
 	for _, line := range lines {
 		if _, err := fmt.Fprintf(w.outFile, "      %s\n", line); err != nil {
-			return gibidiutils.WrapError(
-				err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
+			return shared.WrapError(
+				err,
+				shared.ErrorTypeIO,
+				shared.CodeIOWrite,
 				"failed to write YAML content line",
 			).WithFilePath(req.Path)
 		}
@@ -256,53 +121,9 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	return nil
 }
 
-// streamYAMLContent streams content with YAML indentation.
-func (w *YAMLWriter) streamYAMLContent(reader io.Reader, path string) error {
-	scanner := bufio.NewScanner(reader)
-	// Increase buffer size to handle long lines (up to 10MB per line)
-	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, 10*1024*1024)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if _, err := fmt.Fprintf(w.outFile, "      %s\n", line); err != nil {
-			return gibidiutils.WrapError(
-				err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOWrite,
-				"failed to write YAML line",
-			).WithFilePath(path)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return gibidiutils.WrapError(
-			err, gibidiutils.ErrorTypeIO, gibidiutils.CodeIOFileRead,
-			"failed to scan YAML content",
-		).WithFilePath(path)
-	}
-	return nil
-}
-
 // startYAMLWriter handles YAML format output with streaming support.
 func startYAMLWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
-	defer close(done)
-
-	writer := NewYAMLWriter(outFile)
-
-	// Start writing
-	if err := writer.Start(prefix, suffix); err != nil {
-		gibidiutils.LogError("Failed to write YAML header", err)
-		return
-	}
-
-	// Process files
-	for req := range writeCh {
-		if err := writer.WriteFile(req); err != nil {
-			gibidiutils.LogError("Failed to write YAML file", err)
-		}
-	}
-
-	// Close writer
-	if err := writer.Close(); err != nil {
-		gibidiutils.LogError("Failed to write YAML end", err)
-	}
+	startFormatWriter(outFile, writeCh, done, prefix, suffix, func(f *os.File) FormatWriter {
+		return NewYAMLWriter(f)
+	})
 }

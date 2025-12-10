@@ -1,19 +1,11 @@
-<<<<<<<< HEAD:gibidiutils/writers.go
-// Package gibidiutils provides common utility functions for gibidify.
-package gibidiutils
-|||||||| parent of e21c976 (refactor: rename utils to shared and deduplicate code):utils/writers.go
-package utils
-========
 // Package shared provides common utility functions.
 package shared
->>>>>>>> e21c976 (refactor: rename utils to shared and deduplicate code):shared/writers.go
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"strings"
 )
 
@@ -47,9 +39,6 @@ func WriteWithErrorWrap(writer io.Writer, content, errorMsg, filePath string) er
 
 // StreamContent provides a common streaming implementation with chunk processing.
 // This eliminates the similar streaming patterns across JSON and Markdown writers.
-<<<<<<<< HEAD:gibidiutils/writers.go
-//
-//revive:disable-next-line:cognitive-complexity
 func StreamContent(
 	reader io.Reader,
 	writer io.Writer,
@@ -57,17 +46,6 @@ func StreamContent(
 	filePath string,
 	processChunk func([]byte) []byte,
 ) error {
-|||||||| parent of e21c976 (refactor: rename utils to shared and deduplicate code):utils/writers.go
-func StreamContent(reader io.Reader, writer io.Writer, chunkSize int, filePath string, processChunk func([]byte) []byte) error {
-========
-func StreamContent(
-	reader io.Reader,
-	writer io.Writer,
-	chunkSize int,
-	filePath string,
-	processChunk func([]byte) []byte,
-) error {
->>>>>>>> e21c976 (refactor: rename utils to shared and deduplicate code):shared/writers.go
 	buf := make([]byte, chunkSize)
 	for {
 		n, err := reader.Read(buf)
@@ -80,21 +58,7 @@ func StreamContent(
 			break
 		}
 		if err != nil {
-<<<<<<<< HEAD:gibidiutils/writers.go
-			wrappedErr := WrapError(err, ErrorTypeIO, CodeIOFileRead, "failed to read content chunk")
-			if filePath != "" {
-				wrappedErr = wrappedErr.WithFilePath(filePath)
-			}
-			return wrappedErr
-|||||||| parent of e21c976 (refactor: rename utils to shared and deduplicate code):utils/writers.go
-			wrappedErr := WrapError(err, ErrorTypeIO, CodeIORead, "failed to read content chunk")
-			if filePath != "" {
-				wrappedErr = wrappedErr.WithFilePath(filePath)
-			}
-			return wrappedErr
-========
 			return wrapReadError(err, filePath)
->>>>>>>> e21c976 (refactor: rename utils to shared and deduplicate code):shared/writers.go
 		}
 	}
 
@@ -176,23 +140,6 @@ func EscapeForYAML(content string) string {
 	return content
 }
 
-<<<<<<<< HEAD:gibidiutils/writers.go
-// SafeUint64ToInt64WithDefault safely converts uint64 to int64, returning a default value if overflow would occur.
-// When defaultValue is 0 (the safe default), clamps to MaxInt64 on overflow to keep guardrails active.
-// This prevents overflow from making monitors think memory usage is zero when it's actually maxed out.
-func SafeUint64ToInt64WithDefault(value uint64, defaultValue int64) int64 {
-	if value > math.MaxInt64 {
-		// When caller uses 0 as "safe" default, clamp to max so overflow still trips guardrails
-		if defaultValue == 0 {
-			return math.MaxInt64
-		}
-		return defaultValue
-	}
-	return int64(value) //#nosec G115 -- Safe: value <= MaxInt64 checked above
-}
-
-|||||||| parent of e21c976 (refactor: rename utils to shared and deduplicate code):utils/writers.go
-========
 // CheckContextCancellation is a helper function that checks if context is canceled and returns appropriate error.
 func CheckContextCancellation(ctx context.Context, operation string) error {
 	select {
@@ -212,14 +159,13 @@ func WithContextCheck(ctx context.Context, operation string, fn func() error) er
 	return fn()
 }
 
->>>>>>>> e21c976 (refactor: rename utils to shared and deduplicate code):shared/writers.go
 // StreamLines provides line-based streaming for YAML content.
 // This provides an alternative streaming approach for YAML writers.
 func StreamLines(reader io.Reader, writer io.Writer, filePath string, lineProcessor func(string) string) error {
 	// Read all content first (for small files this is fine)
 	content, err := io.ReadAll(reader)
 	if err != nil {
-		wrappedErr := WrapError(err, ErrorTypeIO, CodeIOFileRead, "failed to read content for line processing")
+		wrappedErr := WrapError(err, ErrorTypeIO, CodeIORead, "failed to read content for line processing")
 		if filePath != "" {
 			wrappedErr = wrappedErr.WithFilePath(filePath)
 		}

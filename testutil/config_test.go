@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/spf13/viper"
+
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 func TestResetViperConfig(t *testing.T) {
@@ -18,10 +20,11 @@ func TestResetViperConfig(t *testing.T) {
 			name:       "reset with empty config path",
 			configPath: "",
 			preSetup: func() {
-				viper.Set("test.key", "value")
+				viper.Set(shared.TestKeyName, "value")
 			},
 			verify: func(t *testing.T) {
-				if viper.IsSet("test.key") {
+				t.Helper()
+				if viper.IsSet(shared.TestKeyName) {
 					t.Error("Viper config not reset properly")
 				}
 			},
@@ -30,10 +33,11 @@ func TestResetViperConfig(t *testing.T) {
 			name:       "reset with config path",
 			configPath: t.TempDir(),
 			preSetup: func() {
-				viper.Set("test.key", "value")
+				viper.Set(shared.TestKeyName, "value")
 			},
 			verify: func(t *testing.T) {
-				if viper.IsSet("test.key") {
+				t.Helper()
+				if viper.IsSet(shared.TestKeyName) {
 					t.Error("Viper config not reset properly")
 				}
 				// Verify config path was added
@@ -47,11 +51,13 @@ func TestResetViperConfig(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.preSetup()
-			ResetViperConfig(t, tt.configPath)
-			tt.verify(t)
-		})
+		t.Run(
+			tt.name, func(t *testing.T) {
+				tt.preSetup()
+				ResetViperConfig(t, tt.configPath)
+				tt.verify(t)
+			},
+		)
 	}
 }
 
@@ -78,7 +84,7 @@ func TestSetupCLIArgs(t *testing.T) {
 			prefix:      "PREFIX",
 			suffix:      "SUFFIX",
 			concurrency: 4,
-			wantLen:     11,
+			wantLen:     12,
 		},
 		{
 			name:        "empty strings",
@@ -87,7 +93,7 @@ func TestSetupCLIArgs(t *testing.T) {
 			prefix:      "",
 			suffix:      "",
 			concurrency: 1,
-			wantLen:     11,
+			wantLen:     12,
 		},
 		{
 			name:        "special characters in args",
@@ -96,37 +102,50 @@ func TestSetupCLIArgs(t *testing.T) {
 			prefix:      "Prefix with\nnewline",
 			suffix:      "Suffix with\ttab",
 			concurrency: 8,
-			wantLen:     11,
+			wantLen:     12,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			SetupCLIArgs(tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency)
+		t.Run(
+			tt.name, func(t *testing.T) {
+				SetupCLIArgs(tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency)
+				verifySetupCLIArgs(t, tt.srcDir, tt.outFile, tt.prefix, tt.suffix, tt.concurrency, tt.wantLen)
+			},
+		)
+	}
+}
 
-			if len(os.Args) != tt.wantLen {
-				t.Errorf("os.Args length = %d, want %d", len(os.Args), tt.wantLen)
-			}
+// verifySetupCLIArgs verifies that CLI arguments are set correctly.
+func verifySetupCLIArgs(t *testing.T, srcDir, outFile, prefix, suffix string, concurrency, wantLen int) {
+	t.Helper()
 
-			// Verify specific args
-			if os.Args[0] != "gibidify" {
-				t.Errorf("Program name = %s, want gibidify", os.Args[0])
-			}
-			if os.Args[2] != tt.srcDir {
-				t.Errorf("Source dir = %s, want %s", os.Args[2], tt.srcDir)
-			}
-			if os.Args[4] != tt.outFile {
-				t.Errorf("Output file = %s, want %s", os.Args[4], tt.outFile)
-			}
-			if os.Args[6] != tt.prefix {
-				t.Errorf("Prefix = %s, want %s", os.Args[6], tt.prefix)
-			}
-			if os.Args[8] != tt.suffix {
-				t.Errorf("Suffix = %s, want %s", os.Args[8], tt.suffix)
-			}
-			if os.Args[10] != string(rune(tt.concurrency+'0')) {
-				t.Errorf("Concurrency = %s, want %d", os.Args[10], tt.concurrency)
-			}
-		})
+	if len(os.Args) != wantLen {
+		t.Errorf("os.Args length = %d, want %d", len(os.Args), wantLen)
+	}
+
+	// Verify specific args
+	if os.Args[0] != "gibidify" {
+		t.Errorf("Program name = %s, want gibidify", os.Args[0])
+	}
+	if os.Args[2] != srcDir {
+		t.Errorf("Source dir = %s, want %s", os.Args[2], srcDir)
+	}
+	if os.Args[4] != outFile {
+		t.Errorf("Output file = %s, want %s", os.Args[4], outFile)
+	}
+	if os.Args[6] != prefix {
+		t.Errorf("Prefix = %s, want %s", os.Args[6], prefix)
+	}
+	if os.Args[8] != suffix {
+		t.Errorf("Suffix = %s, want %s", os.Args[8], suffix)
+	}
+	if os.Args[10] != string(rune(concurrency+'0')) {
+		t.Errorf("Concurrency = %s, want %d", os.Args[10], concurrency)
+	}
+
+	// Verify the -no-ui flag is present
+	if os.Args[11] != "-no-ui" {
+		t.Errorf("NoUI flag = %s, want -no-ui", os.Args[11])
 	}
 }

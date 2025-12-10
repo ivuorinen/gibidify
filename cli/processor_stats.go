@@ -1,44 +1,108 @@
+// Package cli provides command-line interface functionality for gibidify.
 package cli
 
 import (
-	"github.com/sirupsen/logrus"
+	"strings"
 
 	"github.com/ivuorinen/gibidify/config"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
-// logFinalStats logs the final back-pressure and resource monitoring statistics.
+// logFinalStats logs back-pressure, resource usage, and processing statistics.
 func (p *Processor) logFinalStats() {
-	// Log back-pressure stats
-	backpressureStats := p.backpressure.GetStats()
+	p.logBackpressureStats()
+	p.logResourceStats()
+	p.finalizeAndReportMetrics()
+	p.logVerboseStats()
+	if p.resourceMonitor != nil {
+		p.resourceMonitor.Close()
+	}
+}
+
+// logBackpressureStats logs back-pressure statistics.
+func (p *Processor) logBackpressureStats() {
+	// Check backpressure is non-nil before dereferencing
+	if p.backpressure == nil {
+		return
+	}
+
+	logger := shared.GetLogger()
+	backpressureStats := p.backpressure.Stats()
 	if backpressureStats.Enabled {
-		logrus.Infof(
+		logger.Infof(
 			"Back-pressure stats: processed=%d files, memory=%dMB/%dMB",
 			backpressureStats.FilesProcessed,
-			backpressureStats.CurrentMemoryUsage/1024/1024,
-			backpressureStats.MaxMemoryUsage/1024/1024,
+			backpressureStats.CurrentMemoryUsage/int64(shared.BytesPerMB),
+			backpressureStats.MaxMemoryUsage/int64(shared.BytesPerMB),
 		)
 	}
+}
 
-	// Log resource monitoring stats
-	resourceStats := p.resourceMonitor.GetMetrics()
-	if config.GetResourceLimitsEnabled() {
-		logrus.Infof("Resource stats: processed=%d files, totalSize=%dMB, avgFileSize=%.2fKB, rate=%.2f files/sec",
-			resourceStats.FilesProcessed, resourceStats.TotalSizeProcessed/1024/1024,
-			resourceStats.AverageFileSize/1024, resourceStats.ProcessingRate)
-
-		if len(resourceStats.ViolationsDetected) > 0 {
-			logrus.Warnf("Resource violations detected: %v", resourceStats.ViolationsDetected)
-		}
-
-		if resourceStats.DegradationActive {
-			logrus.Warnf("Processing completed with degradation mode active")
-		}
-
-		if resourceStats.EmergencyStopActive {
-			logrus.Errorf("Processing completed with emergency stop active")
-		}
+// logResourceStats logs resource monitoring statistics.
+func (p *Processor) logResourceStats() {
+	// Check resource monitoring is enabled and monitor is non-nil before dereferencing
+	if !config.ResourceLimitsEnabled() {
+		return
 	}
 
-	// Clean up resource monitor
-	p.resourceMonitor.Close()
+	if p.resourceMonitor == nil {
+		return
+	}
+
+	logger := shared.GetLogger()
+	resourceStats := p.resourceMonitor.Metrics()
+
+	logger.Infof(
+		"Resource stats: processed=%d files, totalSize=%dMB, avgFileSize=%.2fKB, rate=%.2f files/sec",
+		resourceStats.FilesProcessed, resourceStats.TotalSizeProcessed/int64(shared.BytesPerMB),
+		resourceStats.AverageFileSize/float64(shared.BytesPerKB), resourceStats.ProcessingRate,
+	)
+
+	if len(resourceStats.ViolationsDetected) > 0 {
+		logger.Warnf("Resource violations detected: %v", resourceStats.ViolationsDetected)
+	}
+
+	if resourceStats.DegradationActive {
+		logger.Warnf("Processing completed with degradation mode active")
+	}
+
+	if resourceStats.EmergencyStopActive {
+		logger.Errorf("Processing completed with emergency stop active")
+	}
+}
+
+// finalizeAndReportMetrics finalizes metrics collection and displays the final report.
+func (p *Processor) finalizeAndReportMetrics() {
+	if p.metricsCollector != nil {
+		p.metricsCollector.Finish()
+	}
+
+	if p.metricsReporter != nil {
+		finalReport := p.metricsReporter.ReportFinal()
+		if finalReport != "" && p.ui != nil {
+			// Use UI manager to respect NoUI flag - remove trailing newline if present
+			p.ui.PrintInfo("%s", strings.TrimSuffix(finalReport, "\n"))
+		}
+	}
+}
+
+// logVerboseStats logs detailed structured statistics when verbose mode is enabled.
+func (p *Processor) logVerboseStats() {
+	if !p.flags.Verbose || p.metricsCollector == nil {
+		return
+	}
+
+	logger := shared.GetLogger()
+	report := p.metricsCollector.GenerateReport()
+	fields := map[string]any{
+		"total_files":      report.Summary.TotalFiles,
+		"processed_files":  report.Summary.ProcessedFiles,
+		"skipped_files":    report.Summary.SkippedFiles,
+		"error_files":      report.Summary.ErrorFiles,
+		"processing_time":  report.Summary.ProcessingTime,
+		"files_per_second": report.Summary.FilesPerSecond,
+		"bytes_per_second": report.Summary.BytesPerSecond,
+		"memory_usage_mb":  report.Summary.CurrentMemoryMB,
+	}
+	logger.WithFields(fields).Info("Processing completed with comprehensive metrics")
 }

@@ -1,10 +1,4 @@
-.PHONY: all clean test test-coverage build coverage help lint lint-fix \
-	install-tools benchmark benchmark-collection \
-	benchmark-concurrency benchmark-format benchmark-processing \
-	build-benchmark check-all ci-lint ci-test dev-setup security \
-	security-full vuln-check deps-update deps-check deps-tidy \
-	benchmark-go benchmark-go-cli benchmark-go-fileproc benchmark-go-metrics \
-	benchmark-go-shared benchmark-all
+.PHONY: all help install-tools lint lint-fix test coverage build clean all build-benchmark benchmark benchmark-go benchmark-go-cli benchmark-go-fileproc benchmark-go-metrics benchmark-go-shared benchmark-all benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check update-deps check-all dev-setup
 
 # Default target shows help
 .DEFAULT_GOAL := help
@@ -33,10 +27,6 @@ test:
 	@echo "Running tests..."
 	@go test -race -v ./...
 
-# Run tests with coverage output
-test-coverage:
-	@./scripts/test-coverage.sh
-
 # Run tests with coverage
 coverage:
 	@echo "Running tests with coverage..."
@@ -57,6 +47,8 @@ clean:
 	@echo "Clean complete"
 
 # CI-specific targets
+.PHONY: ci-lint ci-test
+
 ci-lint:
 	@revive -config revive.toml -formatter friendly -set_exit_status ./...
 
@@ -130,25 +122,10 @@ security-full: install-tools
 
 vuln-check:
 	@echo "Checking for dependency vulnerabilities..."
-	@go install golang.org/x/vuln/cmd/govulncheck@latest
+	@go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
 	@govulncheck ./...
 
-# Dependency management targets
-deps-check:
-	@./scripts/deps-check.sh
-
-deps-update:
+# Update dependencies
+update-deps:
+	@echo "Updating Go dependencies..."
 	@./scripts/update-deps.sh
-
-deps-tidy:
-	@echo "Cleaning up dependencies..."
-	@go mod tidy
-	@go mod verify
-	@echo "Dependencies cleaned and verified successfully!"
-
-# Run all checks before committing
-check-all: lint test coverage security
-
-# Development setup
-dev-setup: install-tools deps-tidy
-	@echo "Development environment ready!"

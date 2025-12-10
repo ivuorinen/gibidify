@@ -14,9 +14,11 @@ file sections with separators, and a suffix.
 - **Concurrent processing** with configurable worker pools
 - **Comprehensive configuration** via YAML with validation
 - **Production-ready** with structured error handling and benchmarking
-- **Modular architecture** - clean, focused codebase with ~63ns registry lookups
+- **Modular architecture** - clean, focused codebase (92 files, ~21.5K lines) with ~63ns registry lookups
 - **Enhanced CLI experience** - progress bars, colored output, helpful error messages
 - **Cross-platform** with Docker support
+- **Advanced template system** - 4 built-in templates (default, minimal, detailed, compact) with custom template support, variable substitution, and YAML-based configuration
+- **Comprehensive metrics and profiling** - real-time processing statistics, performance analysis, memory usage tracking, and automated recommendations
 
 ## Installation
 
@@ -32,15 +34,16 @@ go build -o gibidify .
 
 ```bash
 ./gibidify \
-	-source <source_directory> \
-	-destination <output_file> \
-	-format markdown|json|yaml \
-	-concurrency <num_workers> \
-	--prefix="..." \
-	--suffix="..." \
-	--no-colors \
-	--no-progress \
-	--verbose
+  -source <source_directory> \
+  -destination <output_file> \
+  -format markdown|json|yaml \
+  -concurrency <num_workers> \
+  --prefix="..." \
+  --suffix="..." \
+  --no-colors \
+  --no-progress \
+  --verbose \
+  --log-level debug
 ```
 
 Flags:
@@ -53,6 +56,7 @@ Flags:
 - `--no-colors`: disable colored terminal output.
 - `--no-progress`: disable progress bars.
 - `--verbose`: enable verbose output and detailed logging.
+- `--log-level`: set log level (default: warn; accepted values: debug, info, warn, error).
 
 ## Docker
 
@@ -66,13 +70,13 @@ Run the Docker container:
 
 ```bash
 docker run --rm \
-	-v $(pwd):/workspace \
-	-v $HOME/.config/gibidify:/config \
-	ghcr.io/ivuorinen/gibidify:<tag> \
-	-source /workspace/your_source_directory \
-	-destination /workspace/output.txt \
-	--prefix="Your prefix text" \
-	--suffix="Your suffix text"
+  -v $(pwd):/workspace \
+  -v $HOME/.config/gibidify:/config \
+  ghcr.io/ivuorinen/gibidify:<tag> \
+  -source /workspace/your_source_directory \
+  -destination /workspace/output.txt \
+  --prefix="Your prefix text" \
+  --suffix="Your suffix text"
 ```
 
 ## Configuration
@@ -123,6 +127,33 @@ backpressure:
   maxPendingWrites: 100      # Max writes in write channel buffer
   maxMemoryUsage: 104857600  # 100MB max memory usage
   memoryCheckInterval: 1000  # Check memory every 1000 files
+
+# Output and template customization
+output:
+  # Template selection: default, minimal, detailed, compact, or custom
+  # Templates control output structure and formatting
+  template: "default"
+  # Metadata options
+  metadata:
+    includeStats: true
+    includeTimestamp: true
+    includeFileCount: true
+    includeSourcePath: true
+    includeMetrics: true
+  # Markdown-specific options
+  markdown:
+    useCodeBlocks: true
+    includeLanguage: true
+    headerLevel: 2
+    tableOfContents: false
+    useCollapsible: false
+    syntaxHighlighting: true
+    lineNumbers: false
+  # Custom template variables
+  variables:
+    project_name: "My Project"
+    author: "Developer Name"
+    version: "1.0.0"
 ```
 
 See `config.example.yaml` for a comprehensive configuration example.

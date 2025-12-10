@@ -1,58 +1,194 @@
-# revive configuration for gibidify
-# See https://revive.run/ for more information
+# Revive configuration for gibidify project
+# https://revive.run/
+# Migrated from golangci-lint v2.4.0 configuration
+# NOTE: For comprehensive security scanning, also run: gosec ./...
 
-# Global settings
-ignoreGeneratedHeader = false
-severity = "warning"
+# Global configuration
+ignoreGeneratedHeader = true
+severity = "error"
 confidence = 0.8
 errorCode = 1
-warningCode = 0
+warningCode = 2
 
-# Enable all rules by default, then selectively disable or configure
-[rule.blank-imports]
-[rule.context-as-argument]
-[rule.context-keys-type]
-[rule.dot-imports]
+# Enable all rules initially then selectively disable/configure
+enableAllRules = true
+
+# ============================================================================
+# ESSENTIAL ERROR DETECTION (from errcheck, govet, ineffassign, staticcheck, unused)
+# ============================================================================
+
+# Error handling rules (from errcheck)
+[rule.unhandled-error]
+
 [rule.error-return]
 [rule.error-strings]
 [rule.error-naming]
-[rule.exported]
-[rule.if-return]
-[rule.increment-decrement]
-[rule.var-naming]
-[rule.var-declaration]
-[rule.package-comments]
+[rule.errorf]
+
+# Code correctness rules (from govet)
+[rule.atomic]
+[rule.bool-literal-in-expr]
+[rule.context-as-argument]
+[rule.context-keys-type]
+[rule.dot-imports]
 [rule.range]
 [rule.receiver-naming]
 [rule.time-naming]
 [rule.unexported-return]
-[rule.indent-error-flow]
-[rule.errorf]
-[rule.empty-block]
-[rule.superfluous-else]
-[rule.unused-parameter]
 [rule.unreachable-code]
 [rule.redefines-builtin-id]
+[rule.struct-tag]
+[rule.modifies-value-receiver]
+[rule.constant-logical-expr]
+[rule.unconditional-recursion]
+[rule.identical-branches]
+[rule.defer]
+	arguments = [["call-chain", "loop", "method-call", "recover", "immediate-recover", "return"]]
 
-# Configure specific rules
-[rule.line-length-limit]
-  arguments = [120]
-  Exclude = ["**/*_test.go"]
+# Unused code detection (from unused, ineffassign)
+[rule.unused-parameter]
+[rule.unused-receiver]
+	disabled = true  # Too strict for interface methods
+[rule.blank-imports]
 
-[rule.function-length]
-  arguments = [50, 100]
-  Exclude = ["**/*_test.go"]
+# ============================================================================
+# BUG PREVENTION (from bodyclose, dupl, gochecknoinits, goconst, gocritic, gosec, misspell, unparam, usestdlibvars)
+# ============================================================================
 
-[rule.max-public-structs]
-  arguments = [10]
+# Security rules (from gosec and additional security checks)
+[rule.file-header]
+[rule.datarace]
+[rule.unchecked-type-assertion]
+
+# Code duplication (from dupl - threshold: 150)
+[rule.duplicated-imports]
+
+# Constants (from goconst - min-len: 3, min-occurrences: 3)
+[rule.add-constant]
+	disabled = true  # Complex configuration, use goconst separately if needed
+
+# Init functions (from gochecknoinits)
+# Note: main.go and config package are excluded in original
+
+# Comprehensive analysis (from gocritic)
+[rule.if-return]
+[rule.early-return]
+[rule.indent-error-flow]
+[rule.superfluous-else]
+[rule.confusing-naming]
+[rule.get-return]
+[rule.modifies-parameter]
+[rule.confusing-results]
+[rule.deep-exit]
+[rule.flag-parameter]
+	disabled = true  # Too strict for CLI applications
+[rule.unnecessary-stmt]
+[rule.empty-block]
+[rule.empty-lines]
+
+# Standard library usage (from usestdlibvars)
+[rule.use-any]
+
+# ============================================================================
+# PERFORMANCE (from prealloc, perfsprint)
+# ============================================================================
+
+[rule.optimize-operands-order]
+[rule.string-format]
+[rule.string-of-int]
+[rule.range-val-in-closure]
+[rule.range-val-address]
+[rule.waitgroup-by-value]
+
+# ============================================================================
+# CODE COMPLEXITY (from gocognit: 15, gocyclo: 15, nestif: 5)
+# ============================================================================
 
 [rule.cognitive-complexity]
-  arguments = [15]
-  Exclude = ["**/*_test.go"]
+	arguments = [20]  # Increased for test files which can be more complex
 
 [rule.cyclomatic]
-  arguments = [15]
-  Exclude = ["**/*_test.go"]
+	arguments = [15]
+
+[rule.max-control-nesting]
+	arguments = [5]
+
+[rule.function-length]
+	arguments = [100, 0]  # statements, lines
+
+[rule.function-result-limit]
+	arguments = [10]
 
 [rule.argument-limit]
-  arguments = [5]
+	arguments = [8]
+
+# ============================================================================
+# TESTING (from thelper, errorlint)
+# ============================================================================
+
+# Testing rules are covered by error handling and naming convention rules above
+
+# ============================================================================
+# NAMING CONVENTIONS (from predeclared, varnamelen)
+# ============================================================================
+
+[rule.var-naming]
+	arguments = [["ID", "URL", "API", "HTTP", "JSON", "XML", "UI", "URI", "SQL", "SSH", "EOF", "LHS", "RHS", "TTL", "OK", "UUID", "VM"]]
+
+[rule.exported]
+
+[rule.package-comments]
+	severity = "error"
+
+# Variable name length (from varnamelen)
+# Original config: min-length: 3, with specific ignored names
+# This is partially covered by var-naming rule
+
+# ============================================================================
+# IMPORT MANAGEMENT (from depguard, importas)
+# ============================================================================
+
+[rule.imports-blacklist]
+	arguments = [
+		"io/ioutil",      # Use os and io packages instead
+		"github.com/pkg/errors",  # Use standard errors package
+		"github.com/golang/protobuf"  # Use google.golang.org/protobuf
+	]
+
+[rule.import-alias-naming]
+	arguments = ["^[a-z][a-z0-9]*$"]
+
+[rule.import-shadowing]
+
+# ============================================================================
+# FORMAT (from nlreturn, lll: 120, godot, tagalign, whitespace)
+# ============================================================================
+
+[rule.line-length-limit]
+	arguments = [120]
+
+[rule.comment-spacings]
+	arguments = ["godot"]
+
+# Note: nlreturn, tagalign, whitespace don't have direct revive equivalents
+
+# ============================================================================
+# ADDITIONAL REVIVE-SPECIFIC RULES
+# ============================================================================
+
+[rule.increment-decrement]
+[rule.var-declaration]
+[rule.useless-break]
+[rule.call-to-gc]
+	disabled = true
+[rule.max-public-structs]
+	disabled = true  # Too restrictive for this project
+
+# ============================================================================
+# EXCLUSIONS (from original golangci-lint config)
+# ============================================================================
+# Note: Exclusions in revive are handled differently
+# - main.go: gochecknoinits excluded
+# - _test.go: varnamelen excluded for variable names
+# - internal/config/: gochecknoinits excluded
+# These will need to be handled via file-specific ignores or code comments
