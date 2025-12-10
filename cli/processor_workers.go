@@ -88,7 +88,9 @@ func (p *Processor) processFile(ctx context.Context, filePath string, writeCh ch
 	p.recordFileResult(filePath, fileSize, format, success, false, "", processErr)
 
 	// Update progress bar with metrics
-	p.ui.UpdateProgress(1)
+	if p.ui != nil {
+		p.ui.UpdateProgress(1)
+	}
 
 	// Show real-time stats in verbose mode
 	if p.flags.Verbose && p.metricsCollector != nil {

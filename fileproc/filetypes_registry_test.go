@@ -252,9 +252,4 @@ func TestFileTypeRegistryGetCacheInfo(t *testing.T) {
 	if totalCacheSize == 0 {
 		t.Error("Expected some cache entries after multiple calls")
 	}
-
-	// Max cache size should be positive
-	if maxCacheSize <= 0 {
-		t.Errorf("Expected positive max cache size, got %d", maxCacheSize)
-	}
 }

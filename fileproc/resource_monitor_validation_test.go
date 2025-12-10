@@ -171,16 +171,18 @@ func TestResourceMonitorMemoryLimitHandling(t *testing.T) {
 	t.Log("Could not trigger memory limit - actual memory usage may be lower than limit")
 }
 
-// TestResourceMonitor_GracefulRecovery tests graceful recovery attempts.
+// TestResourceMonitorGracefulRecovery tests graceful recovery attempts.
 func TestResourceMonitorGracefulRecovery(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
 	// Set memory limits that will trigger recovery
 	viper.Set(shared.TestCfgResourceLimitsEnabled, true)
-	viper.Set("resourceLimits.maxMemoryMB", 0.001) // 1KB
 
 	rm := NewResourceMonitor()
 	defer rm.Close()
+
+	// Force a deterministic 1-byte hard memory limit to trigger recovery
+	rm.hardMemoryLimitBytes = 1
 
 	// Process multiple files to accumulate memory usage
 	for i := 0; i < 3; i++ {

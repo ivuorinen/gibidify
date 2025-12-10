@@ -471,6 +471,11 @@ func TestRunAllBenchmarks(t *testing.T) {
 	if pipeErr != nil {
 		t.Fatalf(shared.TestMsgFailedToCreatePipe, pipeErr)
 	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			t.Logf("Failed to close pipe reader: %v", err)
+		}
+	}()
 	defer func() { os.Stdout = original }()
 	os.Stdout = w
 

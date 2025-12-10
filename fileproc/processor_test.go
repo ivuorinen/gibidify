@@ -296,7 +296,7 @@ func createLargeTestFile(t *testing.T) *os.File {
 		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
 	}
 
-	lineContent := "// This is a comment line that will be repeated many times to exceed the streaming threshold\n"
+	lineContent := "// Repeated comment line to exceed streaming threshold\n"
 	repeatCount := (1048576 / len(lineContent)) + 1000
 	largeContent := strings.Repeat(lineContent, repeatCount)
 

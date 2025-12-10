@@ -431,8 +431,8 @@ func TestParseFlagsSingleton(t *testing.T) {
 func resetFlagsState() {
 	flagsParsed = false
 	globalFlags = nil
-	// Reset the flag.CommandLine for clean testing
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	// Reset the flag.CommandLine for clean testing (use ContinueOnError to match ResetFlags)
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 }
 
 // setupCommandLineArgs sets up command line arguments for testing.
