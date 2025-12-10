@@ -9,7 +9,7 @@ import (
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
-func TestResourceMonitor_Metrics(t *testing.T) {
+func TestResourceMonitorMetrics(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
 	viper.Set("resourceLimits.enabled", true)
@@ -23,7 +23,7 @@ func TestResourceMonitor_Metrics(t *testing.T) {
 	rm.RecordFileProcessed(2000)
 	rm.RecordFileProcessed(500)
 
-	metrics := rm.GetMetrics()
+	metrics := rm.Metrics()
 
 	// Verify metrics
 	if metrics.FilesProcessed != 3 {

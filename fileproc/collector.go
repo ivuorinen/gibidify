@@ -5,5 +5,6 @@ package fileproc
 // and returns a slice of file paths.
 func CollectFiles(root string) ([]string, error) {
 	w := NewProdWalker()
+
 	return w.Walk(root)
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
-func TestResourceMonitor_Integration(t *testing.T) {
+func TestResourceMonitorIntegration(t *testing.T) {
 	// Create temporary test directory
 	tempDir := t.TempDir()
 
@@ -47,6 +47,7 @@ func TestResourceMonitor_Integration(t *testing.T) {
 		err = rm.ValidateFileProcessing(filePath, fileInfo.Size())
 		if err != nil {
 			t.Errorf("Failed to validate file %s: %v", filePath, err)
+
 			continue
 		}
 
@@ -54,6 +55,7 @@ func TestResourceMonitor_Integration(t *testing.T) {
 		err = rm.AcquireReadSlot(ctx)
 		if err != nil {
 			t.Errorf("Failed to acquire read slot for %s: %v", filePath, err)
+
 			continue
 		}
 
@@ -71,7 +73,7 @@ func TestResourceMonitor_Integration(t *testing.T) {
 	}
 
 	// Verify final metrics
-	metrics := rm.GetMetrics()
+	metrics := rm.Metrics()
 	if metrics.FilesProcessed != int64(len(testFiles)) {
 		t.Errorf("Expected %d files processed, got %d", len(testFiles), metrics.FilesProcessed)
 	}

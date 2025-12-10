@@ -1,3 +1,4 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
 import (
@@ -34,6 +35,7 @@ func loadIgnoreRules(currentDir string, parentRules []ignoreRule) []ignoreRule {
 func tryLoadIgnoreFile(dir, fileName string) *ignoreRule {
 	ignorePath := filepath.Join(dir, fileName)
 	if info, err := os.Stat(ignorePath); err == nil && !info.IsDir() {
+		//nolint:errcheck // Regex compile error handled by validation, safe to ignore here
 		if gi, err := ignore.CompileIgnoreFile(ignorePath); err == nil {
 			return &ignoreRule{
 				base: dir,
@@ -41,6 +43,7 @@ func tryLoadIgnoreFile(dir, fileName string) *ignoreRule {
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -51,6 +54,7 @@ func matchesIgnoreRules(fullPath string, rules []ignoreRule) bool {
 			return true
 		}
 	}
+
 	return false
 }
 

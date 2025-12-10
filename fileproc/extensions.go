@@ -1,4 +1,7 @@
+// Package fileproc handles file processing, collection, and output formatting.
 package fileproc
+
+import "github.com/ivuorinen/gibidify/shared"
 
 // getImageExtensions returns the default image file extensions.
 func getImageExtensions() map[string]bool {
@@ -130,15 +133,15 @@ func getLanguageMap() map[string]string {
 		".cmd":  "batch",
 
 		// Data formats
-		".json": "json",
-		".yaml": "yaml",
-		".yml":  "yaml",
+		".json": shared.FormatJSON,
+		".yaml": shared.FormatYAML,
+		".yml":  shared.FormatYAML,
 		".toml": "toml",
 		".xml":  "xml",
 		".sql":  "sql",
 
 		// Documentation
-		".md":  "markdown",
+		".md":  shared.FormatMarkdown,
 		".rst": "rst",
 		".tex": "latex",
 
