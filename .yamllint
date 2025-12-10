@@ -1,3 +1,4 @@
+---
 # yamllint configuration
 # See: https://yamllint.readthedocs.io/en/stable/configuration.html
 
@@ -35,6 +36,3 @@ rules:
   # Relax comments formatting
   comments:
     min-spaces-from-content: 1
-
-  # Allow document start marker to be optional
-  document-start: disable

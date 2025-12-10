@@ -7,6 +7,7 @@ trim_trailing_whitespace = true
 indent_size = 2
 indent_style = tab
 tab_width = 2
+charset = utf-8
 
 [*.go]
 max_line_length = 120
@@ -14,7 +15,7 @@ max_line_length = 120
 [*.md]
 trim_trailing_whitespace = false
 
-[*.{yml,yaml,json,toml}]
+[*.{yml,yaml,json,toml,example}]
 indent_style = space
 max_line_length = 250
 
@@ -29,5 +30,11 @@ max_line_length = 80
 indent_size = 0
 indent_style = space
 
+[*.{sh,txt}]
+indent_style = space
+
 [Makefile]
-max_line_length = 80
+indent_style = tab
+indent_size = 0
+max_line_length = 999
+tab_width = 4
