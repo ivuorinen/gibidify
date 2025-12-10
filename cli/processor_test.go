@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/config"
+	"github.com/ivuorinen/gibidify/fileproc"
 	"github.com/ivuorinen/gibidify/shared"
 	"github.com/ivuorinen/gibidify/testutil"
 )
@@ -74,57 +75,105 @@ func TestNewProcessor(t *testing.T) {
 	}
 }
 
-// TestProcessor_configureFileTypes tests file type registry configuration.
-func TestProcessorConfigureFileTypes(t *testing.T) {
-	// Reset config before testing
-	testutil.ResetViperConfig(t, "")
+// configureFileTypesTestCase holds test case data for file types configuration.
+type configureFileTypesTestCase struct {
+	name             string
+	fileTypesEnabled bool
+	customExtensions []string
+	wantCustom       bool
+}
 
-	tests := []struct {
-		name             string
-		fileTypesEnabled bool
-		setupConfig      func()
-	}{
+// setupFileTypesConfig initializes viper config for file types test.
+func setupFileTypesConfig(t *testing.T, tt configureFileTypesTestCase) {
+	t.Helper()
+	viper.Reset()
+	config.SetDefaultConfig()
+	viper.Set(shared.ConfigKeyFileTypesEnabled, tt.fileTypesEnabled)
+	if len(tt.customExtensions) > 0 {
+		viper.Set("fileTypes.customImageExtensions", tt.customExtensions)
+	}
+}
+
+// verifyDefaultExtensions checks that default extensions are recognized.
+func verifyDefaultExtensions(t *testing.T, registry *fileproc.FileTypeRegistry) {
+	t.Helper()
+	if !registry.IsImage(shared.TestFilePNG) {
+		t.Error("expected .png to be recognized as image (default extension)")
+	}
+	if !registry.IsImage(shared.TestFileJPG) {
+		t.Error("expected .jpg to be recognized as image (default extension)")
+	}
+	if registry.Language(shared.TestFileGo) == "" {
+		t.Error("expected .go to have language mapping (default extension)")
+	}
+}
+
+// verifyCustomExtensions checks that custom extensions are recognized when expected.
+func verifyCustomExtensions(t *testing.T, registry *fileproc.FileTypeRegistry, tt configureFileTypesTestCase) {
+	t.Helper()
+	if !tt.wantCustom || len(tt.customExtensions) == 0 {
+		return
+	}
+	testFile := "test" + tt.customExtensions[0]
+	if !registry.IsImage(testFile) {
+		t.Errorf("expected %s to be recognized as image (custom extension)", testFile)
+	}
+}
+
+// verifyRegistryState checks registry has reasonable state.
+func verifyRegistryState(t *testing.T, registry *fileproc.FileTypeRegistry) {
+	t.Helper()
+	_, _, maxCache := registry.CacheInfo()
+	if maxCache <= 0 {
+		t.Errorf("expected positive maxCacheSize, got %d", maxCache)
+	}
+}
+
+// TestProcessorConfigureFileTypes tests file type registry configuration.
+func TestProcessorConfigureFileTypes(t *testing.T) {
+	tests := []configureFileTypesTestCase{
 		{
-			name:             "file types disabled",
+			name:             "file types disabled - no custom extensions applied",
 			fileTypesEnabled: false,
-			setupConfig: func() {
-				// No additional config needed
-			},
+			customExtensions: []string{".testcustom"},
+			wantCustom:       false,
 		},
 		{
-			name:             "file types enabled with default config",
+			name:             "file types enabled - custom extensions applied",
 			fileTypesEnabled: true,
-			setupConfig: func() {
-				// Use default configuration
-			},
+			customExtensions: []string{".mycustomext"},
+			wantCustom:       true,
+		},
+		{
+			name:             "file types enabled with defaults",
+			fileTypesEnabled: true,
+			customExtensions: nil,
+			wantCustom:       false,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(
-			tt.name, func(t *testing.T) {
-				// Reset config state
-				testutil.ResetViperConfig(t, "")
-				tt.setupConfig()
+		t.Run(tt.name, func(t *testing.T) {
+			setupFileTypesConfig(t, tt)
 
-				flags := &Flags{
-					SourceDir:   shared.TestSourcePath,
-					Format:      "markdown",
-					Concurrency: 1,
-					Destination: shared.TestOutputMarkdown,
-				}
+			if got := config.FileTypesEnabled(); got != tt.fileTypesEnabled {
+				t.Errorf("FileTypesEnabled() = %v, want %v", got, tt.fileTypesEnabled)
+			}
 
-				processor := NewProcessor(flags)
+			flags := &Flags{
+				SourceDir:   shared.TestSourcePath,
+				Format:      shared.FormatMarkdown,
+				Concurrency: 1,
+				Destination: shared.TestOutputMarkdown,
+			}
+			processor := NewProcessor(flags)
+			processor.configureFileTypes()
 
-				// Mock the file types enabled state
-				// This would normally be done through config, but we'll test the function directly
-				// since the actual configuration is complex and tested elsewhere
-				// No additional setup needed for this test case regardless of fileTypesEnabled value
-
-				// Test that configureFileTypes doesn't panic
-				processor.configureFileTypes()
-			},
-		)
+			registry := fileproc.DefaultRegistry()
+			verifyDefaultExtensions(t, registry)
+			verifyCustomExtensions(t, registry, tt)
+			verifyRegistryState(t, registry)
+		})
 	}
 }
 
@@ -681,29 +730,119 @@ func TestProcessorProcessResourceLimits(t *testing.T) {
 	}
 }
 
-// TestProcessor_logFinalStats tests final statistics logging.
-func TestProcessorlogFinalStats(t *testing.T) {
-	// Suppress all output for cleaner test output
-	restore := testutil.SuppressAllOutput(t)
-	defer restore()
+// logFinalStatsTestCase holds test case data for log final stats tests.
+type logFinalStatsTestCase struct {
+	name                 string
+	enableBackpressure   bool
+	enableResourceLimits bool
+	simulateProcessing   bool
+	expectedKeywords     []string
+	unexpectedKeywords   []string
+}
 
-	testutil.ResetViperConfig(t, "")
+// setupLogStatsConfig initializes config for log stats test.
+func setupLogStatsConfig(t *testing.T, tt logFinalStatsTestCase) {
+	t.Helper()
+	viper.Reset()
+	config.SetDefaultConfig()
+	viper.Set(shared.ConfigKeyBackpressureEnabled, tt.enableBackpressure)
+	viper.Set(shared.ConfigKeyResourceLimitsEnabled, tt.enableResourceLimits)
+	shared.GetLogger().SetLevel(shared.LogLevelInfo)
+}
 
+// createLogStatsProcessor creates a processor for log stats testing.
+func createLogStatsProcessor(t *testing.T) *Processor {
+	t.Helper()
 	flags := &Flags{
 		SourceDir:   t.TempDir(),
-		Format:      "markdown",
+		Format:      shared.FormatMarkdown,
 		Concurrency: 1,
 		Destination: filepath.Join(t.TempDir(), shared.TestOutputMD),
-		NoUI:        true, // Disable all UI output for testing
+		NoUI:        true,
+		NoColors:    true,
+		NoProgress:  true,
+	}
+	return NewProcessor(flags)
+}
+
+// simulateProcessing records file processing activity for stats generation.
+func simulateProcessing(processor *Processor, simulate bool) {
+	if !simulate || processor.resourceMonitor == nil {
+		return
+	}
+	processor.resourceMonitor.RecordFileProcessed(1024)
+	processor.resourceMonitor.RecordFileProcessed(2048)
+}
+
+// verifyLogKeywords checks expected and unexpected keywords in output.
+func verifyLogKeywords(t *testing.T, output string, expected, unexpected []string) {
+	t.Helper()
+	for _, keyword := range expected {
+		if !strings.Contains(output, keyword) {
+			t.Errorf("expected output to contain %q, got: %s", keyword, output)
+		}
+	}
+	for _, keyword := range unexpected {
+		if strings.Contains(output, keyword) {
+			t.Errorf("expected output NOT to contain %q, got: %s", keyword, output)
+		}
+	}
+}
+
+// TestProcessorLogFinalStats tests final statistics logging.
+func TestProcessorLogFinalStats(t *testing.T) {
+	tests := []logFinalStatsTestCase{
+		{
+			name:                 "basic stats without features enabled",
+			enableBackpressure:   false,
+			enableResourceLimits: false,
+			simulateProcessing:   false,
+			expectedKeywords:     []string{},
+			unexpectedKeywords:   []string{"Back-pressure stats", "Resource stats"},
+		},
+		{
+			name:                 "with backpressure enabled",
+			enableBackpressure:   true,
+			enableResourceLimits: false,
+			simulateProcessing:   true,
+			expectedKeywords:     []string{"Back-pressure stats", "processed", "memory"},
+			unexpectedKeywords:   []string{},
+		},
+		{
+			name:                 "with resource limits enabled",
+			enableBackpressure:   false,
+			enableResourceLimits: true,
+			simulateProcessing:   true,
+			expectedKeywords:     []string{"Resource stats", "processed", "files"},
+			unexpectedKeywords:   []string{},
+		},
+		{
+			name:                 "with all features enabled",
+			enableBackpressure:   true,
+			enableResourceLimits: true,
+			simulateProcessing:   true,
+			expectedKeywords:     []string{"processed"},
+			unexpectedKeywords:   []string{},
+		},
 	}
 
-	processor := NewProcessor(flags)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setupLogStatsConfig(t, tt)
+			_, getStderr, restore := testutil.CaptureOutput(t)
 
-	// Test that logFinalStats doesn't panic
-	processor.logFinalStats()
+			processor := createLogStatsProcessor(t)
+			simulateProcessing(processor, tt.simulateProcessing)
+			processor.logFinalStats()
 
-	// Verify that resource monitor is properly closed
-	// (This is mainly to ensure the method completes without error)
+			restore()
+			verifyLogKeywords(t, getStderr(), tt.expectedKeywords, tt.unexpectedKeywords)
+
+			if processor.resourceMonitor != nil {
+				processor.resourceMonitor.Close()
+			}
+		})
+	}
 }
 
 // Helper types and functions

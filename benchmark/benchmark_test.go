@@ -21,6 +21,7 @@ func capturedOutput(t *testing.T, fn func()) string {
 	if err != nil {
 		t.Fatalf(shared.TestMsgFailedToCreatePipe, err)
 	}
+	defer r.Close()
 	defer func() { os.Stdout = original }()
 	os.Stdout = w
 
@@ -223,6 +224,7 @@ func TestPrintResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf(shared.TestMsgFailedToCreatePipe, err)
 	}
+	defer r.Close()
 	defer func() { os.Stdout = original }()
 	os.Stdout = w
 
@@ -283,6 +285,7 @@ func TestPrintSuite(t *testing.T) {
 	if err != nil {
 		t.Fatalf(shared.TestMsgFailedToCreatePipe, err)
 	}
+	defer r.Close()
 	defer func() { os.Stdout = original }()
 	os.Stdout = w
 
