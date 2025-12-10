@@ -73,7 +73,7 @@ func TestResourceMonitorDisabledResourceLimits(t *testing.T) {
 	}
 }
 
-// TestResourceMonitor_StateQueries tests state query functions.
+// TestResourceMonitorStateQueries tests state query functions.
 func TestResourceMonitorStateQueries(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
@@ -91,7 +91,7 @@ func TestResourceMonitorStateQueries(t *testing.T) {
 	}
 }
 
-// TestResourceMonitor_IsEmergencyStopActive tests the IsEmergencyStopActive method.
+// TestResourceMonitorIsEmergencyStopActive tests the IsEmergencyStopActive method.
 func TestResourceMonitorIsEmergencyStopActive(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
@@ -112,7 +112,7 @@ func TestResourceMonitorIsEmergencyStopActive(t *testing.T) {
 	}
 }
 
-// TestResourceMonitor_IsDegradationActive tests the IsDegradationActive method.
+// TestResourceMonitorIsDegradationActive tests the IsDegradationActive method.
 func TestResourceMonitorIsDegradationActive(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
@@ -133,7 +133,7 @@ func TestResourceMonitorIsDegradationActive(t *testing.T) {
 	}
 }
 
-// TestResourceMonitor_Close tests the Close method.
+// TestResourceMonitorClose tests the Close method.
 func TestResourceMonitorClose(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 

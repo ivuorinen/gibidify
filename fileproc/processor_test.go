@@ -366,7 +366,7 @@ func validateStreamingRequest(t *testing.T, streamingRequest *fileproc.WriteRequ
 	t.Log("Successfully triggered streaming for large file and tested reader")
 }
 
-// TestProcessor_StreamingIntegration tests streaming functionality in processor.
+// TestProcessorStreamingIntegration tests streaming functionality in processor.
 func TestProcessorStreamingIntegration(t *testing.T) {
 	configDir := writeTempConfig(t, `
 max_file_size_mb: 0.001
@@ -394,7 +394,7 @@ streaming_threshold_mb: 0.0001
 	}
 }
 
-// TestProcessor_ContextCancellation tests context cancellation during processing.
+// TestProcessorContextCancellation tests context cancellation during processing.
 func TestProcessorContextCancellation(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
@@ -439,7 +439,7 @@ func TestProcessorContextCancellation(t *testing.T) {
 	t.Logf("Processed %d files with immediate cancellation", len(results))
 }
 
-// TestProcessor_ValidationEdgeCases tests edge cases in file validation.
+// TestProcessorValidationEdgeCases tests edge cases in file validation.
 func TestProcessorValidationEdgeCases(t *testing.T) {
 	configDir := writeTempConfig(t, `
 max_file_size_mb: 0.001  # 1KB limit for testing
@@ -493,7 +493,7 @@ max_file_size_mb: 0.001  # 1KB limit for testing
 	t.Logf("Large file processing results: %d", len(results2))
 }
 
-// TestProcessor_ContextCancellationDuringValidation tests context cancellation during file validation.
+// TestProcessorContextCancellationDuringValidation tests context cancellation during file validation.
 func TestProcessorContextCancellationDuringValidation(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
@@ -532,7 +532,7 @@ func TestProcessorContextCancellationDuringValidation(t *testing.T) {
 	t.Logf("Results with canceled context: %d", len(results))
 }
 
-// TestProcessor_InMemoryProcessingEdgeCases tests edge cases in in-memory processing.
+// TestProcessorInMemoryProcessingEdgeCases tests edge cases in in-memory processing.
 func TestProcessorInMemoryProcessingEdgeCases(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
@@ -572,7 +572,7 @@ func TestProcessorInMemoryProcessingEdgeCases(t *testing.T) {
 	}
 }
 
-// TestProcessor_StreamingEdgeCases tests edge cases in streaming processing.
+// TestProcessorStreamingEdgeCases tests edge cases in streaming processing.
 func TestProcessorStreamingEdgeCases(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 

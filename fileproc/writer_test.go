@@ -153,7 +153,7 @@ func verifyPrefixSuffixWith(t *testing.T, data []byte, expectedPrefix, expectedS
 	}
 }
 
-// TestStartWriter_StreamingFormats tests streaming functionality in all writers.
+// TestStartWriterStreamingFormats tests streaming functionality in all writers.
 func TestStartWriterStreamingFormats(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -405,7 +405,7 @@ func runErrorHandlingTest(
 	}
 }
 
-// TestStartWriter_ErrorHandling tests error scenarios in writers.
+// TestStartWriterErrorHandling tests error scenarios in writers.
 func TestStartWriterErrorHandling(t *testing.T) {
 	tests := []struct {
 		name              string
@@ -511,7 +511,7 @@ func runCloseTest(
 	verifyPrefixSuffixWith(t, data, "TEST_PREFIX", "TEST_SUFFIX")
 }
 
-// TestStartWriter_WriterCloseErrors tests error handling during writer close operations.
+// TestStartWriterWriterCloseErrors tests error handling during writer close operations.
 func TestStartWriterWriterCloseErrors(t *testing.T) {
 	tests := []struct {
 		name   string

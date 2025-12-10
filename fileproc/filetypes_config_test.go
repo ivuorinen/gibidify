@@ -10,7 +10,7 @@ const (
 	zigLang = "zig"
 )
 
-// TestFileTypeRegistry_ApplyCustomExtensions tests applying custom extensions.
+// TestFileTypeRegistryApplyCustomExtensions tests applying custom extensions.
 func TestFileTypeRegistryApplyCustomExtensions(t *testing.T) {
 	registry := createEmptyTestRegistry()
 
@@ -27,7 +27,7 @@ func TestFileTypeRegistryApplyCustomExtensions(t *testing.T) {
 	verifyCustomExtensions(t, registry, customImages, customBinary, customLanguages)
 }
 
-// TestFileTypeRegistry_DisableExtensions tests disabling extensions.
+// TestFileTypeRegistryDisableExtensions tests disabling extensions.
 func TestFileTypeRegistryDisableExtensions(t *testing.T) {
 	registry := createEmptyTestRegistry()
 
@@ -49,7 +49,7 @@ func TestFileTypeRegistryDisableExtensions(t *testing.T) {
 	verifyRemainingExtensions(t, registry)
 }
 
-// TestFileTypeRegistry_EmptyValuesHandling tests handling of empty values.
+// TestFileTypeRegistryEmptyValuesHandling tests handling of empty values.
 func TestFileTypeRegistryEmptyValuesHandling(t *testing.T) {
 	registry := createEmptyTestRegistry()
 
@@ -66,7 +66,7 @@ func TestFileTypeRegistryEmptyValuesHandling(t *testing.T) {
 	verifyEmptyValueHandling(t, registry)
 }
 
-// TestFileTypeRegistry_CaseInsensitiveHandling tests case insensitive handling.
+// TestFileTypeRegistryCaseInsensitiveHandling tests case insensitive handling.
 func TestFileTypeRegistryCaseInsensitiveHandling(t *testing.T) {
 	registry := createEmptyTestRegistry()
 

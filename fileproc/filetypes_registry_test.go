@@ -6,21 +6,21 @@ import (
 	"github.com/ivuorinen/gibidify/shared"
 )
 
-// TestFileTypeRegistry_AddImageExtension tests adding image extensions.
+// TestFileTypeRegistryAddImageExtension tests adding image extensions.
 func TestFileTypeRegistryAddImageExtension(t *testing.T) {
 	registry := createModificationTestRegistry()
 
 	testImageExtensionModifications(t, registry)
 }
 
-// TestFileTypeRegistry_AddBinaryExtension tests adding binary extensions.
+// TestFileTypeRegistryAddBinaryExtension tests adding binary extensions.
 func TestFileTypeRegistryAddBinaryExtension(t *testing.T) {
 	registry := createModificationTestRegistry()
 
 	testBinaryExtensionModifications(t, registry)
 }
 
-// TestFileTypeRegistry_AddLanguageMapping tests adding language mappings.
+// TestFileTypeRegistryAddLanguageMapping tests adding language mappings.
 func TestFileTypeRegistryAddLanguageMapping(t *testing.T) {
 	registry := createModificationTestRegistry()
 
@@ -155,7 +155,7 @@ func verifyLanguageMappingAbsent(t *testing.T, registry *FileTypeRegistry, _ str
 	}
 }
 
-// TestFileTypeRegistry_DefaultRegistryConsistency tests default registry behavior.
+// TestFileTypeRegistryDefaultRegistryConsistency tests default registry behavior.
 func TestFileTypeRegistryDefaultRegistryConsistency(t *testing.T) {
 	registry := DefaultRegistry()
 
@@ -181,7 +181,7 @@ func TestFileTypeRegistryDefaultRegistryConsistency(t *testing.T) {
 	}
 }
 
-// TestFileTypeRegistry_GetStats tests the GetStats method.
+// TestFileTypeRegistryGetStats tests the GetStats method.
 func TestFileTypeRegistryGetStats(t *testing.T) {
 	// Ensure clean, isolated state
 	ResetRegistryForTesting()
@@ -219,7 +219,7 @@ func TestFileTypeRegistryGetStats(t *testing.T) {
 	}
 }
 
-// TestFileTypeRegistry_GetCacheInfo tests the GetCacheInfo method.
+// TestFileTypeRegistryGetCacheInfo tests the GetCacheInfo method.
 func TestFileTypeRegistryGetCacheInfo(t *testing.T) {
 	// Ensure clean, isolated state
 	ResetRegistryForTesting()

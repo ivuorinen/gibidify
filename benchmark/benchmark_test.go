@@ -332,7 +332,7 @@ func TestPrintSuite(t *testing.T) {
 	}
 }
 
-// TestPrintResult_EdgeCases tests edge cases for PrintResult.
+// TestPrintResultEdgeCases tests edge cases for PrintResult.
 func TestPrintResultEdgeCases(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -396,7 +396,7 @@ func TestPrintResultEdgeCases(t *testing.T) {
 	}
 }
 
-// TestPrintSuite_EdgeCases tests edge cases for PrintSuite.
+// TestPrintSuiteEdgeCases tests edge cases for PrintSuite.
 func TestPrintSuiteEdgeCases(t *testing.T) {
 	tests := []struct {
 		name   string
