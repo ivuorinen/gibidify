@@ -1,9 +1,13 @@
+---
+# yaml-language-server: $schema=https://json.schemastore.org/pre-commit-config.json
+# For more hooks, see https://pre-commit.com/hooks.html
 repos:
-  - repo: https://github.com/golangci/golangci-lint
-    rev: v2.7.2
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
+    rev: 3.6.0
     hooks:
-      - id: golangci-lint
-        args: ["--timeout=5m"]
+      - id: editorconfig-checker
+        alias: ec
+
   - repo: https://github.com/tekwizely/pre-commit-golang
     rev: v1.0.0-rc.2
     hooks:
@@ -11,13 +15,17 @@ repos:
         alias: build
       - id: go-mod-tidy
         alias: tidy
+      - id: go-revive
+        alias: revive
+      - id: go-vet-mod
+        alias: vet
+      - id: go-staticcheck-mod
+        alias: static
       - id: go-fmt
         alias: fmt
-  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 3.6.0
-    hooks:
-      - id: editorconfig-checker
-        alias: ec
+      - id: go-sec-mod
+        alias: sec
+
   - repo: https://github.com/shellcheck-py/shellcheck-py
     rev: v0.11.0.1
     hooks:

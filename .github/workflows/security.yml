@@ -1,34 +1,50 @@
+---
 name: Security Scan
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   schedule:
     # Run security scan weekly on Sundays at 00:00 UTC
     - cron: "0 0 * * 0"
 
-permissions: {}
+permissions:
+  security-events: write
+  contents: read
+  actions: read
 
 jobs:
   security:
     name: Security Analysis
     runs-on: ubuntu-latest
 
-    permissions:
-      security-events: write
-      contents: read
-      actions: read
-
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-
-      - name: Setup Go
-        uses: ./.github/actions/setup
         with:
           token: ${{ github.token }}
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: "go.mod"
+
+      - name: Cache Go modules
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       # Security Scanning with gosec
       - name: Run gosec Security Scanner
@@ -45,37 +61,59 @@ jobs:
       # Dependency Vulnerability Scanning
       - name: Run govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
           govulncheck -json ./... > govulncheck-results.json || true
 
       - name: Parse govulncheck results
         run: |
           if [ -s govulncheck-results.json ]; then
             echo "::warning::Vulnerability check completed. Check govulncheck-results.json for details."
-            if grep -i -q '"finding"' govulncheck-results.json; then
+            if grep -q '"finding"' govulncheck-results.json; then
               echo "::error::Vulnerabilities found in dependencies!"
               cat govulncheck-results.json
               exit 1
             fi
           fi
 
+      # Additional Security Linting
+      - name: Run security-focused revive linting
+        run: |
+          go install github.com/mgechev/revive@v1.11.0
+          revive -config revive.toml -set_exit_status ./...
+
       # Makefile Linting
       - name: Run checkmake on Makefile
         run: |
-          go install github.com/checkmake/checkmake/cmd/checkmake@latest
+          go install github.com/checkmake/checkmake@v0.2.2
           checkmake --config=.checkmake Makefile
 
       # Shell Script Formatting Check
       - name: Check shell script formatting
         run: |
-          go install mvdan.cc/sh/v3/cmd/shfmt@latest
+          go install mvdan.cc/sh/v3/cmd/shfmt@v3.12.0
           shfmt -d .
 
+      # YAML Linting
       - name: Run YAML linting
-        uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c # v3.1.1
-        with:
-          file_or_dir: .
-          strict: true
+        run: |
+          python3 -m pip install 'yamllint==1.37.1'
+          yamllint -c .yamllint .
+
+      # Secrets Detection (basic patterns)
+      - name: Run secrets detection
+        run: |
+          echo "Scanning for potential secrets..."
+          # Look for common secret patterns
+          git log --all --full-history -- . | grep -i -E "(password|secret|key|token|api_key)" || true
+          find . -type f -name "*.go" -exec grep -H -i -E "(password|secret|key|token|api_key)\s*[:=]" {} \; || true
+
+      # Check for hardcoded IPs and URLs
+      - name: Check for hardcoded network addresses
+        run: |
+          echo "Scanning for hardcoded network addresses..."
+          find . -type f -name "*.go" -exec grep -H -E "([0-9]{1,3}\.){3}[0-9]{1,3}" {} \; || true
+          find . -type f -name "*.go" -exec grep -H -E "https?://[^/\s]+" {} \; | \
+            grep -v "example.com|localhost|127.0.0.1" || true
 
       # Docker Security (if Dockerfile exists)
       - name: Run Docker security scan
@@ -83,6 +121,21 @@ jobs:
         run: |
           docker run --rm -v "$PWD":/workspace \
             aquasec/trivy:latest fs --security-checks vuln,config /workspace/Dockerfile || true
+
+      # SAST with CodeQL (if available)
+      - name: Initialize CodeQL
+        if: github.event_name != 'schedule'
+        uses: github/codeql-action/init@cf1bb45a277cb3c205638b2cd5c984db1c46a412 # v4.31.7
+        with:
+          languages: go
+
+      - name: Autobuild
+        if: github.event_name != 'schedule'
+        uses: github/codeql-action/autobuild@cf1bb45a277cb3c205638b2cd5c984db1c46a412 # v4.31.7
+
+      - name: Perform CodeQL Analysis
+        if: github.event_name != 'schedule'
+        uses: github/codeql-action/analyze@cf1bb45a277cb3c205638b2cd5c984db1c46a412 # v4.31.7
 
       # Upload artifacts for review
       - name: Upload security scan results

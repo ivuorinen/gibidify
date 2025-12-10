@@ -1,14 +1,16 @@
 .PHONY: all clean test test-coverage build coverage help lint lint-fix \
-	lint-verbose install-tools benchmark benchmark-collection \
+	install-tools benchmark benchmark-collection \
 	benchmark-concurrency benchmark-format benchmark-processing \
 	build-benchmark check-all ci-lint ci-test dev-setup security \
-	security-full vuln-check deps-update deps-check deps-tidy
+	security-full vuln-check deps-update deps-check deps-tidy \
+	benchmark-go benchmark-go-cli benchmark-go-fileproc benchmark-go-metrics \
+	benchmark-go-shared benchmark-all
 
 # Default target shows help
 .DEFAULT_GOAL := help
 
 # All target runs full workflow
-all: lint test build
+all: lint lint-fix test build
 
 # Help target
 help:
@@ -25,10 +27,6 @@ lint:
 # Run linters with auto-fix
 lint-fix:
 	@./scripts/lint-fix.sh
-
-# Run linters with verbose output
-lint-verbose:
-	@./scripts/lint-verbose.sh
 
 # Run tests
 test:
@@ -55,13 +53,12 @@ build:
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -f gibidify gibidify-benchmark
-	@rm -f coverage.out coverage.html
+	@rm -f gibidify gibidify-benchmark coverage.out coverage.html *.out
 	@echo "Clean complete"
 
 # CI-specific targets
 ci-lint:
-	@golangci-lint run --out-format=github-actions ./...
+	@revive -config revive.toml -formatter friendly -set_exit_status ./...
 
 ci-test:
 	@go test -race -coverprofile=coverage.out -json ./... > test-results.json
@@ -72,10 +69,35 @@ build-benchmark:
 	@go build -ldflags="-s -w" -o gibidify-benchmark ./cmd/benchmark
 	@echo "Build complete: ./gibidify-benchmark"
 
-# Run benchmarks
+# Run custom benchmark binary
 benchmark: build-benchmark
-	@echo "Running all benchmarks..."
+	@echo "Running custom benchmarks..."
 	@./gibidify-benchmark -type=all
+
+# Run all Go test benchmarks
+benchmark-go:
+	@echo "Running all Go test benchmarks..."
+	@go test -bench=. -benchtime=100ms -run=^$$ ./...
+
+# Run Go test benchmarks for specific packages
+benchmark-go-cli:
+	@echo "Running CLI benchmarks..."
+	@go test -bench=. -benchtime=100ms -run=^$$ ./cli/...
+
+benchmark-go-fileproc:
+	@echo "Running fileproc benchmarks..."
+	@go test -bench=. -benchtime=100ms -run=^$$ ./fileproc/...
+
+benchmark-go-metrics:
+	@echo "Running metrics benchmarks..."
+	@go test -bench=. -benchtime=100ms -run=^$$ ./metrics/...
+
+benchmark-go-shared:
+	@echo "Running shared benchmarks..."
+	@go test -bench=. -benchtime=100ms -run=^$$ ./shared/...
+
+# Run all benchmarks (custom + Go test)
+benchmark-all: benchmark benchmark-go
 
 # Run specific benchmark types
 benchmark-collection: build-benchmark
@@ -99,9 +121,12 @@ security:
 	@echo "Running comprehensive security scan..."
 	@./scripts/security-scan.sh
 
-security-full:
+security-full: install-tools
 	@echo "Running full security analysis..."
 	@./scripts/security-scan.sh
+	@echo "Running additional security checks..."
+	@gosec -fmt=json -out=security-report.json ./...
+	@staticcheck -checks=all ./...
 
 vuln-check:
 	@echo "Checking for dependency vulnerabilities..."
@@ -113,10 +138,17 @@ deps-check:
 	@./scripts/deps-check.sh
 
 deps-update:
-	@./scripts/deps-update.sh
+	@./scripts/update-deps.sh
 
 deps-tidy:
 	@echo "Cleaning up dependencies..."
 	@go mod tidy
 	@go mod verify
 	@echo "Dependencies cleaned and verified successfully!"
+
+# Run all checks before committing
+check-all: lint test coverage security
+
+# Development setup
+dev-setup: install-tools deps-tidy
+	@echo "Development environment ready!"
