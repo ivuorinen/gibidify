@@ -8,7 +8,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.21.0
-	golang.org/x/text v0.32.0
+	golang.org/x/text v0.33.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
