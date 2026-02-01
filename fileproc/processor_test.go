@@ -31,54 +31,6 @@ func writeTempConfig(t *testing.T, content string) string {
 	return dir
 }
 
-// collectWriteRequests runs a processing function and collects all WriteRequests.
-// This helper wraps the common pattern of channel + goroutine + WaitGroup.
-func collectWriteRequests(t *testing.T, process func(ch chan fileproc.WriteRequest)) []fileproc.WriteRequest {
-	t.Helper()
-
-	ch := make(chan fileproc.WriteRequest, 10)
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		process(ch)
-	})
-
-	results := make([]fileproc.WriteRequest, 0)
-	for req := range ch {
-		results = append(results, req)
-	}
-	wg.Wait()
-
-	return results
-}
-
-// collectWriteRequestsWithContext runs a processing function with context and collects all WriteRequests.
-func collectWriteRequestsWithContext(
-	ctx context.Context,
-	t *testing.T,
-	process func(ctx context.Context, ch chan fileproc.WriteRequest) error,
-) ([]fileproc.WriteRequest, error) {
-	t.Helper()
-
-	ch := make(chan fileproc.WriteRequest, 10)
-	var processErr error
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		processErr = process(ctx, ch)
-	})
-
-	results := make([]fileproc.WriteRequest, 0)
-	for req := range ch {
-		results = append(results, req)
-	}
-	wg.Wait()
-
-	return results, processErr
-}
-
 func TestProcessFile(t *testing.T) {
 	// Reset and load default config to ensure proper file size limits
 	testutil.ResetViperConfig(t, "")
