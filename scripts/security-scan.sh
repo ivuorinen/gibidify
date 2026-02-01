@@ -63,44 +63,25 @@ run_security_lint() {
   fi
 }
 
-# Check for potential secrets
+# Check for potential secrets using gitleaks
 check_secrets() {
-  print_status "Scanning for potential secrets and sensitive data..."
+  print_status "Scanning for potential secrets and sensitive data with gitleaks..."
 
-  local secrets_found=false
-
-  # Common secret patterns
-  local patterns=(
-    "password\s*[:=]\s*['\"][^'\"]{3,}['\"]"
-    "secret\s*[:=]\s*['\"][^'\"]{3,}['\"]"
-    "key\s*[:=]\s*['\"][^'\"]{8,}['\"]"
-    "token\s*[:=]\s*['\"][^'\"]{8,}['\"]"
-    "api_?key\s*[:=]\s*['\"][^'\"]{8,}['\"]"
-    "aws_?access_?key"
-    "aws_?secret"
-    "AKIA[0-9A-Z]{16}" # AWS Access Key pattern
-    "github_?token"
-    "private_?key"
-  )
-
-  for pattern in "${patterns[@]}"; do
-    if grep -r -i -E "$pattern" --include="*.go" . 2>/dev/null; then
-      print_warning "Potential secret pattern found: $pattern"
-      secrets_found=true
-    fi
-  done
-
-  # Check git history for secrets (last 10 commits)
-  if git log --oneline -10 | grep -i -E "(password|secret|key|token)" >/dev/null 2>&1; then
-    print_warning "Potential secrets mentioned in recent commit messages"
-    secrets_found=true
-  fi
-
-  if [[ "$secrets_found" = true ]]; then
-    print_warning "Potential secrets detected. Please review manually."
-    return 1
+  local gitleaks_report="gitleaks-report.json"
+  if go run github.com/zricethezav/gitleaks/v8@latest dir \
+    --config .gitleaks.toml \
+    --report-format json \
+    --report-path "$gitleaks_report" \
+    --no-banner \
+    .; then
+    print_success "No secrets detected by gitleaks"
+    rm -f "$gitleaks_report"
   else
-    print_success "No obvious secrets detected"
+    print_error "Secrets detected by gitleaks!"
+    if [[ -f "$gitleaks_report" ]]; then
+      echo "Detailed report saved to $gitleaks_report"
+    fi
+    return 1
   fi
 }
 
@@ -235,11 +216,14 @@ check_yaml_files() {
   print_status "Checking YAML files..."
 
   if find . -name "*.yml" -o -name "*.yaml" -type f | head -1 | grep -q .; then
-    if yamllint -c .yamllint .; then
+    if command -v yamllint >/dev/null 2>&1; then
+      if ! yamllint -c .yamllint .; then
+        print_error "YAML file issues detected!"
+        return 1
+      fi
       print_success "YAML files check passed"
     else
-      print_error "YAML file issues detected!"
-      return 1
+      print_warning "yamllint not found, skipping YAML file check"
     fi
   else
     print_status "No YAML files found, skipping yamllint check"
@@ -268,7 +252,7 @@ generate_report() {
 - checkmake (Makefile linting)
 - shfmt (Shell script formatting)
 - yamllint (YAML file validation)
-- Custom secret detection
+- gitleaks (Secret detection)
 - Custom network address detection
 - Docker security checks
 - File permission checks
@@ -276,6 +260,7 @@ generate_report() {
 ### Files Generated
 - \`gosec-report.json\` - Detailed gosec security findings
 - \`govulncheck-report.json\` - Dependency vulnerability report
+- \`gitleaks-report.json\` - Secret detection findings (if any)
 
 ### Recommendations
 1. Review all security findings in the generated reports
@@ -350,6 +335,7 @@ main() {
     print_status "Generated reports:"
     print_status "- gosec-report.json (if exists)"
     print_status "- govulncheck-report.json (if exists)"
+    print_status "- gitleaks-report.json (if exists)"
     print_status "- security-report.md"
   fi
 

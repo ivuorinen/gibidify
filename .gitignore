@@ -14,6 +14,8 @@ output.txt
 output.yaml
 gosec-report.json
 govulncheck-report.json
+gitleaks-report.json
+security-report.json
 security-report.md
 gosec*.log
 pr.txt

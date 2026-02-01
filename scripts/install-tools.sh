@@ -86,7 +86,7 @@ check_dependencies() {
 
   if ! command -v checkmake &>/dev/null; then
     print_warning "checkmake not found, installing..."
-    go install github.com/checkmake/checkmake/cmd/checkmake@v0.2.2
+    go install github.com/mrtazz/checkmake/cmd/checkmake@v0.2.2
   fi
 
   if ! command -v eclint &>/dev/null; then
@@ -97,11 +97,6 @@ check_dependencies() {
   if ! command -v staticcheck &>/dev/null; then
     print_warning "staticcheck not found, installing..."
     go install honnef.co/go/tools/cmd/staticcheck@v0.6.1
-  fi
-
-  if ! command -v yamllint &>/dev/null; then
-    print_warning "yamllint not found, installing..."
-    go install mvdan.cc/yaml/cmd/yaml-lint@v2.4.0
   fi
 
   # Formatting tools

@@ -1,0 +1,15 @@
+# gitleaks configuration
+# https://github.com/gitleaks/gitleaks
+#
+# Extends the built-in ruleset. Only allowlist overrides are defined here.
+
+[allowlist]
+  description = "Global allowlist for generated and report files"
+  paths = [
+    '''gosec-report\.json$''',
+    '''govulncheck-report\.json$''',
+    '''security-report\.json$''',
+    '''security-report\.md$''',
+    '''output\.json$''',
+    '''gibidify\.json$''',
+  ]
