@@ -29,4 +29,4 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      - uses: ivuorinen/actions/pr-lint@37e80e522400ad61d043b0f16a789ed36a8637fd # v2026.02.23
+      - uses: ivuorinen/actions/pr-lint@8faacf8a1cae049c1471708dcb408a167e91afaf # v2026.02.24
