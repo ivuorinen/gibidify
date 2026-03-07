@@ -1,40 +1,34 @@
 ---
-name: CodeQL Analysis
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: "CodeQL"
 
 on:
   push:
-    branches: [main, develop]
+    branches: ["main"]
   pull_request:
-    branches: [main, develop]
+    branches: ["main"]
+  schedule:
+    - cron: "30 1 * * 0"
+  merge_group:
 
 permissions: {}
 
 jobs:
   analyze:
-    name: Analyze Code
+    name: Analyze
     runs-on: ubuntu-latest
-
     permissions:
-      security-events: write
-      contents: read
       actions: read
-
+      contents: read
+      packages: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["actions", "go"]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Setup Go
-        uses: ./.github/actions/setup
+      - name: CodeQL Analysis
+        uses: ivuorinen/actions/codeql-analysis@97105fc2a909360678588cb50caf0be5144be486 # v2026.03.06
         with:
-          token: ${{ github.token }}
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
-        with:
-          languages: go
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
+          language: ${{ matrix.language }}
+          queries: security-and-quality
