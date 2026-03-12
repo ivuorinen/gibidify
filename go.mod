@@ -1,6 +1,6 @@
 module github.com/ivuorinen/gibidify
 
-go 1.25
+go 1.25.0
 
 toolchain go1.26.1
 
@@ -10,7 +10,7 @@ require (
 	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/viper v1.21.0
-	golang.org/x/text v0.34.0
+	golang.org/x/text v0.35.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
