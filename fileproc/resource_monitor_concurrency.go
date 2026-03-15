@@ -51,7 +51,7 @@ func (rm *ResourceMonitor) CreateFileProcessingContext(parent context.Context) (
 		return parent, func() {}
 	}
 
-	return context.WithTimeout(parent, rm.fileProcessingTimeout)
+	return context.WithTimeout(parent, rm.fileProcessingTimeout) // #nosec G118 - cancel returned to caller
 }
 
 // CreateOverallProcessingContext creates a context with overall processing timeout.
@@ -64,5 +64,5 @@ func (rm *ResourceMonitor) CreateOverallProcessingContext(parent context.Context
 		return parent, func() {}
 	}
 
-	return context.WithTimeout(parent, rm.overallTimeout)
+	return context.WithTimeout(parent, rm.overallTimeout) // #nosec G118 - cancel returned to caller
 }
