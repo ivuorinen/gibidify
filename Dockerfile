@@ -1,5 +1,5 @@
 # Use a minimal base image
-FROM alpine:3.23.3
+FROM alpine:3.23.4
 
 # Add user
 RUN useradd -ms /bin/bash gibidify
