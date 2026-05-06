@@ -98,7 +98,9 @@ func SuppressAllOutput(t *testing.T) OutputRestoreFunc {
 }
 
 // CaptureOutput captures both stdout and stderr during test execution.
-// Returns the captured output as strings and a restore function.
+// Returns getter funcs (getStdout, getStderr) and a restore func.
+// Call restore() before invoking the getters to ensure the pipes are fully
+// drained; logger output is also redirected to the stderr pipe during capture.
 func CaptureOutput(t *testing.T) (getStdout func() string, getStderr func() string, restore OutputRestoreFunc) {
 	t.Helper()
 
