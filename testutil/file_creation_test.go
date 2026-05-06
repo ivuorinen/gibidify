@@ -139,7 +139,7 @@ func verifyFilePermissions(t *testing.T, info os.FileInfo) {
 func verifyFileContent(t *testing.T, filePath string, expectedContent []byte) {
 	t.Helper()
 
-	readContent, err := os.ReadFile(filePath)
+	readContent, err := os.ReadFile(filePath) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Fatalf("Failed to read created file: %v", err)
 	}
@@ -417,7 +417,7 @@ func verifyCreatedFilesContent(t *testing.T, createdFiles []string, fileSpecs []
 	t.Helper()
 
 	for i, filePath := range createdFiles {
-		content, err := os.ReadFile(filePath)
+		content, err := os.ReadFile(filePath) //nolint:gosec // G304: path constructed from t.TempDir()
 		if err != nil {
 			t.Errorf("Failed to read file %s: %v", filePath, err)
 

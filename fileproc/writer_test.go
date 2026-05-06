@@ -277,14 +277,14 @@ func setupReadOnlyFile(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan
 	t.Helper()
 
 	outPath := filepath.Join(t.TempDir(), "readonly_out")
-	outFile, err := os.Create(outPath)
+	outFile, err := os.Create(outPath) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
 	}
 
 	// Close writable FD and reopen as read-only so writes will fail
 	_ = outFile.Close()
-	outFile, err = os.OpenFile(outPath, os.O_RDONLY, 0)
+	outFile, err = os.OpenFile(outPath, os.O_RDONLY, 0) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Fatalf("Failed to reopen as read-only: %v", err)
 	}
@@ -569,7 +569,7 @@ func benchStreamingIteration(b *testing.B, format, content string) {
 	contentFile := createBenchContentFile(b, content)
 	defer func() { _ = os.Remove(contentFile) }()
 
-	reader, err := os.Open(contentFile)
+	reader, err := os.Open(contentFile) //nolint:gosec // G304: path constructed from benchmark helper
 	if err != nil {
 		b.Fatalf("Failed to open content file: %v", err)
 	}

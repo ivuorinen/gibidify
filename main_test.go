@@ -76,7 +76,7 @@ func setupCLIArgs(srcDir, outFilePath string) {
 // verifyOutput checks that the output file contains expected content.
 func verifyOutput(t *testing.T, outFilePath string) {
 	t.Helper()
-	data, err := os.ReadFile(outFilePath)
+	data, err := os.ReadFile(outFilePath) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Fatalf("Failed to read output file: %v", err)
 	}

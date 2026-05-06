@@ -163,7 +163,7 @@ func attemptFileCreation(t *testing.T, tempDir, specName string) {
 		}
 	}()
 
-	if _, err := os.Create(filepath.Join(tempDir, specName)); err != nil {
+	if _, err := os.Create(filepath.Join(tempDir, specName)); err != nil { //nolint:gosec // G304: tempDir path
 		t.Logf("File creation failed (expected for some edge cases): %v", err)
 	}
 }

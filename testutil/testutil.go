@@ -143,11 +143,7 @@ func CaptureOutput(t *testing.T) (getStdout func() string, getStderr func() stri
 		_, _ = io.Copy(&stderrBuf, stderrReader) //nolint:errcheck // Ignore errors during test output capture shutdown
 	}()
 
-	return func() string {
-			return stdoutBuf.String()
-		}, func() string {
-			return stderrBuf.String()
-		}, func() {
+	return stdoutBuf.String, stderrBuf.String, func() {
 			// Close writers first to signal EOF
 			_ = stdoutWriter.Close() // Ignore close errors in cleanup
 			_ = stderrWriter.Close() // Ignore close errors in cleanup
@@ -387,10 +383,8 @@ func ValidateErrorCase(t *testing.T, err error, wantErr bool, errContains string
 		if errContains != "" && !strings.Contains(err.Error(), errContains) {
 			t.Errorf("%s: expected error containing %q, got: %v", operation, errContains, err)
 		}
-	} else {
-		if err != nil {
-			t.Errorf("%s: unexpected error: %v", operation, err)
-		}
+	} else if err != nil {
+		t.Errorf("%s: unexpected error: %v", operation, err)
 	}
 }
 

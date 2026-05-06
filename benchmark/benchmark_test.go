@@ -21,7 +21,7 @@ func capturedOutput(t *testing.T, fn func()) string {
 	if err != nil {
 		t.Fatalf(shared.TestMsgFailedToCreatePipe, err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	defer func() { os.Stdout = original }()
 	os.Stdout = w
 
@@ -224,7 +224,7 @@ func TestPrintResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf(shared.TestMsgFailedToCreatePipe, err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	defer func() { os.Stdout = original }()
 	os.Stdout = w
 
@@ -285,7 +285,7 @@ func TestPrintSuite(t *testing.T) {
 	if err != nil {
 		t.Fatalf(shared.TestMsgFailedToCreatePipe, err)
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 	defer func() { os.Stdout = original }()
 	os.Stdout = w
 
@@ -459,7 +459,7 @@ func TestRunAllBenchmarks(t *testing.T) {
 
 	for _, file := range testFiles {
 		filePath := filepath.Join(srcDir, file.name)
-		err := os.WriteFile(filePath, []byte(file.content), 0o644)
+		err := os.WriteFile(filePath, []byte(file.content), 0o600)
 		if err != nil {
 			t.Fatalf("Failed to create test file %s: %v", file.name, err)
 		}

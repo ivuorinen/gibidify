@@ -184,7 +184,7 @@ func FileProcessingBenchmark(sourceDir string, format string, concurrency int) (
 			//nolint:errcheck // Warning message in defer, failure doesn't affect benchmark
 			_, _ = fmt.Printf("Warning: failed to close benchmark output file: %v\n", err)
 		}
-		if err := os.Remove(outputFile.Name()); err != nil {
+		if err := os.Remove(outputFile.Name()); err != nil { //nolint:gosec // G703: path from os.CreateTemp
 			//nolint:errcheck // Warning message in defer, failure doesn't affect benchmark
 			_, _ = fmt.Printf("Warning: failed to remove benchmark output file: %v\n", err)
 		}

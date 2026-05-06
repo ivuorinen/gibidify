@@ -40,7 +40,7 @@ func TestProcessFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func(name string) {
-		err := os.Remove(name)
+		err := os.Remove(name) //nolint:gosec // G703: path from os.CreateTemp
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -94,7 +94,7 @@ func TestNewFileProcessorWithMonitor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }() //nolint:gosec // G703: path from os.CreateTemp
 
 	if _, err := tmpFile.WriteString("test content"); err != nil {
 		t.Fatal(err)
