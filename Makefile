@@ -2,7 +2,7 @@
 
 .PHONY: help all build install
 .PHONY: test test-verbose test-coverage
-.PHONY: fmt lint lint-go lint-golangci lint-static lint-sec lint-yaml lint-actions lint-make lint-md
+.PHONY: fmt fmt-check lint lint-go lint-golangci lint-static lint-sec lint-yaml lint-actions lint-make lint-md
 .PHONY: ci ci-lint ci-test
 .PHONY: security security-full vuln-check
 .PHONY: clean update-deps dev-setup pre-commit-setup
@@ -73,9 +73,13 @@ test-coverage: ## Run tests with coverage profile + HTML report
 
 # Format / lint --------------------------------------------------------------
 
-fmt: ## Format Go code (gofmt + goimports)
+fmt: ## Format Go code (gofmt + goimports, mutating)
 	gofmt -w .
 	go run golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION) -w -local $(LOCAL_PKG) .
+
+fmt-check: ## Check Go formatting without modifying files (used in CI)
+	@out=$$(gofmt -l .); test -z "$$out" || { printf 'Unformatted files:\n%s\nRun make fmt to fix\n' "$$out"; exit 1; }
+	@out=$$(go run golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION) -l -local $(LOCAL_PKG) .); test -z "$$out" || { printf 'Files need import formatting:\n%s\nRun make fmt to fix\n' "$$out"; exit 1; }
 
 lint: ## Run all linters via pre-commit (preferred)
 	@pre-commit run --all-files
@@ -107,7 +111,7 @@ lint-md: ## Run only Markdown linter (markdownlint-cli2)
 
 # CI -------------------------------------------------------------------------
 
-ci: fmt lint test ## Run format, lint, and test
+ci: fmt-check lint test ## Run format check, lint, and test
 
 ci-lint: ## CI: revive only with strict exit
 	go run github.com/mgechev/revive@$(REVIVE_VERSION) -config revive.toml -formatter friendly -set_exit_status ./...
