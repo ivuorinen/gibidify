@@ -33,12 +33,12 @@ jobs:
 
       # Security Scanning with gosec
       - name: Run gosec Security Scanner
-        uses: securego/gosec@223e19b8856e00f02cc67804499a83f77e208f3c # v2.25.0
+        uses: securego/gosec@4a3bd8af174872c778439083ded7adbf3747e770 # v2.26.1
         with:
           args: "-fmt sarif -out gosec-results.sarif ./..."
 
       - name: Upload gosec results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
         if: always()
         with:
           sarif_file: gosec-results.sarif
@@ -62,13 +62,13 @@ jobs:
 
       # Additional Security Linting
       - name: Run security-focused golangci-lint
-        uses: golangci/golangci-lint-action@v6.0.1
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
           args: "--enable=gosec,gocritic,bodyclose,rowserrcheck,misspell,unconvert,unparam,unused --timeout=5m"
 
       # Makefile Linting
       - name: Run checkmake on Makefile
-        uses: Uno-Takashi/checkmake-action@v2
+        uses: Uno-Takashi/checkmake-action@bc11ee86274ceaf5710dbcd80871d7cd7ecc78ce # v2
         with:
           config: .checkmake
 
