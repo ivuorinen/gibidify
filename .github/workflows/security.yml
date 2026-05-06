@@ -57,7 +57,7 @@ jobs:
         run: |
           if [ -s govulncheck-results.json ]; then
             echo "::warning::Vulnerability check completed. Check govulncheck-results.json for details."
-            if grep -i -q '"finding"' govulncheck-results.json; then
+            if grep -q '"osv"' govulncheck-results.json; then
               echo "::error::Vulnerabilities found in dependencies!"
               cat govulncheck-results.json
               exit 1
@@ -68,6 +68,8 @@ jobs:
       - name: Run security-focused golangci-lint
         uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
         with:
+          # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+          version: v2.10.1
           args: "--timeout=5m"
 
       # Makefile Linting
