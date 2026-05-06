@@ -17,7 +17,8 @@ repos:
         name: go build
         entry: go build ./...
         language: system
-        types: [go]
+        types:
+          - go
         pass_filenames: false
 
       - id: go-mod-tidy
@@ -31,21 +32,24 @@ repos:
         name: go vet
         entry: go vet ./...
         language: system
-        types: [go]
+        types:
+          - go
         pass_filenames: false
 
       - id: go-fmt
         name: gofmt
         entry: bash -c 'test -z "$(gofmt -l "$@")"' --
         language: system
-        types: [go]
+        types:
+          - go
 
       # renovate: datasource=go depName=github.com/mgechev/revive
       - id: revive
         name: revive
         entry: go run github.com/mgechev/revive@v1.11.0 -config revive.toml -formatter friendly -set_exit_status ./...
         language: system
-        types: [go]
+        types:
+          - go
         pass_filenames: false
 
       # renovate: datasource=go depName=honnef.co/go/tools/cmd/staticcheck
@@ -53,7 +57,8 @@ repos:
         name: staticcheck
         entry: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
         language: system
-        types: [go]
+        types:
+          - go
         pass_filenames: false
 
       # renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
@@ -61,5 +66,15 @@ repos:
         name: gosec
         entry: go run github.com/securego/gosec/v2/cmd/gosec@v2.24.0 -quiet ./...
         language: system
-        types: [go]
+        types:
+          - go
+        pass_filenames: false
+
+      # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+      - id: golangci-lint
+        name: golangci-lint
+        entry: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.1 run
+        language: system
+        types:
+          - go
         pass_filenames: false

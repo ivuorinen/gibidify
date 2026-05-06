@@ -2,7 +2,7 @@
 
 .PHONY: help all build install
 .PHONY: test test-verbose test-coverage
-.PHONY: fmt lint lint-go lint-static lint-sec lint-yaml lint-actions lint-make lint-md
+.PHONY: fmt lint lint-go lint-golangci lint-static lint-sec lint-yaml lint-actions lint-make lint-md
 .PHONY: ci ci-lint ci-test
 .PHONY: security security-full vuln-check
 .PHONY: clean update-deps dev-setup pre-commit-setup
@@ -83,6 +83,9 @@ lint: ## Run all linters via pre-commit (preferred)
 lint-go: ## Run only Go linters (vet + revive)
 	go vet ./...
 	go run github.com/mgechev/revive@$(REVIVE_VERSION) -config revive.toml -formatter friendly -set_exit_status ./...
+
+lint-golangci: ## Run golangci-lint (mirrors CI security scan, uses .golangci.yml)
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
 
 lint-static: ## Run staticcheck
 	go run honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION) ./...
