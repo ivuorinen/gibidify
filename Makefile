@@ -29,8 +29,11 @@ STATICCHECK_VERSION := v0.7.0
 REVIVE_VERSION := v1.11.0
 # renovate: datasource=go depName=github.com/checkmake/checkmake/cmd/checkmake
 CHECKMAKE_VERSION := v0.3.2
-# renovate: datasource=go depName=golang.org/x/vuln/cmd/govulncheck
-GOVULNCHECK_VERSION := v1.1.4
+# govulncheck intentionally tracks @latest, not a pinned version:
+# the vuln DB is fetched live from vuln.go.dev each run, but the binary
+# controls reachability-analysis features and bug fixes. For a security
+# scanner, "always run the newest one" beats reproducibility.
+GOVULNCHECK_VERSION := latest
 # renovate: datasource=npm depName=markdownlint-cli2
 MARKDOWNLINT_CLI2_VERSION := 0.21.0
 
