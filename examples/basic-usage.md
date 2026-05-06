@@ -43,19 +43,15 @@ gibidify -source ./src -format json -destination api-code.json
 Example JSON structure:
 ```json
 {
+  "prefix": "",
+  "suffix": "",
   "files": [
     {
-      "path": "src/main.go", 
-      "content": "package main...",
+      "path": "src/main.go",
       "language": "go",
-      "size": 1024
+      "content": "package main..."
     }
-  ],
-  "metadata": {
-    "total_files": 15,
-    "total_size": 45678,
-    "processing_time": "1.2s"
-  }
+  ]
 }
 ```
 
@@ -184,7 +180,7 @@ docs:
 
 ### Docker Usage
 ```dockerfile
-FROM golang:1.25-alpine
+FROM golang:1.26-alpine
 RUN go install github.com/ivuorinen/gibidify@latest
 WORKDIR /workspace
 COPY . .

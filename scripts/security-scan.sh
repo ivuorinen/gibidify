@@ -12,8 +12,42 @@ cd "$PROJECT_ROOT" || {
   exit 1
 }
 
-# shellcheck source=scripts/install-tools.sh
-source "$SCRIPT_DIR/install-tools.sh"
+# Colors for output (disabled when NO_COLOR is set)
+if [[ -n "${NO_COLOR:-}" ]]; then
+  RED=''
+  GREEN=''
+  YELLOW=''
+  BLUE=''
+  NC=''
+else
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  YELLOW='\033[1;33m'
+  BLUE='\033[0;34m'
+  NC='\033[0m'
+fi
+
+print_status() { echo -e "${BLUE}[INFO]${NC} $1"; }
+print_warning() { echo -e "${YELLOW}[WARN]${NC} $1" >&2; }
+print_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
+print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
+
+# Probe required tools — fail fast if anything is missing.
+# `make security-full` is opt-in heavy; rely on the user (or `make security` for a
+# lighter gosec run via `go run`).
+check_dependencies() {
+  print_status "Checking dependencies..."
+  local missing=()
+  for tool in go gosec govulncheck; do
+    command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
+  done
+  if (( ${#missing[@]} > 0 )); then
+    print_error "Missing required tools: ${missing[*]}"
+    print_error "Install with: go install <tool>@latest, or run 'make security' instead."
+    exit 1
+  fi
+  print_success "All dependencies are available"
+}
 
 echo "🔒 Starting comprehensive security scan for gibidify..."
 

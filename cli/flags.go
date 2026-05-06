@@ -63,7 +63,9 @@ func ParseFlags() (*Flags, error) {
 		&flags.LogLevel, "log-level", string(shared.LogLevelWarn), "Set log level (debug, info, warn, error)",
 	)
 
-	flag.Parse()
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, err
+	}
 
 	if err := flags.validate(); err != nil {
 		return nil, err

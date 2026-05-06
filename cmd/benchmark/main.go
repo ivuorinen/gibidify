@@ -35,7 +35,11 @@ var (
 )
 
 func main() {
-	flag.Parse()
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		//goland:noinspection GoUnhandledErrorResult
+		_, _ = fmt.Fprintf(os.Stderr, "Flag parse failed: %v\n", err)
+		os.Exit(1)
+	}
 
 	if err := runBenchmarks(); err != nil {
 		//goland:noinspection GoUnhandledErrorResult

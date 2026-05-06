@@ -1,6 +1,9 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/pre-commit-config.json
-# For more hooks, see https://pre-commit.com/hooks.html
+# All Go hooks invoke `go run TOOL@VERSION` so they build with the project's
+# Go toolchain (go.mod). This eliminates "tool built with old Go" failures
+# (e.g., staticcheck binary built with go1.23 against a go1.26 module).
+# Tool versions are duplicated from the Makefile; keep them in sync via Renovate.
 repos:
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
     rev: 3.6.1
@@ -8,20 +11,55 @@ repos:
       - id: editorconfig-checker
         alias: ec
 
-  - repo: https://github.com/tekwizely/pre-commit-golang
-    rev: v1.0.0-rc.2
+  - repo: local
     hooks:
-      - id: go-build-mod
-        alias: build
+      - id: go-build
+        name: go build
+        entry: go build ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+
       - id: go-mod-tidy
-        alias: tidy
-      - id: go-revive
-        alias: revive
-      - id: go-vet-mod
-        alias: vet
-      - id: go-staticcheck-mod
-        alias: static
+        name: go mod tidy
+        entry: go mod tidy
+        language: system
+        files: ^go\.(mod|sum)$
+        pass_filenames: false
+
+      - id: go-vet
+        name: go vet
+        entry: go vet ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+
       - id: go-fmt
-        alias: fmt
-      - id: go-sec-mod
-        alias: sec
+        name: gofmt
+        entry: gofmt -l -d
+        language: system
+        types: [go]
+
+      # renovate: datasource=go depName=github.com/mgechev/revive
+      - id: revive
+        name: revive
+        entry: go run github.com/mgechev/revive@v1.11.0 -config revive.toml -formatter friendly -set_exit_status ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      # renovate: datasource=go depName=honnef.co/go/tools/cmd/staticcheck
+      - id: staticcheck
+        name: staticcheck
+        entry: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        language: system
+        types: [go]
+        pass_filenames: false
+
+      # renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
+      - id: gosec
+        name: gosec
+        entry: go run github.com/securego/gosec/v2/cmd/gosec@v2.24.0 -quiet ./...
+        language: system
+        types: [go]
+        pass_filenames: false
