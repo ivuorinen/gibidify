@@ -1,21 +1,21 @@
 # Architecture Profile
-Generated: 2026-05-06
+Last updated: 2026-05-06
 
 ## Detected Patterns
 
 ### Pipe and Filter — High confidence
 Evidence:
 - Producer-consumer pipeline: `fileproc/walker.go` (collector) → `fileproc/processor.go` (filter/transformer) → `fileproc/{json,markdown,yaml}_writer.go` (sink), connected by Go channels
-- `fileproc/processor.go:55,67,80` — functions take `outCh chan<- WriteRequest`; pipeline stages decoupled by channel hand-off
+- `ProcessFile`, `ProcessFileWithMonitor`, `Process` — functions take `outCh chan<- WriteRequest`; pipeline stages decoupled by channel hand-off
 - `fileproc/backpressure.go` — explicit back-pressure management between stages (`maxPendingFiles`, `maxPendingWrites`)
-- `fileproc/backpressure.go:41` — `WriteRequest` channel type is the canonical hand-off between processor and writer stages
+- `WriteRequest` channel type is the canonical hand-off between processor and writer stages (`CreateChannels` in `fileproc/backpressure.go`)
 - CLAUDE.md acknowledges this: "Producer-consumer, … streaming"
 
 ### Plugin / Registry — High confidence
 Evidence:
-- `fileproc/registry.go:19-32` — `FileTypeRegistry` with `RegistryStats`, accessed via `DefaultRegistry()`; ~63ns lookup mentioned in CLAUDE.md
+- `FileTypeRegistry` with `RegistryStats`, accessed via `DefaultRegistry()`; ~63ns lookup mentioned in CLAUDE.md
 - `fileproc/extensions.go` — extensible file-type registration (custom + disabled extensions, custom languages)
-- `fileproc/formats.go:19-23` — `FormatWriter` interface implemented by three writers (`json_writer.go`, `markdown_writer.go`, `yaml_writer.go`); writers selected at runtime by format flag
+- `FormatWriter` interface implemented by three writers (`json_writer.go`, `markdown_writer.go`, `yaml_writer.go`); writers selected at runtime by format flag
 - Configuration-driven extension: `output.markdown.*`, `output.metadata.*`, `output.variables.*` in `config.example.yaml`
 
 ### Layered / Functional Modular — Medium confidence
