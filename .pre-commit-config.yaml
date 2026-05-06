@@ -36,7 +36,7 @@ repos:
 
       - id: go-fmt
         name: gofmt
-        entry: gofmt -l -d
+        entry: bash -c 'test -z "$(gofmt -l "$@")"' --
         language: system
         types: [go]
 

@@ -8,7 +8,7 @@ Evidence:
 - Producer-consumer pipeline: `fileproc/walker.go` (collector) → `fileproc/processor.go` (filter/transformer) → `fileproc/{json,markdown,yaml}_writer.go` (sink), connected by Go channels
 - `fileproc/processor.go:55,67,80` — functions take `outCh chan<- WriteRequest`; pipeline stages decoupled by channel hand-off
 - `fileproc/backpressure.go` — explicit back-pressure management between stages (`maxPendingFiles`, `maxPendingWrites`)
-- `interfaces.go:13-30` — `Processor` interface plus `FileProcessorInterface` describes the staged transformation
+- `fileproc/backpressure.go:41` — `WriteRequest` channel type is the canonical hand-off between processor and writer stages
 - CLAUDE.md acknowledges this: "Producer-consumer, … streaming"
 
 ### Plugin / Registry — High confidence
@@ -55,7 +55,6 @@ The following rules are inferred from the detected combination and should be enf
 
 ## Ambiguities & Contradictions
 
-- **`interfaces.go` lives in package `main` at the repo root.** It defines cross-cutting interfaces (`Processor`, `FileProcessorInterface`, `ResourceMonitorInterface`, `MetricsCollectorInterface`) that conceptually belong in `shared/` or a dedicated `interfaces/` package. Putting them in `package main` makes them un-importable by sibling packages — anything that wanted to satisfy these interfaces from `cli/` or `fileproc/` would have a circular import. This is a structural smell flagged for arch-auditor.
 - **`benchmark/` and `cmd/benchmark/`**: two top-level locations referencing benchmarking. Their relationship needs verification (library vs entrypoint) — currently ambiguous from naming alone.
 - **`metrics/` vs `fileproc/resource_monitor_*.go`**: there is overlap between `metrics/` (observability) and the `resource_monitor_*` family inside `fileproc/`. Whether resource monitoring is part of the pipeline or part of metrics is not consistently chosen.
 

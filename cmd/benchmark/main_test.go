@@ -27,6 +27,11 @@ const (
 	testContent2     = "content2"
 )
 
+func TestMain(m *testing.M) {
+	resetFlags()
+	m.Run()
+}
+
 func TestParseConcurrencyList(t *testing.T) {
 	tests := []struct {
 		name        string

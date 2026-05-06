@@ -56,8 +56,8 @@ all: ci ## Run format, lint, and test (alias for ci)
 build: ## Build the gibidify binary
 	go build -ldflags="$(LDFLAGS)" -o gibidify .
 
-install: ## Install gibidify globally via go install
-	go install $(LOCAL_PKG)@latest
+install: ## Install the current checkout globally
+	go install .
 
 # Test -----------------------------------------------------------------------
 

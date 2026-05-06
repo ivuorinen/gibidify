@@ -48,22 +48,23 @@ func ParseFlags() (*Flags, error) {
 
 	flags := &Flags{}
 
-	flag.StringVar(&flags.SourceDir, shared.CLIArgSource, "", "Source directory to scan recursively")
-	flag.StringVar(&flags.Destination, "destination", "", "Output file to write aggregated code")
-	flag.StringVar(&flags.Prefix, "prefix", "", "Text to add at the beginning of the output file")
-	flag.StringVar(&flags.Suffix, "suffix", "", "Text to add at the end of the output file")
-	flag.StringVar(&flags.Format, shared.CLIArgFormat, shared.FormatJSON, "Output format (json, markdown, yaml)")
-	flag.IntVar(&flags.Concurrency, shared.CLIArgConcurrency, runtime.NumCPU(),
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	fs.StringVar(&flags.SourceDir, shared.CLIArgSource, "", "Source directory to scan recursively")
+	fs.StringVar(&flags.Destination, "destination", "", "Output file to write aggregated code")
+	fs.StringVar(&flags.Prefix, "prefix", "", "Text to add at the beginning of the output file")
+	fs.StringVar(&flags.Suffix, "suffix", "", "Text to add at the end of the output file")
+	fs.StringVar(&flags.Format, shared.CLIArgFormat, shared.FormatJSON, "Output format (json, markdown, yaml)")
+	fs.IntVar(&flags.Concurrency, shared.CLIArgConcurrency, runtime.NumCPU(),
 		"Number of concurrent workers (default: number of CPU cores)")
-	flag.BoolVar(&flags.NoColors, "no-colors", false, "Disable colored output")
-	flag.BoolVar(&flags.NoProgress, "no-progress", false, "Disable progress bars")
-	flag.BoolVar(&flags.NoUI, "no-ui", false, "Disable all UI output (implies no-colors and no-progress)")
-	flag.BoolVar(&flags.Verbose, "verbose", false, "Enable verbose output")
-	flag.StringVar(
+	fs.BoolVar(&flags.NoColors, "no-colors", false, "Disable colored output")
+	fs.BoolVar(&flags.NoProgress, "no-progress", false, "Disable progress bars")
+	fs.BoolVar(&flags.NoUI, "no-ui", false, "Disable all UI output (implies no-colors and no-progress)")
+	fs.BoolVar(&flags.Verbose, "verbose", false, "Enable verbose output")
+	fs.StringVar(
 		&flags.LogLevel, "log-level", string(shared.LogLevelWarn), "Set log level (debug, info, warn, error)",
 	)
 
-	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+	if err := fs.Parse(os.Args[1:]); err != nil {
 		return nil, err
 	}
 
