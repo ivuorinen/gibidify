@@ -27,10 +27,22 @@ else
   NC='\033[0m'
 fi
 
-print_status() { local msg="$1"; echo -e "${BLUE}[INFO]${NC} ${msg}"; }
-print_warning() { local msg="$1"; echo -e "${YELLOW}[WARN]${NC} ${msg}" >&2; }
-print_error() { local msg="$1"; echo -e "${RED}[ERROR]${NC} ${msg}" >&2; }
-print_success() { local msg="$1"; echo -e "${GREEN}[SUCCESS]${NC} ${msg}"; }
+print_status() {
+  local msg="$1"
+  echo -e "${BLUE}[INFO]${NC} ${msg}"
+}
+print_warning() {
+  local msg="$1"
+  echo -e "${YELLOW}[WARN]${NC} ${msg}" >&2
+}
+print_error() {
+  local msg="$1"
+  echo -e "${RED}[ERROR]${NC} ${msg}" >&2
+}
+print_success() {
+  local msg="$1"
+  echo -e "${GREEN}[SUCCESS]${NC} ${msg}"
+}
 
 # Probe required tools — fail fast if anything is missing.
 # `make security-full` is opt-in heavy; rely on the user (or `make security` for a
@@ -41,17 +53,13 @@ check_dependencies() {
   for tool in go gosec govulncheck revive checkmake shfmt; do
     command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
   done
-  if (( ${#missing[@]} > 0 )); then
+  if ((${#missing[@]} > 0)); then
     print_error "Missing required tools: ${missing[*]}"
     print_error "Install with: go install <tool>@latest, or run 'make security' instead."
     exit 1
   fi
   print_success "All dependencies are available"
 }
-
-echo "🔒 Starting comprehensive security scan for gibidify..."
-
-check_dependencies
 
 # Run gosec security scanner
 run_gosec() {
