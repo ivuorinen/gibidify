@@ -19,3 +19,4 @@ security-report.json
 security-report.md
 gosec*.log
 pr.txt
+dist/

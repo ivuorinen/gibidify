@@ -1,0 +1,424 @@
+---
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=jcroql
+# GoReleaser configuration for gibidify
+# Documentation: https://goreleaser.com/customization/
+version: 2
+
+project_name: gibidify
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  # Linux: static linking for amd64 (validated platform)
+  - id: gibidify-linux-static
+    main: .
+    binary: gibidify
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+      - -extldflags=-static
+
+    goos:
+      - linux
+
+    goarch:
+      - amd64
+
+    env:
+      - CGO_ENABLED=0
+
+    tags:
+      - netgo
+      - osusergo
+
+    flags:
+      - -trimpath
+
+  # Linux: dynamic linking for additional architectures
+  - id: gibidify-linux-dynamic
+    main: .
+    binary: gibidify
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+
+    goos:
+      - linux
+
+    goarch:
+      - arm64
+      - arm
+      - "386"
+      - ppc64le
+      - s390x
+      - mips64
+      - mips64le
+
+    goarm:
+      - "6"
+      - "7"
+
+    env:
+      - CGO_ENABLED=0
+
+    tags:
+      - netgo
+      - osusergo
+
+    flags:
+      - -trimpath
+
+  # macOS
+  - id: gibidify-darwin
+    main: .
+    binary: gibidify
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+
+    goos:
+      - darwin
+
+    goarch:
+      - amd64
+      - arm64
+
+    env:
+      - CGO_ENABLED=0
+
+    tags:
+      - netgo
+      - osusergo
+
+    flags:
+      - -trimpath
+
+  # Windows
+  - id: gibidify-windows
+    main: .
+    binary: gibidify
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+
+    goos:
+      - windows
+
+    goarch:
+      - amd64
+      - arm64
+      - "386"
+
+    env:
+      - CGO_ENABLED=0
+
+    tags:
+      - netgo
+      - osusergo
+
+    flags:
+      - -trimpath
+
+  # BSD family
+  - id: gibidify-bsd
+    main: .
+    binary: gibidify
+
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+
+    goos:
+      - freebsd
+      - openbsd
+      - netbsd
+      - dragonfly
+
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - "386"
+      - ppc64le
+      - s390x
+      - mips64
+      - mips64le
+
+    goarm:
+      - "6"
+      - "7"
+
+    ignore:
+      - goos: freebsd
+        goarch: arm
+      - goos: openbsd
+        goarch: arm
+      - goos: netbsd
+        goarch: arm
+      - goos: dragonfly
+        goarch: "386"
+      - goos: dragonfly
+        goarch: arm
+      - goos: dragonfly
+        goarch: arm64
+
+    env:
+      - CGO_ENABLED=0
+
+    tags:
+      - netgo
+      - osusergo
+
+    flags:
+      - -trimpath
+
+archives:
+  - id: gibidify
+    formats: ["tar.gz", "tar.xz", "zip"]
+
+    files:
+      - LICENSE
+      - README.md
+
+    wrap_in_directory: true
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+release:
+  github:
+    owner: ivuorinen
+    name: gibidify
+
+  header: |
+    ## gibidify v{{ .Version }} ({{ .Date }})
+
+    Go CLI that aggregates code files into LLM-optimized output (markdown, JSON, YAML).
+
+  footer: |
+    ## Installation
+
+    ### Using Go
+    ```bash
+    go install github.com/ivuorinen/gibidify@latest
+    ```
+
+    ### Manual Download
+    Download the appropriate binary for your platform from the assets below.
+
+    ## Documentation
+
+    See the [README](https://github.com/ivuorinen/gibidify#readme) for usage instructions.
+
+  make_latest: true
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "typo"
+      - "Merge pull request"
+      - "Merge branch"
+  groups:
+    - title: "🚀 Features"
+      regexp: "^feat"
+    - title: "🐛 Bug Fixes"
+      regexp: "^fix"
+    - title: "🔒 Security"
+      regexp: "^security"
+    - title: "⚡ Performance"
+      regexp: "^perf"
+    - title: "♻️ Refactoring"
+      regexp: "^refactor"
+    - title: "Other changes"
+
+# Homebrew tap — disabled by default. To enable:
+#   1. Create repo ivuorinen/homebrew-tap
+#   2. Provide HOMEBREW_TAP_GITHUB_TOKEN secret in CI
+#   3. Uncomment the block below
+# brews:
+#   - name: gibidify
+#     repository:
+#       owner: ivuorinen
+#       name: homebrew-tap
+#       branch: main
+#       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+#     commit_author:
+#       name: goreleaserbot
+#       email: bot@goreleaser.com
+#     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+#     homepage: "https://github.com/ivuorinen/gibidify"
+#     description: "Go CLI aggregating code files into LLM-optimized output"
+#     license: "MIT"
+#     test: |
+#       system "#{bin}/gibidify", "-version"
+#     install: |
+#       bin.install "gibidify"
+
+nfpms:
+  - id: gibidify
+    package_name: gibidify
+
+    vendor: ivuorinen
+    homepage: https://github.com/ivuorinen/gibidify
+    maintainer: ivuorinen
+    description: Go CLI aggregating code files into LLM-optimized output (markdown, JSON, YAML)
+    license: MIT
+
+    formats:
+      - deb
+      - rpm
+      - apk
+
+    bindir: /usr/bin
+
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/doc/gibidify/LICENSE
+      - src: ./README.md
+        dst: /usr/share/doc/gibidify/README.md
+
+dockers:
+  - image_templates:
+      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-amd64"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-amd64"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-amd64"
+      - "ghcr.io/ivuorinen/gibidify:latest-amd64"
+
+    dockerfile: |
+      FROM alpine:3.23.4
+      RUN apk --no-cache add ca-certificates && \
+          adduser -D -s /bin/sh gibidify
+      COPY --chmod=0755 gibidify /usr/local/bin/gibidify
+      HEALTHCHECK NONE
+      USER gibidify
+      ENTRYPOINT ["/usr/local/bin/gibidify"]
+
+    use: buildx
+    goos: linux
+    goarch: amd64
+
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+  - image_templates:
+      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-arm64"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-arm64"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-arm64"
+      - "ghcr.io/ivuorinen/gibidify:latest-arm64"
+
+    dockerfile: |
+      FROM alpine:3.23.4
+      RUN apk --no-cache add ca-certificates && \
+          adduser -D -s /bin/sh gibidify
+      COPY --chmod=0755 gibidify /usr/local/bin/gibidify
+      HEALTHCHECK NONE
+      USER gibidify
+      ENTRYPOINT ["/usr/local/bin/gibidify"]
+
+    use: buildx
+    goos: linux
+    goarch: arm64
+
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+  - image_templates:
+      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-armv7"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-armv7"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-armv7"
+      - "ghcr.io/ivuorinen/gibidify:latest-armv7"
+
+    dockerfile: |
+      FROM alpine:3.23.4
+      RUN apk --no-cache add ca-certificates && \
+          adduser -D -s /bin/sh gibidify
+      COPY --chmod=0755 gibidify /usr/local/bin/gibidify
+      HEALTHCHECK NONE
+      USER gibidify
+      ENTRYPOINT ["/usr/local/bin/gibidify"]
+
+    use: buildx
+    goos: linux
+    goarch: arm
+    goarm: 7
+
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm/v7"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source={{.GitURL}}"
+
+docker_manifests:
+  - name_template: "ghcr.io/ivuorinen/gibidify:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-amd64"
+      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-arm64"
+      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-armv7"
+
+  - name_template: "ghcr.io/ivuorinen/gibidify:v{{ .Major }}"
+    image_templates:
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-amd64"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-arm64"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-armv7"
+
+  - name_template: "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}"
+    image_templates:
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-amd64"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-arm64"
+      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-armv7"
+
+  - name_template: "ghcr.io/ivuorinen/gibidify:latest"
+    image_templates:
+      - "ghcr.io/ivuorinen/gibidify:latest-amd64"
+      - "ghcr.io/ivuorinen/gibidify:latest-arm64"
+      - "ghcr.io/ivuorinen/gibidify:latest-armv7"
+
+announce:
+  skip: false

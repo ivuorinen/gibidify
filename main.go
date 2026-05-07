@@ -12,7 +12,20 @@ import (
 	"github.com/ivuorinen/gibidify/shared"
 )
 
+// Build information populated at link time via -ldflags by goreleaser.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "source"
+)
+
 func main() {
+	if len(os.Args) > 1 && (os.Args[1] == "-version" || os.Args[1] == "--version") {
+		_, _ = fmt.Printf("gibidify %s\ncommit: %s\nbuilt: %s\nby: %s\n", version, commit, date, builtBy)
+		return
+	}
+
 	// Initialize UI for error handling
 	ui := cli.NewUIManager()
 	errorFormatter := cli.NewErrorFormatter(ui)
