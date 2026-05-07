@@ -115,7 +115,7 @@ jobs:
         run: |
           mkdir -p dist
           go build \
-            -ldflags "-X main.Version=${REF_NAME}" \
+            -ldflags "-X main.version=${REF_NAME}" \
             -o "dist/gibidify-${GOOS}-${GOARCH}${EXT}" \
             .
 

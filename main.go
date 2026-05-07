@@ -5,11 +5,20 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/ivuorinen/gibidify/cli"
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
+)
+
+// Build information populated at link time via -ldflags by goreleaser.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "source"
 )
 
 func main() {
@@ -32,12 +41,23 @@ func main() {
 	}
 }
 
+// printVersion writes build metadata to w. Extracted for testability.
+func printVersion(w io.Writer) {
+	_, _ = fmt.Fprintf(w, "gibidify %s\ncommit: %s\nbuilt: %s\nby: %s\n", version, commit, date, builtBy)
+}
+
 // Run executes the main logic of the CLI application using the provided context.
 func run(ctx context.Context) error {
 	// Parse CLI flags
 	flags, err := cli.ParseFlags()
 	if err != nil {
 		return fmt.Errorf("parsing flags: %w", err)
+	}
+
+	// Honour --version regardless of argument position.
+	if flags.ShowVersion {
+		printVersion(os.Stdout)
+		return nil
 	}
 
 	// Initialize logger with provided log level
