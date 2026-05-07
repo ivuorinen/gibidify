@@ -70,6 +70,18 @@ repos:
           - go
         pass_filenames: false
 
+      # govulncheck intentionally tracks @latest (see Makefile): the vuln DB is
+      # fetched live from vuln.go.dev each run; the binary controls reachability
+      # analysis. Gated on go.mod/go.sum only — running it on every Go file edit
+      # adds network latency to every commit, and the realistic vector for new
+      # findings is dependency changes. CI re-runs it on every PR regardless.
+      - id: govulncheck
+        name: govulncheck
+        entry: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        language: system
+        files: ^go\.(mod|sum)$
+        pass_filenames: false
+
       # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
       - id: golangci-lint
         name: golangci-lint
