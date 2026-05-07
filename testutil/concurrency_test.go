@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +18,7 @@ func TestConcurrentOperations(t *testing.T) {
 	// Test concurrent file creation
 	for i := 0; i < 5; i++ {
 		go func(n int) {
-			CreateTestFile(t, tempDir, string(rune('a'+n))+".txt", []byte("content"))
+			CreateTestFile(t, tempDir, fmt.Sprintf("%c", 'a'+n)+".txt", []byte("content"))
 			done <- true
 		}(i)
 	}
@@ -25,7 +26,7 @@ func TestConcurrentOperations(t *testing.T) {
 	// Test concurrent directory creation
 	for i := 0; i < 5; i++ {
 		go func(n int) {
-			CreateTestDirectory(t, tempDir, "dir"+string(rune('0'+n)))
+			CreateTestDirectory(t, tempDir, fmt.Sprintf("dir%c", '0'+n))
 			done <- true
 		}(i)
 	}

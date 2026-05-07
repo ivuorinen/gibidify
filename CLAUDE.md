@@ -5,7 +5,7 @@ Supports markdown/JSON/YAML with concurrent processing.
 
 ## Architecture
 
-**Core**: `main.go`, `cli/`, `fileproc/`, `config/`, `utils/`, `testutil/`, `cmd/`
+**Core**: `main.go`, `cli/`, `fileproc/`, `config/`, `shared/`, `testutil/`, `cmd/`
 
 **Advanced**: `metrics/`, `templates/`, `benchmark/`
 
@@ -40,16 +40,16 @@ Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 
 ## Testing
 
-**Coverage**: 77.9% overall (utils 90.0%, cli 83.8%, config 77.0%, testutil 73.7%, fileproc 74.5%, metrics 96.0%, templates 87.3%)
+**Coverage**: run `go test -cover ./...` for current numbers (per-package; not pinned in this doc to avoid drift)
 **Patterns**: Table-driven tests, shared testutil helpers, mock objects, error assertions
 **Race detection**, benchmarks, comprehensive integration tests
 
 ## Development Patterns
 
-**Logging**: Use `utils.Logger()` for all logging (replaces logrus). Default WARN level, set via `--log-level` flag
-**Error Handling**: Use `utils.WrapError` family for structured errors with context
-**Streaming**: Use `utils.StreamContent/StreamLines` for consistent file processing
-**Context**: Use `utils.CheckContextCancellation` for standardized cancellation
+**Logging**: Use `shared.GetLogger()` for all logging (replaces logrus). Default WARN level, set via `--log-level` flag
+**Error Handling**: Use `shared.WrapError` family for structured errors with context
+**Streaming**: Use `shared.StreamContent/StreamLines` for consistent file processing
+**Context**: Use `shared.CheckContextCancellation` for standardized cancellation
 **Testing**: Use `testutil.*` helpers for directory setup, error assertions
 **Validation**: Centralized in `config/validation.go` with structured error collection
 
@@ -64,9 +64,9 @@ The linting configuration is carefully tuned and should not be altered during no
 
 ## Status
 
-**Health: 9/10** - Production-ready with systematic deduplication complete
+**Health**: lint 0 issues; tests pass with `-race`. Run `make lint && go test -race ./...` to verify.
 
-**Done**: Deduplication, errors, benchmarks, config, optimization, testing (77.9%), modularization, linting (0 issues), metrics system, templating
+**Done**: Deduplication, errors, benchmarks, config, optimization, modularization, linting, metrics system, templating
 
 ## Workflow
 

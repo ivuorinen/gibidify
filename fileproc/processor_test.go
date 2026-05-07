@@ -94,8 +94,6 @@ func TestNewFileProcessorWithMonitor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Remove(tmpFile.Name())
-
 	if _, err := tmpFile.WriteString("test content"); err != nil {
 		t.Fatal(err)
 	}
@@ -321,8 +319,7 @@ func validateStreamingRequest(t *testing.T, streamingRequest *fileproc.WriteRequ
 // TestProcessorStreamingIntegration tests streaming functionality in processor.
 func TestProcessorStreamingIntegration(t *testing.T) {
 	configDir := writeTempConfig(t, `
-max_file_size_mb: 0.001
-streaming_threshold_mb: 0.0001
+fileSizeLimit: 5242880
 `)
 	testutil.ResetViperConfig(t, configDir)
 
@@ -394,7 +391,7 @@ func TestProcessorContextCancellation(t *testing.T) {
 // TestProcessorValidationEdgeCases tests edge cases in file validation.
 func TestProcessorValidationEdgeCases(t *testing.T) {
 	configDir := writeTempConfig(t, `
-max_file_size_mb: 0.001  # 1KB limit for testing
+fileSizeLimit: 1024
 `)
 	testutil.ResetViperConfig(t, configDir)
 

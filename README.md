@@ -14,7 +14,7 @@ file sections with separators, and a suffix.
 - **Concurrent processing** with configurable worker pools
 - **Comprehensive configuration** via YAML with validation
 - **Production-ready** with structured error handling and benchmarking
-- **Modular architecture** - clean, focused codebase (92 files, ~21.5K lines) with ~63ns registry lookups
+- **Modular architecture** - clean, focused codebase with ~63ns registry lookups
 - **Enhanced CLI experience** - progress bars, colored output, helpful error messages
 - **Cross-platform** with Docker support
 - **Advanced template system** - 4 built-in templates (default, minimal, detailed, compact) with custom template support, variable substitution, and YAML-based configuration
@@ -55,6 +55,7 @@ Flags:
 - `--prefix` / `--suffix`: optional text blocks.
 - `--no-colors`: disable colored terminal output.
 - `--no-progress`: disable progress bars.
+- `--no-ui`: disable all UI output (implies `--no-colors` and `--no-progress`).
 - `--verbose`: enable verbose output and detailed logging.
 - `--log-level`: set log level (default: warn; accepted values: debug, info, warn, error).
 

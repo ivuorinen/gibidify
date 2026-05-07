@@ -98,7 +98,9 @@ func SuppressAllOutput(t *testing.T) OutputRestoreFunc {
 }
 
 // CaptureOutput captures both stdout and stderr during test execution.
-// Returns the captured output as strings and a restore function.
+// Returns getter funcs (getStdout, getStderr) and a restore func.
+// Call restore() before invoking the getters to ensure the pipes are fully
+// drained; logger output is also redirected to the stderr pipe during capture.
 func CaptureOutput(t *testing.T) (getStdout func() string, getStderr func() string, restore OutputRestoreFunc) {
 	t.Helper()
 
@@ -143,28 +145,24 @@ func CaptureOutput(t *testing.T) (getStdout func() string, getStderr func() stri
 		_, _ = io.Copy(&stderrBuf, stderrReader) //nolint:errcheck // Ignore errors during test output capture shutdown
 	}()
 
-	return func() string {
-			return stdoutBuf.String()
-		}, func() string {
-			return stderrBuf.String()
-		}, func() {
-			// Close writers first to signal EOF
-			_ = stdoutWriter.Close() // Ignore close errors in cleanup
-			_ = stderrWriter.Close() // Ignore close errors in cleanup
+	return stdoutBuf.String, stderrBuf.String, func() {
+		// Close writers first to signal EOF
+		_ = stdoutWriter.Close() // Ignore close errors in cleanup
+		_ = stderrWriter.Close() // Ignore close errors in cleanup
 
-			// Wait for readers to finish
-			<-stdoutDone
-			<-stderrDone
+		// Wait for readers to finish
+		<-stdoutDone
+		<-stderrDone
 
-			// Close readers
-			_ = stdoutReader.Close() // Ignore close errors in cleanup
-			_ = stderrReader.Close() // Ignore close errors in cleanup
+		// Close readers
+		_ = stdoutReader.Close() // Ignore close errors in cleanup
+		_ = stderrReader.Close() // Ignore close errors in cleanup
 
-			// Restore original outputs
-			os.Stdout = originalStdout
-			os.Stderr = originalStderr
-			logger.SetOutput(originalStderr)
-		}
+		// Restore original outputs
+		os.Stdout = originalStdout
+		os.Stderr = originalStderr
+		logger.SetOutput(originalStderr)
+	}
 }
 
 // CreateTestFile creates a test file with the given content and returns its path.
@@ -387,10 +385,8 @@ func ValidateErrorCase(t *testing.T, err error, wantErr bool, errContains string
 		if errContains != "" && !strings.Contains(err.Error(), errContains) {
 			t.Errorf("%s: expected error containing %q, got: %v", operation, errContains, err)
 		}
-	} else {
-		if err != nil {
-			t.Errorf("%s: unexpected error: %v", operation, err)
-		}
+	} else if err != nil {
+		t.Errorf("%s: unexpected error: %v", operation, err)
 	}
 }
 

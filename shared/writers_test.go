@@ -807,12 +807,10 @@ func TestCheckContextCancellation(t *testing.T) {
 		errorContains string
 	}{
 		{
-			name: "active context",
-			setupContext: func() context.Context {
-				return context.Background()
-			},
-			operation:   "test operation",
-			expectError: false,
+			name:         "active context",
+			setupContext: context.Background,
+			operation:    "test operation",
+			expectError:  false,
 		},
 		{
 			name: "canceled context",
@@ -882,22 +880,18 @@ func TestWithContextCheck(t *testing.T) {
 		errorContains string
 	}{
 		{
-			name: "active context with successful operation",
-			setupContext: func() context.Context {
-				return context.Background()
-			},
-			operation: "successful operation",
+			name:         "active context with successful operation",
+			setupContext: context.Background,
+			operation:    "successful operation",
 			fn: func() error {
 				return nil
 			},
 			expectError: false,
 		},
 		{
-			name: "active context with failing operation",
-			setupContext: func() context.Context {
-				return context.Background()
-			},
-			operation: "failing operation",
+			name:         "active context with failing operation",
+			setupContext: context.Background,
+			operation:    "failing operation",
 			fn: func() error {
 				return errors.New("operation failed")
 			},

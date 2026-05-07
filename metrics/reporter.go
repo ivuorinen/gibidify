@@ -3,15 +3,22 @@ package metrics
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-
 	"github.com/ivuorinen/gibidify/shared"
 )
+
+// titleASCII capitalizes the first ASCII letter of an identifier-style label
+// (e.g., "collection" → "Collection"). Phase names are pure ASCII constants;
+// pulling in golang.org/x/text/cases just to title-case them would be overkill.
+func titleASCII(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
 
 // reportBuilder wraps strings.Builder with error accumulation for robust error handling.
 type reportBuilder struct {
@@ -271,7 +278,7 @@ func (r *Reporter) writeFormatBreakdown(b *reportBuilder, report ProfileReport) 
 	for format := range report.FormatBreakdown {
 		formats = append(formats, format)
 	}
-	sort.Strings(formats)
+	slices.Sort(formats)
 
 	for _, format := range formats {
 		formatMetrics := report.FormatBreakdown[format]
@@ -296,7 +303,7 @@ func (r *Reporter) writePhaseBreakdown(b *reportBuilder, report ProfileReport) {
 		if phaseMetrics, exists := report.PhaseBreakdown[phase]; exists {
 			b.fprintf(
 				"  %s: %v (%.1f%%)\n",
-				cases.Title(language.English).String(phase),
+				titleASCII(phase),
 				phaseMetrics.TotalTime.Truncate(time.Millisecond),
 				phaseMetrics.Percentage,
 			)
@@ -388,7 +395,7 @@ func (r *Reporter) sortedMapKeys(m map[string]int64) []string {
 	for k := range m {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	return keys
 }

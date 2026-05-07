@@ -19,7 +19,7 @@ func verifySingleDirectoryFiles(t *testing.T, rootDir string, _ []string) {
 	}
 
 	mainFile := filepath.Join(srcDir, shared.TestFileMainGo)
-	content, err := os.ReadFile(mainFile)
+	content, err := os.ReadFile(mainFile) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read %s: %v", shared.TestFileMainGo, err)
 	}
@@ -28,7 +28,7 @@ func verifySingleDirectoryFiles(t *testing.T, rootDir string, _ []string) {
 	}
 
 	utilsFile := filepath.Join(srcDir, shared.TestFileSharedGo)
-	content, err = os.ReadFile(utilsFile)
+	content, err = os.ReadFile(utilsFile) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read shared.go: %v", err)
 	}
@@ -55,7 +55,7 @@ func verifyMultipleDirectories(t *testing.T, rootDir string, _ []string) {
 	}
 
 	handlerFile := filepath.Join(rootDir, "src", "handlers", "handler.go")
-	content, err := os.ReadFile(handlerFile)
+	content, err := os.ReadFile(handlerFile) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read handler.go: %v", err)
 	}
@@ -91,7 +91,7 @@ func verifySpecialCharacters(t *testing.T, rootDir string, _ []string) {
 	}
 
 	spacedFile := filepath.Join(spacedDir, "file with spaces.txt")
-	content, err := os.ReadFile(spacedFile)
+	content, err := os.ReadFile(spacedFile) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read spaced file: %v", err)
 	}
@@ -240,7 +240,7 @@ func verifyBasicDirectoryStructure(t *testing.T, rootDir string) {
 	}
 
 	mainFile := filepath.Join(appDir, shared.TestFileMainGo)
-	content, err := os.ReadFile(mainFile)
+	content, err := os.ReadFile(mainFile) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read %s: %v", shared.TestFileMainGo, err)
 	}
@@ -250,7 +250,7 @@ func verifyBasicDirectoryStructure(t *testing.T, rootDir string) {
 	}
 
 	configFile := filepath.Join(appDir, shared.TestFileConfigJSON)
-	content, err = os.ReadFile(configFile)
+	content, err = os.ReadFile(configFile) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read %s: %v", shared.TestFileConfigJSON, err)
 	}
@@ -266,7 +266,7 @@ func verifyBasicDirectoryStructure(t *testing.T, rootDir string) {
 	}
 
 	readmeFile := filepath.Join(docsDir, shared.TestFileReadmeMD)
-	content, err = os.ReadFile(readmeFile)
+	content, err = os.ReadFile(readmeFile) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read %s: %v", shared.TestFileReadmeMD, err)
 	}
@@ -299,7 +299,7 @@ func verifyComplexNestedStructure(t *testing.T, rootDir string) {
 	t.Helper()
 
 	deepPath := filepath.Join(rootDir, "project", "internal", "handlers", "auth.go")
-	content, err := os.ReadFile(deepPath)
+	content, err := os.ReadFile(deepPath) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read deep nested file: %v", err)
 	}

@@ -526,7 +526,7 @@ func validateProcessingResult(t *testing.T, err error, outputPath, format string
 		return
 	}
 
-	content, err := os.ReadFile(outputPath)
+	content, err := os.ReadFile(outputPath) //nolint:gosec // G304: path constructed from t.TempDir()
 	if err != nil {
 		t.Errorf("Failed to read output file: %v", err)
 

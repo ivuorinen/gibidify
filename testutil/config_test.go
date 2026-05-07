@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -140,7 +141,7 @@ func verifySetupCLIArgs(t *testing.T, srcDir, outFile, prefix, suffix string, co
 	if os.Args[8] != suffix {
 		t.Errorf("Suffix = %s, want %s", os.Args[8], suffix)
 	}
-	if os.Args[10] != string(rune(concurrency+'0')) {
+	if os.Args[10] != strconv.Itoa(concurrency) {
 		t.Errorf("Concurrency = %s, want %d", os.Args[10], concurrency)
 	}
 

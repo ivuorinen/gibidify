@@ -13,29 +13,42 @@ import (
 )
 
 var (
-	sourceDir = flag.String(
-		shared.CLIArgSource, "", "Source directory to benchmark (uses temp files if empty)",
-	)
-	benchmarkType = flag.String(
-		"type", shared.CLIArgAll, "Benchmark type: all, collection, processing, concurrency, format",
-	)
-	format = flag.String(
-		shared.CLIArgFormat, shared.FormatJSON, "Output format for processing benchmarks",
-	)
-	concurrency = flag.Int(
-		shared.CLIArgConcurrency, runtime.NumCPU(), "Concurrency level for processing benchmarks",
-	)
-	concurrencyList = flag.String(
-		"concurrency-list", shared.TestConcurrencyList, "Comma-separated list of concurrency levels",
-	)
-	formatList = flag.String(
-		"format-list", shared.TestFormatList, "Comma-separated list of formats",
-	)
-	numFiles = flag.Int("files", shared.BenchmarkDefaultFileCount, "Number of files to create for benchmarks")
+	sourceDir       *string
+	benchmarkType   *string
+	format          *string
+	concurrency     *int
+	concurrencyList *string
+	formatList      *string
+	numFiles        *int
 )
 
 func main() {
-	flag.Parse()
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	sourceDir = fs.String(
+		shared.CLIArgSource, "", "Source directory to benchmark (uses temp files if empty)",
+	)
+	benchmarkType = fs.String(
+		"type", shared.CLIArgAll, "Benchmark type: all, collection, processing, concurrency, format",
+	)
+	format = fs.String(
+		shared.CLIArgFormat, shared.FormatJSON, "Output format for processing benchmarks",
+	)
+	concurrency = fs.Int(
+		shared.CLIArgConcurrency, runtime.NumCPU(), "Concurrency level for processing benchmarks",
+	)
+	concurrencyList = fs.String(
+		"concurrency-list", shared.TestConcurrencyList, "Comma-separated list of concurrency levels",
+	)
+	formatList = fs.String(
+		"format-list", shared.TestFormatList, "Comma-separated list of formats",
+	)
+	numFiles = fs.Int("files", shared.BenchmarkDefaultFileCount, "Number of files to create for benchmarks")
+
+	if err := fs.Parse(os.Args[1:]); err != nil {
+		//goland:noinspection GoUnhandledErrorResult
+		_, _ = fmt.Fprintf(os.Stderr, "Flag parse failed: %v\n", err)
+		os.Exit(1)
+	}
 
 	if err := runBenchmarks(); err != nil {
 		//goland:noinspection GoUnhandledErrorResult

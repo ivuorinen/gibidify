@@ -1,131 +1,189 @@
-.PHONY: all help install-tools lint lint-fix test coverage build clean all build-benchmark benchmark benchmark-go benchmark-go-cli benchmark-go-fileproc benchmark-go-metrics benchmark-go-shared benchmark-all benchmark-collection benchmark-processing benchmark-concurrency benchmark-format security security-full vuln-check update-deps check-all dev-setup
+# gibidify Makefile
 
-# Default target shows help
+.PHONY: help all build install
+.PHONY: test test-verbose test-coverage
+.PHONY: fmt fmt-check lint lint-go lint-golangci lint-static lint-sec lint-yaml lint-actions lint-make lint-md
+.PHONY: ci ci-lint ci-test
+.PHONY: security security-full vuln-check
+.PHONY: clean update-deps dev-setup pre-commit-setup
+.PHONY: build-benchmark benchmark benchmark-go benchmark-all
+.PHONY: benchmark-go-cli benchmark-go-fileproc benchmark-go-metrics benchmark-go-shared
+.PHONY: benchmark-collection benchmark-processing benchmark-concurrency benchmark-format
+
+# Tool versions (managed by Renovate)
+# renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+GOLANGCI_LINT_VERSION := v2.10.1
+# renovate: datasource=go depName=github.com/google/yamlfmt/cmd/yamlfmt
+YAMLFMT_VERSION := v0.21.0
+# renovate: datasource=go depName=github.com/rhysd/actionlint/cmd/actionlint
+ACTIONLINT_VERSION := v1.7.11
+# renovate: datasource=go depName=golang.org/x/tools/cmd/goimports
+GOIMPORTS_VERSION := v0.42.0
+# renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
+GOSEC_VERSION := v2.26.1
+# renovate: datasource=go depName=honnef.co/go/tools/cmd/staticcheck
+STATICCHECK_VERSION := v0.7.0
+# renovate: datasource=go depName=github.com/mgechev/revive
+# Pinned to v1.11.0 — newer revive added var-naming rules that flag the existing
+# `shared` and `metrics` package names; revive.toml is intentionally off-limits.
+REVIVE_VERSION := v1.11.0
+# renovate: datasource=go depName=github.com/checkmake/checkmake/cmd/checkmake
+CHECKMAKE_VERSION := v0.3.2
+# govulncheck intentionally tracks @latest, not a pinned version:
+# the vuln DB is fetched live from vuln.go.dev each run, but the binary
+# controls reachability-analysis features and bug fixes. For a security
+# scanner, "always run the newest one" beats reproducibility.
+GOVULNCHECK_VERSION := latest
+# renovate: datasource=npm depName=markdownlint-cli2
+MARKDOWNLINT_CLI2_VERSION := 0.21.0
+
+# Default goal — invoking `make` with no args prints the help table.
 .DEFAULT_GOAL := help
 
-# All target runs full workflow
-all: lint lint-fix test build
+LDFLAGS    := -s -w
+LOCAL_PKG  := github.com/ivuorinen/gibidify
 
-# Help target
-help:
-	@cat scripts/help.txt
+help: ## Show this help message
+	@echo 'Usage: make [target]'
+	@echo ''
+	@echo 'Targets:'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-22s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-# Install required tools
-install-tools:
-	@./scripts/install-tools.sh
+all: ci ## Run format, lint, and test (alias for ci)
 
-# Run linters
-lint:
-	@./scripts/lint.sh
+# Build / install ------------------------------------------------------------
 
-# Run linters with auto-fix
-lint-fix:
-	@./scripts/lint-fix.sh
+build: ## Build the gibidify binary
+	go build -ldflags="$(LDFLAGS)" -o gibidify .
 
-# Run tests
-test:
-	@echo "Running tests..."
-	@go test -race -v ./...
+install: ## Install the current checkout globally
+	go install .
 
-# Run tests with coverage
-coverage:
-	@echo "Running tests with coverage..."
-	@go test -race -coverprofile=coverage.out -covermode=atomic ./...
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
+# Test -----------------------------------------------------------------------
 
-# Build the application
-build:
-	@echo "Building gibidify..."
-	@go build -ldflags="-s -w" -o gibidify .
-	@echo "Build complete: ./gibidify"
+test: ## Run all tests with race detector
+	go test -race ./...
 
-# Clean build artifacts
-clean:
-	@echo "Cleaning build artifacts..."
-	@rm -f gibidify gibidify-benchmark coverage.out coverage.html *.out
-	@echo "Clean complete"
+test-verbose: ## Run tests with verbose output
+	go test -race -v ./...
 
-# CI-specific targets
-.PHONY: ci-lint ci-test
+test-coverage: ## Run tests with coverage profile + HTML report
+	go test -race -coverprofile=coverage.out -covermode=atomic ./...
+	go tool cover -html=coverage.out -o coverage.html
 
-ci-lint:
-	@revive -config revive.toml -formatter friendly -set_exit_status ./...
+# Format / lint --------------------------------------------------------------
 
-ci-test:
-	@go test -race -coverprofile=coverage.out -json ./... > test-results.json
+fmt: ## Format Go code (gofmt + goimports, mutating)
+	gofmt -w .
+	go run golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION) -w -local $(LOCAL_PKG) .
 
-# Build benchmark binary
-build-benchmark:
-	@echo "Building gibidify-benchmark..."
-	@go build -ldflags="-s -w" -o gibidify-benchmark ./cmd/benchmark
-	@echo "Build complete: ./gibidify-benchmark"
+fmt-check: ## Check Go formatting without modifying files (used in CI)
+	@out=$$(gofmt -l .); test -z "$$out" || { printf 'Unformatted files:\n%s\nRun make fmt to fix\n' "$$out"; exit 1; }
+	@out=$$(go run golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION) -l -local $(LOCAL_PKG) .); test -z "$$out" || { printf 'Files need import formatting:\n%s\nRun make fmt to fix\n' "$$out"; exit 1; }
 
-# Run custom benchmark binary
-benchmark: build-benchmark
-	@echo "Running custom benchmarks..."
-	@./gibidify-benchmark -type=all
+lint: ## Run all linters via pre-commit (preferred)
+	@pre-commit run --all-files
 
-# Run all Go test benchmarks
-benchmark-go:
-	@echo "Running all Go test benchmarks..."
-	@go test -bench=. -benchtime=100ms -run=^$$ ./...
+lint-go: ## Run only Go linters (vet + revive)
+	go vet ./...
+	go run github.com/mgechev/revive@$(REVIVE_VERSION) -config revive.toml -formatter friendly -set_exit_status ./...
 
-# Run Go test benchmarks for specific packages
-benchmark-go-cli:
-	@echo "Running CLI benchmarks..."
-	@go test -bench=. -benchtime=100ms -run=^$$ ./cli/...
+lint-golangci: ## Run golangci-lint (mirrors CI security scan, uses .golangci.yml)
+	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
 
-benchmark-go-fileproc:
-	@echo "Running fileproc benchmarks..."
-	@go test -bench=. -benchtime=100ms -run=^$$ ./fileproc/...
+lint-static: ## Run staticcheck
+	go run honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION) ./...
 
-benchmark-go-metrics:
-	@echo "Running metrics benchmarks..."
-	@go test -bench=. -benchtime=100ms -run=^$$ ./metrics/...
+lint-sec: ## Run gosec (alias for `make security`)
+	go run github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION) -quiet ./...
 
-benchmark-go-shared:
-	@echo "Running shared benchmarks..."
-	@go test -bench=. -benchtime=100ms -run=^$$ ./shared/...
+lint-yaml: ## Run only YAML linter (yamlfmt -lint)
+	go run github.com/google/yamlfmt/cmd/yamlfmt@$(YAMLFMT_VERSION) -lint -conf .yamlfmt.yml .
 
-# Run all benchmarks (custom + Go test)
-benchmark-all: benchmark benchmark-go
+lint-actions: ## Run only GitHub Actions linter (actionlint)
+	go run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION) .github/workflows/*.yml
 
-# Run specific benchmark types
-benchmark-collection: build-benchmark
-	@echo "Running file collection benchmarks..."
-	@./gibidify-benchmark -type=collection
+lint-make: ## Run only Makefile linter (checkmake)
+	go run github.com/checkmake/checkmake/cmd/checkmake@$(CHECKMAKE_VERSION) --config=.checkmake Makefile
 
-benchmark-processing: build-benchmark
-	@echo "Running file processing benchmarks..."
-	@./gibidify-benchmark -type=processing
+lint-md: ## Run only Markdown linter (markdownlint-cli2)
+	npx --yes markdownlint-cli2@$(MARKDOWNLINT_CLI2_VERSION) "*.md" "**/*.md"
 
-benchmark-concurrency: build-benchmark
-	@echo "Running concurrency benchmarks..."
-	@./gibidify-benchmark -type=concurrency
+# CI -------------------------------------------------------------------------
 
-benchmark-format: build-benchmark
-	@echo "Running format benchmarks..."
-	@./gibidify-benchmark -type=format
+ci: fmt-check lint test ## Run format check, lint, and test
 
-# Security targets
-security:
-	@echo "Running comprehensive security scan..."
+ci-lint: ## CI: revive only with strict exit
+	go run github.com/mgechev/revive@$(REVIVE_VERSION) -config revive.toml -formatter friendly -set_exit_status ./...
+
+ci-test: ## CI: tests with coverage in JSON
+	go test -race -coverprofile=coverage.out -json ./... > test-results.json
+
+# Security -------------------------------------------------------------------
+
+security: ## Run gosec security scan
+	go run github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION) ./...
+
+security-full: ## Run comprehensive multi-tool security scan
 	@./scripts/security-scan.sh
 
-security-full: install-tools
-	@echo "Running full security analysis..."
-	@./scripts/security-scan.sh
-	@echo "Running additional security checks..."
-	@gosec -fmt=json -out=security-report.json ./...
-	@staticcheck -checks=all ./...
+vuln-check: ## Check for dependency vulnerabilities (govulncheck)
+	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
 
-vuln-check:
-	@echo "Checking for dependency vulnerabilities..."
-	@go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
-	@govulncheck ./...
+# Maintenance ----------------------------------------------------------------
 
-# Update dependencies
-update-deps:
-	@echo "Updating Go dependencies..."
-	@./scripts/update-deps.sh
+update-deps: ## Update Go dependencies to latest patch versions
+	go get -u=patch ./...
+	go mod tidy
+	go mod verify
+	@go list -u -m all | grep '\[' || true
+
+clean: ## Remove build artifacts, coverage, test outputs
+	rm -f gibidify gibidify-benchmark coverage.out coverage.html test-results.json security-report.json
+	go clean -testcache
+
+# Development setup ----------------------------------------------------------
+
+dev-setup: pre-commit-setup ## Set up development environment
+
+pre-commit-setup: ## Install pre-commit hooks
+	@command -v pre-commit >/dev/null 2>&1 || pip install pre-commit
+	@pre-commit install
+	@pre-commit install --install-hooks
+
+# Benchmarks (gibidify-specific) ---------------------------------------------
+
+build-benchmark: ## Build the gibidify-benchmark binary
+	go build -ldflags="$(LDFLAGS)" -o gibidify-benchmark ./cmd/benchmark
+
+benchmark: build-benchmark ## Run all custom benchmarks
+	./gibidify-benchmark -type=all
+
+benchmark-collection: build-benchmark ## Run file collection benchmarks
+	./gibidify-benchmark -type=collection
+
+benchmark-processing: build-benchmark ## Run file processing benchmarks
+	./gibidify-benchmark -type=processing
+
+benchmark-concurrency: build-benchmark ## Run concurrency benchmarks
+	./gibidify-benchmark -type=concurrency
+
+benchmark-format: build-benchmark ## Run format benchmarks
+	./gibidify-benchmark -type=format
+
+benchmark-go: ## Run all Go test benchmarks
+	go test -bench=. -benchtime=100ms -run=^$$ ./...
+
+benchmark-go-cli: ## Run CLI test benchmarks
+	go test -bench=. -benchtime=100ms -run=^$$ ./cli/...
+
+benchmark-go-fileproc: ## Run fileproc test benchmarks
+	go test -bench=. -benchtime=100ms -run=^$$ ./fileproc/...
+
+benchmark-go-metrics: ## Run metrics test benchmarks
+	go test -bench=. -benchtime=100ms -run=^$$ ./metrics/...
+
+benchmark-go-shared: ## Run shared test benchmarks
+	go test -bench=. -benchtime=100ms -run=^$$ ./shared/...
+
+benchmark-all: benchmark benchmark-go ## Run custom + Go test benchmarks

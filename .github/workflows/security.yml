@@ -3,9 +3,13 @@ name: Security Scan
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
   schedule:
     # Run security scan weekly on Sundays at 00:00 UTC
     - cron: "0 0 * * 0"
@@ -32,39 +36,69 @@ jobs:
           token: ${{ github.token }}
 
       # Security Scanning with gosec
+      # Using go run instead of the Docker action so the runner's Go toolchain
+      # (set up above) is used — the gosec Docker image ships an older Go and
+      # cannot analyse go 1.26+ modules with GOTOOLCHAIN=local.
       - name: Run gosec Security Scanner
-        uses: securego/gosec@223e19b8856e00f02cc67804499a83f77e208f3c # v2.25.0
-        with:
-          args: "-fmt sarif -out gosec-results.sarif ./..."
+        run: |
+          # renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
+          go run github.com/securego/gosec/v2/cmd/gosec@v2.26.1 \
+            -fmt sarif -out gosec-results.sarif ./...
 
       - name: Upload gosec results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@95e58e9a2cdfd71adc6e0353d5c52f41a045d225 # v4.35.2
+        uses: github/codeql-action/upload-sarif@e46ed2cbd01164d986452f91f178727624ae40d7 # v4.35.3
         if: always()
         with:
           sarif_file: gosec-results.sarif
 
       # Dependency Vulnerability Scanning
+      # Parse SARIF output with jq, not the -json stream with grep:
+      # govulncheck -json emits an `osv` advisory body for every known
+      # vuln in any imported module regardless of reachability, so
+      # grepping "osv" is a false positive. SARIF results in
+      # runs[].results[] carry a `level` — "error" mirrors what the
+      # govulncheck CLI counts as a failing (called/reachable) finding.
+      # Ref: golang.org/x/vuln/internal/sarif.
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck -json ./... > govulncheck-results.json || true
+          govulncheck -format sarif ./... > govulncheck-results.sarif
 
       - name: Parse govulncheck results
         run: |
-          if [ -s govulncheck-results.json ]; then
-            echo "::warning::Vulnerability check completed. Check govulncheck-results.json for details."
-            if grep -i -q '"finding"' govulncheck-results.json; then
-              echo "::error::Vulnerabilities found in dependencies!"
-              cat govulncheck-results.json
-              exit 1
-            fi
+          if [ ! -s govulncheck-results.sarif ]; then
+            echo "::error::govulncheck produced no SARIF output"
+            exit 1
           fi
+
+          called=$(jq '[.runs[].results[]? | select(.level == "error")] | length' govulncheck-results.sarif)
+          informational=$(jq '[.runs[].results[]? | select(.level != "error")] | length' govulncheck-results.sarif)
+
+          echo "Called (reachable) vulnerabilities: $called"
+          echo "Informational findings (imported/required, not called): $informational"
+
+          if [ "$called" -gt 0 ]; then
+            echo "::error::Reachable vulnerabilities found in dependencies"
+            jq -r '.runs[].results[]?
+                   | select(.level == "error")
+                   | "::error::\(.ruleId): \(.message.text)"' \
+              govulncheck-results.sarif
+            exit 1
+          fi
+
+      # Additional Security Linting
+      - name: Run security-focused golangci-lint
+        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
+        with:
+          # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
+          version: v2.10.1
+          args: "--timeout=5m"
 
       # Makefile Linting
       - name: Run checkmake on Makefile
-        run: |
-          go install github.com/checkmake/checkmake/cmd/checkmake@latest
-          checkmake --config=.checkmake Makefile
+        uses: Uno-Takashi/checkmake-action@bc11ee86274ceaf5710dbcd80871d7cd7ecc78ce # v2
+        with:
+          config: .checkmake
 
       # Shell Script Formatting Check
       - name: Check shell script formatting
@@ -93,5 +127,5 @@ jobs:
           name: security-scan-results
           path: |
             gosec-results.sarif
-            govulncheck-results.json
+            govulncheck-results.sarif
           retention-days: 30

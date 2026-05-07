@@ -178,7 +178,7 @@ func TestErrorFormatterSuggestFileAccess(t *testing.T) {
 
 	// Create a temporary file to test with existing file
 	tempDir := t.TempDir()
-	tempFile, err := os.Create(filepath.Join(tempDir, "testfile"))
+	tempFile, err := os.Create(filepath.Join(tempDir, "testfile")) //nolint:gosec // G304: tempDir path
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
@@ -238,7 +238,7 @@ func TestErrorFormatterSuggestFileNotFound(t *testing.T) {
 	tempDir := t.TempDir()
 	testFiles := []string{"similar-file.txt", "another-similar.go", "different.md"}
 	for _, filename := range testFiles {
-		file, err := os.Create(filepath.Join(tempDir, filename))
+		file, err := os.Create(filepath.Join(tempDir, filename)) //nolint:gosec // G304: tempDir path
 		if err != nil {
 			t.Fatalf("Failed to create test file %s: %v", filename, err)
 		}

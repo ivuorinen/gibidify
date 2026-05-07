@@ -448,10 +448,10 @@ func TestConfigGettersWithDefaults(t *testing.T) {
 
 	// Test string getters with concrete default assertions
 	t.Run("string_getters", func(t *testing.T) {
-		assertStringGetter(t, "OutputTemplate", config.OutputTemplate, shared.ConfigOutputTemplateDefault)
-		assertStringGetter(t, "TemplateCustomCSS", config.TemplateCustomCSS, shared.ConfigMarkdownCustomCSSDefault)
-		assertStringGetter(t, "TemplateCustomHeader", config.TemplateCustomHeader, shared.ConfigCustomHeaderDefault)
-		assertStringGetter(t, "TemplateCustomFooter", config.TemplateCustomFooter, shared.ConfigCustomFooterDefault)
+		assertStringGetter(t, "OutputTemplate", config.OutputTemplate)
+		assertStringGetter(t, "TemplateCustomCSS", config.TemplateCustomCSS)
+		assertStringGetter(t, "TemplateCustomHeader", config.TemplateCustomHeader)
+		assertStringGetter(t, "TemplateCustomFooter", config.TemplateCustomFooter)
 	})
 }
 
@@ -482,11 +482,11 @@ func assertBoolGetter(t *testing.T, name string, getter func() bool, expected bo
 	}
 }
 
-// assertStringGetter tests a string getter returns the expected default value.
-func assertStringGetter(t *testing.T, name string, getter func() string, expected string) {
+// assertStringGetter tests a string getter returns the empty default value.
+func assertStringGetter(t *testing.T, name string, getter func() string) {
 	t.Helper()
 	result := getter()
-	if result != expected {
-		t.Errorf("%s: expected %q, got %q", name, expected, result)
+	if result != "" {
+		t.Errorf("%s: expected %q, got %q", name, "", result)
 	}
 }
