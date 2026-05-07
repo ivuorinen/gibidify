@@ -94,8 +94,6 @@ func TestNewFileProcessorWithMonitor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
-
 	if _, err := tmpFile.WriteString("test content"); err != nil {
 		t.Fatal(err)
 	}
