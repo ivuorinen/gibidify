@@ -20,7 +20,7 @@ ACTIONLINT_VERSION := v1.7.11
 # renovate: datasource=go depName=golang.org/x/tools/cmd/goimports
 GOIMPORTS_VERSION := v0.42.0
 # renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
-GOSEC_VERSION := v2.24.0
+GOSEC_VERSION := v2.26.1
 # renovate: datasource=go depName=honnef.co/go/tools/cmd/staticcheck
 STATICCHECK_VERSION := v0.7.0
 # renovate: datasource=go depName=github.com/mgechev/revive
