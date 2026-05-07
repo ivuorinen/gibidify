@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/ivuorinen/gibidify/cli"
@@ -21,11 +22,6 @@ var (
 )
 
 func main() {
-	if len(os.Args) > 1 && (os.Args[1] == "-version" || os.Args[1] == "--version") {
-		_, _ = fmt.Printf("gibidify %s\ncommit: %s\nbuilt: %s\nby: %s\n", version, commit, date, builtBy)
-		return
-	}
-
 	// Initialize UI for error handling
 	ui := cli.NewUIManager()
 	errorFormatter := cli.NewErrorFormatter(ui)
@@ -45,12 +41,23 @@ func main() {
 	}
 }
 
+// printVersion writes build metadata to w. Extracted for testability.
+func printVersion(w io.Writer) {
+	_, _ = fmt.Fprintf(w, "gibidify %s\ncommit: %s\nbuilt: %s\nby: %s\n", version, commit, date, builtBy)
+}
+
 // Run executes the main logic of the CLI application using the provided context.
 func run(ctx context.Context) error {
 	// Parse CLI flags
 	flags, err := cli.ParseFlags()
 	if err != nil {
 		return fmt.Errorf("parsing flags: %w", err)
+	}
+
+	// Honour --version regardless of argument position.
+	if flags.ShowVersion {
+		printVersion(os.Stdout)
+		return nil
 	}
 
 	// Initialize logger with provided log level

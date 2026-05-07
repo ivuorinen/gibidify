@@ -140,6 +140,12 @@ builds:
       - -trimpath
 
   # BSD family
+  # NOTE: Go's BSD support is narrow. Supported pairs (per `go tool dist list`):
+  #   dragonfly: amd64
+  #   freebsd:   386, amd64, arm, arm64
+  #   netbsd:    386, amd64, arm, arm64
+  #   openbsd:   386, amd64, arm, arm64, ppc64, riscv64
+  # We target the common subset and ignore unsupported combinations explicitly.
   - id: gibidify-bsd
     main: .
     binary: gibidify
@@ -162,22 +168,12 @@ builds:
       - arm64
       - arm
       - "386"
-      - ppc64le
-      - s390x
-      - mips64
-      - mips64le
 
     goarm:
       - "6"
       - "7"
 
     ignore:
-      - goos: freebsd
-        goarch: arm
-      - goos: openbsd
-        goarch: arm
-      - goos: netbsd
-        goarch: arm
       - goos: dragonfly
         goarch: "386"
       - goos: dragonfly

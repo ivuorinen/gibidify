@@ -23,6 +23,7 @@ type Flags struct {
 	NoProgress  bool
 	NoUI        bool
 	Verbose     bool
+	ShowVersion bool
 	LogLevel    string
 }
 
@@ -60,12 +61,20 @@ func ParseFlags() (*Flags, error) {
 	fs.BoolVar(&flags.NoProgress, "no-progress", false, "Disable progress bars")
 	fs.BoolVar(&flags.NoUI, "no-ui", false, "Disable all UI output (implies no-colors and no-progress)")
 	fs.BoolVar(&flags.Verbose, "verbose", false, "Enable verbose output")
+	fs.BoolVar(&flags.ShowVersion, "version", false, "Print version information and exit")
 	fs.StringVar(
 		&flags.LogLevel, "log-level", string(shared.LogLevelWarn), "Set log level (debug, info, warn, error)",
 	)
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return nil, err
+	}
+
+	// --version is a terminal action that does not require source/destination validation.
+	if flags.ShowVersion {
+		flagsParsed = true
+		globalFlags = flags
+		return flags, nil
 	}
 
 	if err := flags.validate(); err != nil {
