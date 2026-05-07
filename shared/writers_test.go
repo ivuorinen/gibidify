@@ -891,7 +891,7 @@ func TestWithContextCheck(t *testing.T) {
 		{
 			name:         "active context with failing operation",
 			setupContext: context.Background,
-			operation: "failing operation",
+			operation:    "failing operation",
 			fn: func() error {
 				return errors.New("operation failed")
 			},

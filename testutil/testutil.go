@@ -146,23 +146,23 @@ func CaptureOutput(t *testing.T) (getStdout func() string, getStderr func() stri
 	}()
 
 	return stdoutBuf.String, stderrBuf.String, func() {
-			// Close writers first to signal EOF
-			_ = stdoutWriter.Close() // Ignore close errors in cleanup
-			_ = stderrWriter.Close() // Ignore close errors in cleanup
+		// Close writers first to signal EOF
+		_ = stdoutWriter.Close() // Ignore close errors in cleanup
+		_ = stderrWriter.Close() // Ignore close errors in cleanup
 
-			// Wait for readers to finish
-			<-stdoutDone
-			<-stderrDone
+		// Wait for readers to finish
+		<-stdoutDone
+		<-stderrDone
 
-			// Close readers
-			_ = stdoutReader.Close() // Ignore close errors in cleanup
-			_ = stderrReader.Close() // Ignore close errors in cleanup
+		// Close readers
+		_ = stdoutReader.Close() // Ignore close errors in cleanup
+		_ = stderrReader.Close() // Ignore close errors in cleanup
 
-			// Restore original outputs
-			os.Stdout = originalStdout
-			os.Stderr = originalStderr
-			logger.SetOutput(originalStderr)
-		}
+		// Restore original outputs
+		os.Stdout = originalStdout
+		os.Stderr = originalStderr
+		logger.SetOutput(originalStderr)
+	}
 }
 
 // CreateTestFile creates a test file with the given content and returns its path.
