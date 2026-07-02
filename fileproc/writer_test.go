@@ -2,9 +2,7 @@ package fileproc_test
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -153,125 +151,6 @@ func verifyPrefixSuffixWith(t *testing.T, data []byte, expectedPrefix, expectedS
 	}
 }
 
-// TestStartWriterStreamingFormats tests streaming functionality in all writers.
-func TestStartWriterStreamingFormats(t *testing.T) {
-	tests := []struct {
-		name    string
-		format  string
-		content string
-	}{
-		{"JSON streaming", "json", strings.Repeat("line\n", 1000)},
-		{"YAML streaming", "yaml", strings.Repeat("data: value\n", 1000)},
-		{"Markdown streaming", "markdown", strings.Repeat("# Header\nContent\n", 1000)},
-	}
-
-	for _, tc := range tests {
-		t.Run(
-			tc.name, func(t *testing.T) {
-				data := runStreamingWriterTest(t, tc.format, tc.content)
-
-				// Verify output is not empty
-				if len(data) == 0 {
-					t.Error("Expected streaming output but got empty result")
-				}
-
-				// Format-specific validation
-				verifyValidOutput(t, data, tc.format)
-				verifyPrefixSuffixWith(t, data, "STREAM_PREFIX", "STREAM_SUFFIX")
-
-				// Verify content was written
-				content := string(data)
-				if !strings.Contains(content, shared.TestFileStreamTest) {
-					t.Error("Expected file path in streaming output")
-				}
-			},
-		)
-	}
-}
-
-// runStreamingWriterTest executes the writer with streaming content.
-func runStreamingWriterTest(t *testing.T, format, content string) []byte {
-	t.Helper()
-
-	// Create temp file with content for streaming
-	contentFile, err := os.CreateTemp(t.TempDir(), "content_*.txt")
-	if err != nil {
-		t.Fatalf("Failed to create content file: %v", err)
-	}
-	defer func() {
-		if err := os.Remove(contentFile.Name()); err != nil {
-			t.Logf("Failed to remove content file: %v", err)
-		}
-	}()
-
-	if _, err := contentFile.WriteString(content); err != nil {
-		t.Fatalf("Failed to write content file: %v", err)
-	}
-	if err := contentFile.Close(); err != nil {
-		t.Fatalf("Failed to close content file: %v", err)
-	}
-
-	// Create output file
-	outFile, err := os.CreateTemp(t.TempDir(), "gibidify_stream_test_output")
-	if err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
-	}
-	defer func() {
-		if closeErr := outFile.Close(); closeErr != nil {
-			t.Errorf("close temp file: %v", closeErr)
-		}
-		if removeErr := os.Remove(outFile.Name()); removeErr != nil {
-			t.Errorf("remove temp file: %v", removeErr)
-		}
-	}()
-
-	// Prepare channels with streaming request
-	writeCh := make(chan fileproc.WriteRequest, 1)
-	doneCh := make(chan struct{})
-
-	// Create reader for streaming
-	reader, err := os.Open(contentFile.Name())
-	if err != nil {
-		t.Fatalf("Failed to open content file for reading: %v", err)
-	}
-	defer func() {
-		if err := reader.Close(); err != nil {
-			t.Logf("Failed to close reader: %v", err)
-		}
-	}()
-
-	// Write streaming request
-	writeCh <- fileproc.WriteRequest{
-		Path:     shared.TestFileStreamTest,
-		Content:  "", // Empty for streaming
-		IsStream: true,
-		Reader:   reader,
-	}
-	close(writeCh)
-
-	// Start the writer
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		fileproc.StartWriter(outFile, writeCh, doneCh, format, "STREAM_PREFIX", "STREAM_SUFFIX")
-	})
-
-	// Wait until writer signals completion
-	wg.Wait()
-	select {
-	case <-doneCh:
-	case <-time.After(3 * time.Second):
-		t.Fatal(shared.TestMsgTimeoutWriterCompletion)
-	}
-
-	// Read output
-	data, err := os.ReadFile(outFile.Name())
-	if err != nil {
-		t.Fatalf("Error reading output file: %v", err)
-	}
-
-	return data
-}
-
 // setupReadOnlyFile creates a read-only file for error testing.
 func setupReadOnlyFile(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan struct{}) {
 	t.Helper()
@@ -295,34 +174,6 @@ func setupReadOnlyFile(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan
 	writeCh <- fileproc.WriteRequest{
 		Path:    shared.TestFileGo,
 		Content: shared.LiteralPackageMain,
-	}
-	close(writeCh)
-
-	return outFile, writeCh, doneCh
-}
-
-// setupStreamingError creates a streaming request with a failing reader.
-func setupStreamingError(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan struct{}) {
-	t.Helper()
-
-	outFile, err := os.CreateTemp(t.TempDir(), "yaml_stream_*")
-	if err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
-	}
-
-	writeCh := make(chan fileproc.WriteRequest, 1)
-	doneCh := make(chan struct{})
-
-	pr, pw := io.Pipe()
-	if err := pw.CloseWithError(errors.New("simulated stream error")); err != nil {
-		t.Fatalf("failed to set pipe error: %v", err)
-	}
-
-	writeCh <- fileproc.WriteRequest{
-		Path:     "stream_fail.yaml",
-		Content:  "", // Empty for streaming
-		IsStream: true,
-		Reader:   pr,
 	}
 	close(writeCh)
 
@@ -418,12 +269,6 @@ func TestStartWriterErrorHandling(t *testing.T) {
 			format:            "json",
 			setupError:        setupReadOnlyFile,
 			expectEmptyOutput: true,
-		},
-		{
-			name:              "YAML writer with streaming error",
-			format:            "yaml",
-			setupError:        setupStreamingError,
-			expectEmptyOutput: false, // Partial writes are acceptable before streaming errors
 		},
 		{
 			name:              "Markdown writer with special characters",
@@ -557,72 +402,6 @@ func BenchmarkStartWriter(b *testing.B) {
 				<-doneCh
 
 				_ = outFile.Close()
-			}
-		})
-	}
-}
-
-// benchStreamingIteration runs a single streaming benchmark iteration.
-func benchStreamingIteration(b *testing.B, format, content string) {
-	b.Helper()
-
-	contentFile := createBenchContentFile(b, content)
-	defer func() { _ = os.Remove(contentFile) }()
-
-	reader, err := os.Open(contentFile) //nolint:gosec // G304: path constructed from benchmark helper
-	if err != nil {
-		b.Fatalf("Failed to open content file: %v", err)
-	}
-	defer func() { _ = reader.Close() }()
-
-	outFile, err := os.CreateTemp(b.TempDir(), "bench_stream_output_*")
-	if err != nil {
-		b.Fatalf("Failed to create output file: %v", err)
-	}
-	defer func() { _ = outFile.Close() }()
-
-	writeCh := make(chan fileproc.WriteRequest, 1)
-	doneCh := make(chan struct{})
-
-	writeCh <- fileproc.WriteRequest{
-		Path:     shared.TestFileStreamTest,
-		Content:  "",
-		IsStream: true,
-		Reader:   reader,
-	}
-	close(writeCh)
-
-	fileproc.StartWriter(outFile, writeCh, doneCh, format, "PREFIX", "SUFFIX")
-	<-doneCh
-}
-
-// createBenchContentFile creates a temp file with content for benchmarks.
-func createBenchContentFile(b *testing.B, content string) string {
-	b.Helper()
-
-	contentFile, err := os.CreateTemp(b.TempDir(), "content_*")
-	if err != nil {
-		b.Fatalf("Failed to create content file: %v", err)
-	}
-	if _, err := contentFile.WriteString(content); err != nil {
-		b.Fatalf("Failed to write content: %v", err)
-	}
-	if err := contentFile.Close(); err != nil {
-		b.Fatalf("Failed to close content file: %v", err)
-	}
-
-	return contentFile.Name()
-}
-
-// BenchmarkStartWriterStreaming benchmarks streaming writer operations across formats.
-func BenchmarkStartWriterStreaming(b *testing.B) {
-	formats := []string{"json", "yaml", "markdown"}
-	content := strings.Repeat("line content\n", 1000)
-
-	for _, format := range formats {
-		b.Run(format, func(b *testing.B) {
-			for b.Loop() {
-				benchStreamingIteration(b, format, content)
 			}
 		})
 	}

@@ -10,15 +10,13 @@ file sections with separators, and a suffix.
 - **Recursive directory scanning** with smart file filtering
 - **Configurable file type detection** - add/remove extensions and languages
 - **Multiple output formats** - markdown, JSON, YAML
-- **Memory-optimized processing** - streaming for large files, intelligent back-pressure
+- **Safety caps** - configurable max file count and total size limits
 - **Concurrent processing** with configurable worker pools
 - **Comprehensive configuration** via YAML with validation
-- **Production-ready** with structured error handling and benchmarking
-- **Modular architecture** - clean, focused codebase with ~63ns registry lookups
+- **Production-ready** with structured error handling
+- **Modular architecture** - clean, focused codebase
 - **Enhanced CLI experience** - progress bars, colored output, helpful error messages
 - **Cross-platform** with Docker support
-- **Advanced template system** - 4 built-in templates (default, minimal, detailed, compact) with custom template support, variable substitution, and YAML-based configuration
-- **Comprehensive metrics and profiling** - real-time processing statistics, performance analysis, memory usage tracking, and automated recommendations
 
 ## Installation
 
@@ -121,40 +119,10 @@ fileTypes:
   disabledLanguageExtensions:
     - .bat
 
-# Memory optimization (back-pressure management)
-backpressure:
-  enabled: true
-  maxPendingFiles: 1000      # Max files in file channel buffer
-  maxPendingWrites: 100      # Max writes in write channel buffer
-  maxMemoryUsage: 104857600  # 100MB max memory usage
-  memoryCheckInterval: 1000  # Check memory every 1000 files
-
-# Output and template customization
-output:
-  # Template selection: default, minimal, detailed, compact, or custom
-  # Templates control output structure and formatting
-  template: "default"
-  # Metadata options
-  metadata:
-    includeStats: true
-    includeTimestamp: true
-    includeFileCount: true
-    includeSourcePath: true
-    includeMetrics: true
-  # Markdown-specific options
-  markdown:
-    useCodeBlocks: true
-    includeLanguage: true
-    headerLevel: 2
-    tableOfContents: false
-    useCollapsible: false
-    syntaxHighlighting: true
-    lineNumbers: false
-  # Custom template variables
-  variables:
-    project_name: "My Project"
-    author: "Developer Name"
-    version: "1.0.0"
+# Safety caps
+resourceLimits:
+  maxFiles: 10000            # Max number of files to process
+  maxTotalSize: 1073741824   # Max total bytes across all files (1GB)
 ```
 
 See `config.example.yaml` for a comprehensive configuration example.

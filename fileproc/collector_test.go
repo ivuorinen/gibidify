@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/fileproc"
 )
 
@@ -51,6 +52,10 @@ func TestCollectFilesError(t *testing.T) {
 
 // TestCollectFiles tests the actual CollectFiles function with a real directory.
 func TestCollectFiles(t *testing.T) {
+	// Collection filters by the configured file-size limit; load defaults so it is non-zero.
+	config.Reset()
+	config.SetDefaultConfig()
+
 	// Create a temporary directory with test files
 	tmpDir := t.TempDir()
 

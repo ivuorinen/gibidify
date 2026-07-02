@@ -1,4 +1,3 @@
-// Package fileproc provides functions for file processing.
 package fileproc
 
 // FakeWalker implements Walker for testing purposes.

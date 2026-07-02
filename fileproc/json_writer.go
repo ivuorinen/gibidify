@@ -4,13 +4,12 @@ package fileproc
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/ivuorinen/gibidify/shared"
 )
 
-// JSONWriter handles JSON format output with streaming support.
+// JSONWriter handles JSON format output.
 type JSONWriter struct {
 	outFile   *os.File
 	firstFile bool
@@ -63,10 +62,6 @@ func (w *JSONWriter) WriteFile(req WriteRequest) error {
 	}
 	w.firstFile = false
 
-	if req.IsStream {
-		return w.writeStreaming(req)
-	}
-
 	return w.writeInline(req)
 }
 
@@ -80,42 +75,7 @@ func (w *JSONWriter) Close() error {
 	return nil
 }
 
-// writeStreaming writes a large file as JSON in streaming chunks.
-func (w *JSONWriter) writeStreaming(req WriteRequest) error {
-	defer shared.SafeCloseReader(req.Reader, req.Path)
-
-	language := detectLanguage(req.Path)
-
-	// Write file start
-	escapedPath := shared.EscapeForJSON(req.Path)
-	if _, err := fmt.Fprintf(w.outFile, `{"path":"%s","language":"%s","content":"`, escapedPath, language); err != nil {
-		return shared.WrapError(
-			err,
-			shared.ErrorTypeIO,
-			shared.CodeIOWrite,
-			"failed to write JSON file start",
-		).WithFilePath(req.Path)
-	}
-
-	// Stream content with JSON escaping
-	if err := w.streamJSONContent(req.Reader, req.Path); err != nil {
-		return err
-	}
-
-	// Write file end
-	if _, err := w.outFile.WriteString(`"}`); err != nil {
-		return shared.WrapError(
-			err,
-			shared.ErrorTypeIO,
-			shared.CodeIOWrite,
-			"failed to write JSON file end",
-		).WithFilePath(req.Path)
-	}
-
-	return nil
-}
-
-// writeInline writes a small file directly as JSON.
+// writeInline writes a file directly as JSON.
 func (w *JSONWriter) writeInline(req WriteRequest) error {
 	language := detectLanguage(req.Path)
 	fileData := FileData{
@@ -146,22 +106,7 @@ func (w *JSONWriter) writeInline(req WriteRequest) error {
 	return nil
 }
 
-// streamJSONContent streams content with JSON escaping.
-func (w *JSONWriter) streamJSONContent(reader io.Reader, path string) error {
-	if err := shared.StreamContent(
-		reader, w.outFile, shared.FileProcessingStreamChunkSize, path, func(chunk []byte) []byte {
-			escaped := shared.EscapeForJSON(string(chunk))
-
-			return []byte(escaped)
-		},
-	); err != nil {
-		return fmt.Errorf("streaming JSON content: %w", err)
-	}
-
-	return nil
-}
-
-// startJSONWriter handles JSON format output with streaming support.
+// startJSONWriter handles JSON format output.
 func startJSONWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
 	startFormatWriter(outFile, writeCh, done, prefix, suffix, func(f *os.File) FormatWriter {
 		return NewJSONWriter(f)

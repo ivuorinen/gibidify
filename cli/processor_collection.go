@@ -28,12 +28,8 @@ func (p *Processor) collectFiles() ([]string, error) {
 	return files, nil
 }
 
-// validateFileCollection validates the collected files against resource limits.
+// validateFileCollection validates the collected files against the size caps.
 func (p *Processor) validateFileCollection(files []string) error {
-	if !config.ResourceLimitsEnabled() {
-		return nil
-	}
-
 	// Check file count limit
 	maxFiles := config.MaxFiles()
 	if len(files) > maxFiles {

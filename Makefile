@@ -6,9 +6,7 @@
 .PHONY: ci ci-lint ci-test
 .PHONY: security security-full vuln-check
 .PHONY: clean update-deps dev-setup pre-commit-setup
-.PHONY: build-benchmark benchmark benchmark-go benchmark-all
-.PHONY: benchmark-go-cli benchmark-go-fileproc benchmark-go-metrics benchmark-go-shared
-.PHONY: benchmark-collection benchmark-processing benchmark-concurrency benchmark-format
+.PHONY: benchmark-go benchmark-go-cli benchmark-go-fileproc benchmark-go-shared
 
 # Tool versions (managed by Renovate)
 # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
@@ -139,7 +137,7 @@ update-deps: ## Update Go dependencies to latest patch versions
 	@go list -u -m all | grep '\[' || true
 
 clean: ## Remove build artifacts, coverage, test outputs
-	rm -f gibidify gibidify-benchmark coverage.out coverage.html test-results.json security-report.json
+	rm -f gibidify coverage.out coverage.html test-results.json security-report.json
 	go clean -testcache
 
 # Development setup ----------------------------------------------------------
@@ -151,25 +149,7 @@ pre-commit-setup: ## Install pre-commit hooks
 	@pre-commit install
 	@pre-commit install --install-hooks
 
-# Benchmarks (gibidify-specific) ---------------------------------------------
-
-build-benchmark: ## Build the gibidify-benchmark binary
-	go build -ldflags="$(LDFLAGS)" -o gibidify-benchmark ./cmd/benchmark
-
-benchmark: build-benchmark ## Run all custom benchmarks
-	./gibidify-benchmark -type=all
-
-benchmark-collection: build-benchmark ## Run file collection benchmarks
-	./gibidify-benchmark -type=collection
-
-benchmark-processing: build-benchmark ## Run file processing benchmarks
-	./gibidify-benchmark -type=processing
-
-benchmark-concurrency: build-benchmark ## Run concurrency benchmarks
-	./gibidify-benchmark -type=concurrency
-
-benchmark-format: build-benchmark ## Run format benchmarks
-	./gibidify-benchmark -type=format
+# Benchmarks (Go test benchmarks) --------------------------------------------
 
 benchmark-go: ## Run all Go test benchmarks
 	go test -bench=. -benchtime=100ms -run=^$$ ./...
@@ -180,10 +160,5 @@ benchmark-go-cli: ## Run CLI test benchmarks
 benchmark-go-fileproc: ## Run fileproc test benchmarks
 	go test -bench=. -benchtime=100ms -run=^$$ ./fileproc/...
 
-benchmark-go-metrics: ## Run metrics test benchmarks
-	go test -bench=. -benchtime=100ms -run=^$$ ./metrics/...
-
 benchmark-go-shared: ## Run shared test benchmarks
 	go test -bench=. -benchtime=100ms -run=^$$ ./shared/...
-
-benchmark-all: benchmark benchmark-go ## Run custom + Go test benchmarks

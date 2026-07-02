@@ -23,10 +23,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Setup Go
         uses: ./.github/actions/setup
         with:
           token: ${{ github.token }}
 
-      - uses: ivuorinen/actions/pr-lint@877acc6d8b013051a6acf83c0e876d3a2b46210a # v2026.06.08
+      - uses: ivuorinen/actions/pr-lint@de31e11dda6488eabe95e951ebb61c6d9d500865 # v2026.06.30

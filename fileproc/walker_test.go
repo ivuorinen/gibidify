@@ -4,8 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/spf13/viper"
-
+	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/fileproc"
 	"github.com/ivuorinen/gibidify/testutil"
 )
@@ -31,7 +30,7 @@ func TestProdWalkerWithIgnore(t *testing.T) {
 
 	// Initialize config to ignore "vendor" directory
 	testutil.ResetViperConfig(t, "")
-	viper.Set("ignoreDirectories", []string{"vendor"})
+	config.Set("ignoreDirectories", []string{"vendor"})
 
 	// Run walker
 	w := fileproc.NewProdWalker()

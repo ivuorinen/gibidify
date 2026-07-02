@@ -26,16 +26,12 @@
 package testutil
 
 import (
-	"bytes"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/spf13/viper"
 
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
@@ -89,74 +85,6 @@ func SuppressAllOutput(t *testing.T) OutputRestoreFunc {
 		if devNull != nil {
 			_ = devNull.Close() // Ignore close errors in cleanup
 		}
-
-		// Restore original outputs
-		os.Stdout = originalStdout
-		os.Stderr = originalStderr
-		logger.SetOutput(originalStderr)
-	}
-}
-
-// CaptureOutput captures both stdout and stderr during test execution.
-// Returns getter funcs (getStdout, getStderr) and a restore func.
-// Call restore() before invoking the getters to ensure the pipes are fully
-// drained; logger output is also redirected to the stderr pipe during capture.
-func CaptureOutput(t *testing.T) (getStdout func() string, getStderr func() string, restore OutputRestoreFunc) {
-	t.Helper()
-
-	// Save original outputs
-	originalStdout := os.Stdout
-	originalStderr := os.Stderr
-
-	// Create pipes for stdout
-	stdoutReader, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("Failed to create stdout pipe: %v", err)
-	}
-
-	// Create pipes for stderr
-	stderrReader, stderrWriter, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("Failed to create stderr pipe: %v", err)
-	}
-
-	// Redirect outputs
-	os.Stdout = stdoutWriter
-	os.Stderr = stderrWriter
-
-	// Suppress logger output to stderr
-	logger := shared.GetLogger()
-	logger.SetOutput(stderrWriter)
-
-	// Buffers to collect output
-	var stdoutBuf, stderrBuf bytes.Buffer
-
-	// Start goroutines to read from pipes
-	stdoutDone := make(chan struct{})
-	stderrDone := make(chan struct{})
-
-	go func() {
-		defer close(stdoutDone)
-		_, _ = io.Copy(&stdoutBuf, stdoutReader) //nolint:errcheck // Ignore errors during test output capture shutdown
-	}()
-
-	go func() {
-		defer close(stderrDone)
-		_, _ = io.Copy(&stderrBuf, stderrReader) //nolint:errcheck // Ignore errors during test output capture shutdown
-	}()
-
-	return stdoutBuf.String, stderrBuf.String, func() {
-		// Close writers first to signal EOF
-		_ = stdoutWriter.Close() // Ignore close errors in cleanup
-		_ = stderrWriter.Close() // Ignore close errors in cleanup
-
-		// Wait for readers to finish
-		<-stdoutDone
-		<-stderrDone
-
-		// Close readers
-		_ = stdoutReader.Close() // Ignore close errors in cleanup
-		_ = stderrReader.Close() // Ignore close errors in cleanup
 
 		// Restore original outputs
 		os.Stdout = originalStdout
@@ -220,9 +148,9 @@ func CreateTestFiles(t *testing.T, rootDir string, fileSpecs []FileSpec) []strin
 // ResetViperConfig resets Viper configuration and optionally sets a config path.
 func ResetViperConfig(t *testing.T, configPath string) {
 	t.Helper()
-	viper.Reset()
+	config.Reset()
 	if configPath != "" {
-		viper.AddConfigPath(configPath)
+		config.AddConfigPath(configPath)
 	}
 	config.LoadConfig()
 }
@@ -230,18 +158,11 @@ func ResetViperConfig(t *testing.T, configPath string) {
 // SetViperKeys sets specific configuration keys for testing.
 func SetViperKeys(t *testing.T, keyValues map[string]any) {
 	t.Helper()
-	viper.Reset()
+	config.Reset()
+	config.SetDefaultConfig()
 	for key, value := range keyValues {
-		viper.Set(key, value)
+		config.Set(key, value)
 	}
-	config.LoadConfig()
-}
-
-// ApplyBackpressureOverrides applies backpressure configuration overrides for testing.
-// This is a convenience wrapper around SetViperKeys specifically for backpressure tests.
-func ApplyBackpressureOverrides(t *testing.T, overrides map[string]any) {
-	t.Helper()
-	SetViperKeys(t, overrides)
 }
 
 // SetupCLIArgs configures os.Args for CLI testing.
@@ -369,41 +290,5 @@ func AssertErrorContains(t *testing.T, err error, expectedSubstring, operation s
 	}
 	if !strings.Contains(err.Error(), expectedSubstring) {
 		t.Errorf("Operation %s error %q should contain %q", operation, err.Error(), expectedSubstring)
-	}
-}
-
-// ValidateErrorCase checks error expectations and optionally validates error message content.
-// This is a comprehensive helper that combines error checking with substring matching.
-func ValidateErrorCase(t *testing.T, err error, wantErr bool, errContains string, operation string) {
-	t.Helper()
-	if wantErr {
-		if err == nil {
-			t.Errorf("%s: expected error but got none", operation)
-
-			return
-		}
-		if errContains != "" && !strings.Contains(err.Error(), errContains) {
-			t.Errorf("%s: expected error containing %q, got: %v", operation, errContains, err)
-		}
-	} else if err != nil {
-		t.Errorf("%s: unexpected error: %v", operation, err)
-	}
-}
-
-// VerifyStructuredError validates StructuredError properties.
-// This helper ensures structured errors have the expected Type and Code values.
-func VerifyStructuredError(t *testing.T, err error, expectedType shared.ErrorType, expectedCode string) {
-	t.Helper()
-	var structErr *shared.StructuredError
-	if !errors.As(err, &structErr) {
-		t.Errorf("expected StructuredError, got: %T", err)
-
-		return
-	}
-	if structErr.Type != expectedType {
-		t.Errorf("expected Type %v, got %v", expectedType, structErr.Type)
-	}
-	if structErr.Code != expectedCode {
-		t.Errorf("expected Code %q, got %q", expectedCode, structErr.Code)
 	}
 }

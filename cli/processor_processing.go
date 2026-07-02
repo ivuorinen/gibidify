@@ -11,11 +11,14 @@ import (
 	"github.com/ivuorinen/gibidify/shared"
 )
 
+// channelBuffer is the fixed capacity of the file and write channels. It keeps
+// producers slightly ahead of consumers without unbounded memory growth;
+// revisit only if profiling shows workers stalling on the channel.
+const channelBuffer = 64
+
 // Process executes the main file processing workflow.
 func (p *Processor) Process(ctx context.Context) error {
-	// Create overall processing context with timeout
-	overallCtx, overallCancel := p.resourceMonitor.CreateOverallProcessingContext(ctx)
-	defer overallCancel()
+	start := time.Now()
 
 	// Configure file type registry
 	p.configureFileTypes()
@@ -27,17 +30,9 @@ func (p *Processor) Process(ctx context.Context) error {
 	p.ui.PrintInfo("Destination: %s", p.flags.Destination)
 	p.ui.PrintInfo("Workers: %d", p.flags.Concurrency)
 
-	// Log resource monitoring configuration
-	p.resourceMonitor.LogResourceInfo()
-	p.backpressure.LogBackpressureInfo()
-
-	// Collect files with progress indication and timing
+	// Collect files with progress indication
 	p.ui.PrintInfo("📁 Collecting files...")
-	collectionStart := time.Now()
 	files, err := p.collectFiles()
-	collectionTime := time.Since(collectionStart)
-	p.metricsCollector.RecordPhaseTime(shared.MetricsPhaseCollection, collectionTime)
-
 	if err != nil {
 		return err
 	}
@@ -50,13 +45,14 @@ func (p *Processor) Process(ctx context.Context) error {
 		return err
 	}
 
-	// Process files with overall timeout and timing
-	processingStart := time.Now()
-	err = p.processFiles(overallCtx, files)
-	processingTime := time.Since(processingStart)
-	p.metricsCollector.RecordPhaseTime(shared.MetricsPhaseProcessing, processingTime)
+	// Process files
+	if err := p.processFiles(ctx, files); err != nil {
+		return err
+	}
 
-	return err
+	shared.GetLogger().Infof("Processed %d files in %s", len(files), time.Since(start).Round(time.Millisecond))
+
+	return nil
 }
 
 // processFiles processes the collected files.
@@ -69,10 +65,10 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 		shared.LogError("Error closing output file", outFile.Close())
 	}()
 
-	// Initialize back-pressure and channels
+	// Initialize channels
 	p.ui.PrintInfo("⚙️  Initializing processing...")
-	p.backpressure.LogBackpressureInfo()
-	fileCh, writeCh := p.backpressure.CreateChannels()
+	fileCh := make(chan string, channelBuffer)
+	writeCh := make(chan fileproc.WriteRequest, channelBuffer)
 	writerDone := make(chan struct{})
 
 	// Start writer
@@ -92,19 +88,9 @@ func (p *Processor) processFiles(ctx context.Context, files []string) error {
 		return err
 	}
 
-	// Wait for completion with timing
-	writingStart := time.Now()
+	// Wait for completion
 	p.waitForCompletion(&wg, writeCh, writerDone)
-	writingTime := time.Since(writingStart)
-	p.metricsCollector.RecordPhaseTime(shared.MetricsPhaseWriting, writingTime)
-
 	p.ui.FinishProgress()
-
-	// Final cleanup with timing
-	finalizeStart := time.Now()
-	p.logFinalStats()
-	finalizeTime := time.Since(finalizeStart)
-	p.metricsCollector.RecordPhaseTime(shared.MetricsPhaseFinalize, finalizeTime)
 
 	p.ui.PrintSuccess("Processing completed. Output saved to %s", p.flags.Destination)
 
