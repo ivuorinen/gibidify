@@ -30,12 +30,9 @@ func TestFileTypeRegistryAddLanguageMapping(t *testing.T) {
 // createModificationTestRegistry creates a registry for modification tests.
 func createModificationTestRegistry() *FileTypeRegistry {
 	return &FileTypeRegistry{
-		imageExts:    make(map[string]bool),
-		binaryExts:   make(map[string]bool),
-		languageMap:  make(map[string]string),
-		extCache:     make(map[string]string, shared.FileTypeRegistryMaxCacheSize),
-		resultCache:  make(map[string]FileTypeResult, shared.FileTypeRegistryMaxCacheSize),
-		maxCacheSize: shared.FileTypeRegistryMaxCacheSize,
+		imageExts:   make(map[string]bool),
+		binaryExts:  make(map[string]bool),
+		languageMap: make(map[string]string),
 	}
 }
 
@@ -178,78 +175,5 @@ func TestFileTypeRegistryDefaultRegistryConsistency(t *testing.T) {
 		if registry.IsBinary(shared.TestFileTXT) {
 			t.Errorf("Iteration %d: Expected .txt to not be recognized as binary", i)
 		}
-	}
-}
-
-// TestFileTypeRegistryGetStats tests the GetStats method.
-func TestFileTypeRegistryGetStats(t *testing.T) {
-	// Ensure clean, isolated state
-	ResetRegistryForTesting()
-	t.Cleanup(ResetRegistryForTesting)
-	registry := DefaultRegistry()
-
-	// Call some methods to populate cache and update stats
-	registry.IsImage(shared.TestFilePNG)
-	registry.IsBinary(shared.TestFileEXE)
-	registry.Language(shared.TestFileGo)
-	// Repeat to generate cache hits
-	registry.IsImage(shared.TestFilePNG)
-	registry.IsBinary(shared.TestFileEXE)
-	registry.Language(shared.TestFileGo)
-
-	// Get stats
-	stats := registry.Stats()
-
-	// Verify stats structure - all values are uint64 and therefore non-negative by definition
-	// We can verify they exist and are properly initialized
-
-	// Test that stats include our calls
-	if stats.TotalLookups < 6 { // We made at least 6 calls above
-		t.Errorf("Expected at least 6 total lookups, got %d", stats.TotalLookups)
-	}
-
-	// Total lookups should equal hits + misses
-	if stats.TotalLookups != stats.CacheHits+stats.CacheMisses {
-		t.Errorf("Total lookups (%d) should equal hits (%d) + misses (%d)",
-			stats.TotalLookups, stats.CacheHits, stats.CacheMisses)
-	}
-	// With repeated lookups we should see some cache hits
-	if stats.CacheHits == 0 {
-		t.Error("Expected some cache hits after repeated lookups")
-	}
-}
-
-// TestFileTypeRegistryGetCacheInfo tests the GetCacheInfo method.
-func TestFileTypeRegistryGetCacheInfo(t *testing.T) {
-	// Ensure clean, isolated state
-	ResetRegistryForTesting()
-	t.Cleanup(ResetRegistryForTesting)
-	registry := DefaultRegistry()
-
-	// Call some methods to populate cache
-	registry.IsImage("test1.png")
-	registry.IsBinary("test2.exe")
-	registry.Language("test3.go")
-	registry.IsImage("test4.jpg")
-	registry.IsBinary("test5.dll")
-
-	// Get cache info
-	extCacheSize, resultCacheSize, maxCacheSize := registry.CacheInfo()
-
-	// Verify cache info
-	if extCacheSize < 0 {
-		t.Error("Expected non-negative extension cache size")
-	}
-	if resultCacheSize < 0 {
-		t.Error("Expected non-negative result cache size")
-	}
-	if maxCacheSize <= 0 {
-		t.Error("Expected positive max cache size")
-	}
-
-	// We should have some cache entries from our calls
-	totalCacheSize := extCacheSize + resultCacheSize
-	if totalCacheSize == 0 {
-		t.Error("Expected some cache entries after multiple calls")
 	}
 }

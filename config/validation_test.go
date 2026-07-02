@@ -5,8 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spf13/viper"
-
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
 )
@@ -92,11 +90,11 @@ func TestValidateConfig(t *testing.T) {
 		t.Run(
 			tt.name, func(t *testing.T) {
 				// Reset viper for each test
-				viper.Reset()
+				config.Reset()
 
 				// Set test configuration
 				for key, value := range tt.config {
-					viper.Set(key, value)
+					config.Set(key, value)
 				}
 
 				// Set defaults for missing values without touching disk
@@ -140,8 +138,8 @@ func TestIsValidFormat(t *testing.T) {
 
 // TestValidateFileSize tests the ValidateFileSize function.
 func TestValidateFileSize(t *testing.T) {
-	viper.Reset()
-	viper.Set("fileSizeLimit", shared.ConfigFileSizeLimitDefault)
+	config.Reset()
+	config.Set("fileSizeLimit", shared.ConfigFileSizeLimitDefault)
 
 	tests := []struct {
 		name    string
@@ -202,9 +200,9 @@ func TestValidateConcurrency(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		viper.Reset()
+		config.Reset()
 		if tt.setMax {
-			viper.Set("maxConcurrency", tt.maxConcurrency)
+			config.Set("maxConcurrency", tt.maxConcurrency)
 		}
 
 		err := config.ValidateConcurrency(tt.concurrency)

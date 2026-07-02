@@ -61,13 +61,11 @@ func (r *FileTypeRegistry) AddBinaryExtension(ext string) {
 // AddLanguageMapping adds a new language mapping to the registry.
 func (r *FileTypeRegistry) AddLanguageMapping(ext, language string) {
 	r.languageMap[strings.ToLower(ext)] = language
-	r.invalidateCache()
 }
 
 // addExtension is a helper to add extensions to a map.
 func (r *FileTypeRegistry) addExtension(ext string, target map[string]bool) {
 	target[strings.ToLower(ext)] = true
-	r.invalidateCache()
 }
 
 // removeExtension is a helper to remove extensions from a map.
@@ -99,5 +97,4 @@ func (r *FileTypeRegistry) DisableExtensions(disabledImages, disabledBinary, dis
 	}
 
 	// Invalidate cache after all modifications
-	r.invalidateCache()
 }

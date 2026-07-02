@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"github.com/ivuorinen/gibidify/shared"
 )
 
 const minExtensionLength = 2
@@ -17,30 +15,15 @@ var (
 )
 
 // FileTypeRegistry manages file type detection and classification.
+// Its maps are populated once during ConfigureFromSettings (before any worker
+// starts) and only read thereafter, so lookups need no locking.
 type FileTypeRegistry struct {
 	imageExts   map[string]bool
 	binaryExts  map[string]bool
 	languageMap map[string]string
-
-	// Cache for frequent lookups to avoid repeated string operations
-	extCache     map[string]string         // filename -> normalized extension
-	resultCache  map[string]FileTypeResult // extension -> cached result
-	cacheMutex   sync.RWMutex
-	maxCacheSize int
-
-	// Performance statistics
-	stats RegistryStats
 }
 
-// RegistryStats tracks performance metrics for the registry.
-type RegistryStats struct {
-	TotalLookups   uint64
-	CacheHits      uint64
-	CacheMisses    uint64
-	CacheEvictions uint64
-}
-
-// FileTypeResult represents cached file type detection results.
+// FileTypeResult represents a file type detection result.
 type FileTypeResult struct {
 	IsImage   bool
 	IsBinary  bool
@@ -51,12 +34,9 @@ type FileTypeResult struct {
 // initRegistry initializes the default file type registry with common extensions.
 func initRegistry() *FileTypeRegistry {
 	return &FileTypeRegistry{
-		imageExts:    getImageExtensions(),
-		binaryExts:   getBinaryExtensions(),
-		languageMap:  getLanguageMap(),
-		extCache:     make(map[string]string, shared.FileTypeRegistryMaxCacheSize),
-		resultCache:  make(map[string]FileTypeResult, shared.FileTypeRegistryMaxCacheSize),
-		maxCacheSize: shared.FileTypeRegistryMaxCacheSize,
+		imageExts:   getImageExtensions(),
+		binaryExts:  getBinaryExtensions(),
+		languageMap: getLanguageMap(),
 	}
 }
 
@@ -74,20 +54,22 @@ func DefaultRegistry() *FileTypeRegistry {
 	return getRegistry()
 }
 
-// Stats returns a copy of the current registry statistics.
-func (r *FileTypeRegistry) Stats() RegistryStats {
-	r.cacheMutex.RLock()
-	defer r.cacheMutex.RUnlock()
+// getFileTypeResult detects the file type for filename from its extension.
+func (r *FileTypeRegistry) getFileTypeResult(filename string) FileTypeResult {
+	ext := normalizeExtension(filename)
+	result := FileTypeResult{
+		Extension: ext,
+		IsImage:   r.imageExts[ext],
+		IsBinary:  r.binaryExts[ext],
+		Language:  r.languageMap[ext],
+	}
 
-	return r.stats
-}
+	// Handle special cases for binary detection (like .DS_Store).
+	if !result.IsBinary && isSpecialFile(filename, r.binaryExts) {
+		result.IsBinary = true
+	}
 
-// CacheInfo returns current cache size information.
-func (r *FileTypeRegistry) CacheInfo() (extCacheSize, resultCacheSize, maxCacheSize int) {
-	r.cacheMutex.RLock()
-	defer r.cacheMutex.RUnlock()
-
-	return len(r.extCache), len(r.resultCache), r.maxCacheSize
+	return result
 }
 
 // ResetRegistryForTesting resets the registry to its initial state.

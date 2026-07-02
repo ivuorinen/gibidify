@@ -133,12 +133,9 @@ func performConcurrentModifications(t *testing.T, id int) {
 // createConcurrencyTestRegistry creates a new registry instance for concurrency testing.
 func createConcurrencyTestRegistry() *FileTypeRegistry {
 	return &FileTypeRegistry{
-		imageExts:    make(map[string]bool),
-		binaryExts:   make(map[string]bool),
-		languageMap:  make(map[string]string),
-		extCache:     make(map[string]string, shared.FileTypeRegistryMaxCacheSize),
-		resultCache:  make(map[string]FileTypeResult, shared.FileTypeRegistryMaxCacheSize),
-		maxCacheSize: shared.FileTypeRegistryMaxCacheSize,
+		imageExts:   make(map[string]bool),
+		binaryExts:  make(map[string]bool),
+		languageMap: make(map[string]string),
 	}
 }
 

@@ -85,12 +85,9 @@ func TestFileTypeRegistryCaseInsensitiveHandling(t *testing.T) {
 // createEmptyTestRegistry creates a new empty test registry instance for config testing.
 func createEmptyTestRegistry() *FileTypeRegistry {
 	return &FileTypeRegistry{
-		imageExts:    make(map[string]bool),
-		binaryExts:   make(map[string]bool),
-		languageMap:  make(map[string]string),
-		extCache:     make(map[string]string, shared.FileTypeRegistryMaxCacheSize),
-		resultCache:  make(map[string]FileTypeResult, shared.FileTypeRegistryMaxCacheSize),
-		maxCacheSize: shared.FileTypeRegistryMaxCacheSize,
+		imageExts:   make(map[string]bool),
+		binaryExts:  make(map[string]bool),
+		languageMap: make(map[string]string),
 	}
 }
 

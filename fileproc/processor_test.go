@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/spf13/viper"
-
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/fileproc"
 	"github.com/ivuorinen/gibidify/shared"
@@ -30,6 +28,8 @@ func writeTempConfig(t *testing.T, content string) string {
 	}
 	return dir
 }
+
+const testContent = "package main\nfunc main() {}\n"
 
 func TestProcessFile(t *testing.T) {
 	// Reset and load default config to ensure proper file size limits
@@ -76,116 +76,6 @@ func TestProcessFile(t *testing.T) {
 	}
 }
 
-// TestNewFileProcessorWithMonitor tests processor creation with resource monitor.
-func TestNewFileProcessorWithMonitor(t *testing.T) {
-	testutil.ResetViperConfig(t, "")
-
-	// Create a resource monitor
-	monitor := fileproc.NewResourceMonitor()
-	defer monitor.Close()
-
-	processor := fileproc.NewFileProcessorWithMonitor("test_source", monitor)
-	if processor == nil {
-		t.Error("Expected processor but got nil")
-	}
-
-	// Exercise the processor to verify monitor integration
-	tmpFile, err := os.CreateTemp(t.TempDir(), "monitor_test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := tmpFile.WriteString("test content"); err != nil {
-		t.Fatal(err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		t.Fatal(err)
-	}
-
-	ctx := context.Background()
-	writeCh := make(chan fileproc.WriteRequest, 1)
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(writeCh)
-		if err := processor.ProcessWithContext(ctx, tmpFile.Name(), writeCh); err != nil {
-			t.Errorf("ProcessWithContext failed: %v", err)
-		}
-	})
-
-	// Drain channel first to avoid deadlock if producer sends multiple requests
-	requestCount := 0
-	for range writeCh {
-		requestCount++
-	}
-
-	// Wait for goroutine to finish after channel is drained
-	wg.Wait()
-
-	if requestCount == 0 {
-		t.Error("Expected at least one write request from processor")
-	}
-}
-
-// TestProcessFileWithMonitor tests file processing with resource monitoring.
-func TestProcessFileWithMonitor(t *testing.T) {
-	testutil.ResetViperConfig(t, "")
-
-	// Create temporary file
-	tmpFile, err := os.CreateTemp(t.TempDir(), "testfile_monitor_*")
-	if err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
-	}
-	defer func() {
-		if err := os.Remove(tmpFile.Name()); err != nil {
-			t.Logf("Failed to remove temp file: %v", err)
-		}
-	}()
-
-	content := "Test content with monitor"
-	if _, err := tmpFile.WriteString(content); err != nil {
-		t.Fatalf(shared.TestMsgFailedToWriteContent, err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		t.Fatalf(shared.TestMsgFailedToCloseFile, err)
-	}
-
-	// Create resource monitor
-	monitor := fileproc.NewResourceMonitor()
-	defer monitor.Close()
-
-	ch := make(chan fileproc.WriteRequest, 1)
-	ctx := context.Background()
-
-	// Test ProcessFileWithMonitor
-	var wg sync.WaitGroup
-	var result string
-
-	// Start reader goroutine first to prevent deadlock
-	wg.Go(func() {
-		for req := range ch {
-			result = req.Content
-		}
-	})
-
-	// Process the file
-	err = fileproc.ProcessFileWithMonitor(ctx, tmpFile.Name(), ch, "", monitor)
-	close(ch)
-
-	if err != nil {
-		t.Fatalf("ProcessFileWithMonitor failed: %v", err)
-	}
-
-	// Wait for reader to finish
-	wg.Wait()
-
-	if !strings.Contains(result, content) {
-		t.Error("Expected content not found in processed result")
-	}
-}
-
-const testContent = "package main\nfunc main() {}\n"
-
-// TestProcess tests the basic Process function.
 func TestProcess(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
@@ -581,7 +471,7 @@ func TestProcessorStreamingEdgeCases(t *testing.T) {
 // BenchmarkProcessFileInline benchmarks inline file processing for small files.
 func BenchmarkProcessFileInline(b *testing.B) {
 	// Initialize config for file processing
-	viper.Reset()
+	config.Reset()
 	config.LoadConfig()
 
 	// Create a small test file
@@ -616,7 +506,7 @@ func BenchmarkProcessFileInline(b *testing.B) {
 // BenchmarkProcessFileStreaming benchmarks streaming file processing for large files.
 func BenchmarkProcessFileStreaming(b *testing.B) {
 	// Initialize config for file processing
-	viper.Reset()
+	config.Reset()
 	config.LoadConfig()
 
 	// Create a large test file that triggers streaming
@@ -688,37 +578,6 @@ func BenchmarkProcessorWithContext(b *testing.B) {
 	}
 }
 
-// BenchmarkProcessorWithMonitor benchmarks processing with resource monitoring.
-func BenchmarkProcessorWithMonitor(b *testing.B) {
-	tmpDir := b.TempDir()
-	testFile := filepath.Join(tmpDir, "bench_monitor.go")
-	content := strings.Repeat("// Benchmark file content with monitor\n", 50)
-	if err := os.WriteFile(testFile, []byte(content), 0o600); err != nil {
-		b.Fatalf(shared.TestMsgFailedToCreateTestFile, err)
-	}
-
-	monitor := fileproc.NewResourceMonitor()
-	defer monitor.Close()
-
-	processor := fileproc.NewFileProcessorWithMonitor(tmpDir, monitor)
-	ctx := context.Background()
-
-	b.ResetTimer()
-	for b.Loop() {
-		ch := make(chan fileproc.WriteRequest, 1)
-		var wg sync.WaitGroup
-		wg.Go(func() {
-			defer close(ch)
-			_ = processor.ProcessWithContext(ctx, testFile, ch)
-		})
-		for req := range ch {
-			_ = req // Drain channel
-		}
-		wg.Wait()
-	}
-}
-
-// BenchmarkProcessorConcurrent benchmarks concurrent file processing.
 func BenchmarkProcessorConcurrent(b *testing.B) {
 	tmpDir := b.TempDir()
 

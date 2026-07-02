@@ -3,14 +3,12 @@ package config
 import (
 	"testing"
 
-	"github.com/spf13/viper"
-
 	"github.com/ivuorinen/gibidify/shared"
 )
 
 // TestFileTypeRegistryDefaultValues tests default configuration values.
 func TestFileTypeRegistryDefaultValues(t *testing.T) {
-	viper.Reset()
+	Reset()
 	SetDefaultConfig()
 
 	verifyDefaultValues(t)
@@ -18,7 +16,7 @@ func TestFileTypeRegistryDefaultValues(t *testing.T) {
 
 // TestFileTypeRegistrySetGet tests configuration setting and getting.
 func TestFileTypeRegistrySetGet(t *testing.T) {
-	viper.Reset()
+	Reset()
 
 	// Set test values
 	setTestConfiguration()
@@ -29,7 +27,7 @@ func TestFileTypeRegistrySetGet(t *testing.T) {
 
 // TestFileTypeRegistryValidationSuccess tests successful validation.
 func TestFileTypeRegistryValidationSuccess(t *testing.T) {
-	viper.Reset()
+	Reset()
 	SetDefaultConfig()
 
 	// Set valid configuration
@@ -71,18 +69,18 @@ func verifyDefaultValues(t *testing.T) {
 
 // setTestConfiguration sets test configuration values.
 func setTestConfiguration() {
-	viper.Set("fileTypes.enabled", false)
-	viper.Set(shared.ConfigKeyFileTypesCustomImageExtensions, []string{".webp", ".avif"})
-	viper.Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{shared.TestExtensionCustom, ".mybin"})
-	viper.Set(
+	Set("fileTypes.enabled", false)
+	Set(shared.ConfigKeyFileTypesCustomImageExtensions, []string{".webp", ".avif"})
+	Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{shared.TestExtensionCustom, ".mybin"})
+	Set(
 		shared.ConfigKeyFileTypesCustomLanguages, map[string]string{
 			".zig": "zig",
 			".v":   "vlang",
 		},
 	)
-	viper.Set("fileTypes.disabledImageExtensions", []string{".gif", ".bmp"})
-	viper.Set("fileTypes.disabledBinaryExtensions", []string{".exe", ".dll"})
-	viper.Set("fileTypes.disabledLanguageExtensions", []string{".rb", ".pl"})
+	Set("fileTypes.disabledImageExtensions", []string{".gif", ".bmp"})
+	Set("fileTypes.disabledBinaryExtensions", []string{".exe", ".dll"})
+	Set("fileTypes.disabledLanguageExtensions", []string{".rb", ".pl"})
 }
 
 // verifyTestConfiguration verifies that test configuration is retrieved correctly.
@@ -109,9 +107,9 @@ func verifyTestConfiguration(t *testing.T) {
 
 // setValidConfiguration sets valid configuration for validation tests.
 func setValidConfiguration() {
-	viper.Set(shared.ConfigKeyFileTypesCustomImageExtensions, []string{".webp", ".avif"})
-	viper.Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{shared.TestExtensionCustom})
-	viper.Set(
+	Set(shared.ConfigKeyFileTypesCustomImageExtensions, []string{".webp", ".avif"})
+	Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{shared.TestExtensionCustom})
+	Set(
 		shared.ConfigKeyFileTypesCustomLanguages, map[string]string{
 			".zig": "zig",
 			".v":   "vlang",
@@ -123,9 +121,9 @@ func setValidConfiguration() {
 func testInvalidImageExtensions(t *testing.T) {
 	t.Helper()
 
-	viper.Reset()
+	Reset()
 	SetDefaultConfig()
-	viper.Set(shared.ConfigKeyFileTypesCustomImageExtensions, []string{"", "webp"}) // Empty and missing dot
+	Set(shared.ConfigKeyFileTypesCustomImageExtensions, []string{"", "webp"}) // Empty and missing dot
 
 	err := ValidateConfig()
 	if err == nil {
@@ -137,9 +135,9 @@ func testInvalidImageExtensions(t *testing.T) {
 func testInvalidBinaryExtensions(t *testing.T) {
 	t.Helper()
 
-	viper.Reset()
+	Reset()
 	SetDefaultConfig()
-	viper.Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{"custom"}) // Missing dot
+	Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{"custom"}) // Missing dot
 
 	err := ValidateConfig()
 	if err == nil {
@@ -151,9 +149,9 @@ func testInvalidBinaryExtensions(t *testing.T) {
 func testInvalidCustomLanguages(t *testing.T) {
 	t.Helper()
 
-	viper.Reset()
+	Reset()
 	SetDefaultConfig()
-	viper.Set(
+	Set(
 		shared.ConfigKeyFileTypesCustomLanguages, map[string]string{
 			"zig": "zig", // Missing dot in extension
 			".v":  "",    // Empty language

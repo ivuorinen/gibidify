@@ -10,12 +10,9 @@ import (
 // This helper reduces code duplication and ensures consistent registry initialization.
 func createTestRegistry() *FileTypeRegistry {
 	return &FileTypeRegistry{
-		imageExts:    getImageExtensions(),
-		binaryExts:   getBinaryExtensions(),
-		languageMap:  getLanguageMap(),
-		extCache:     make(map[string]string, shared.FileTypeRegistryMaxCacheSize),
-		resultCache:  make(map[string]FileTypeResult, shared.FileTypeRegistryMaxCacheSize),
-		maxCacheSize: shared.FileTypeRegistryMaxCacheSize,
+		imageExts:   getImageExtensions(),
+		binaryExts:  getBinaryExtensions(),
+		languageMap: getLanguageMap(),
 	}
 }
 

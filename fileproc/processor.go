@@ -3,14 +3,12 @@ package fileproc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
@@ -27,148 +25,57 @@ type WriteRequest struct {
 
 // FileProcessor handles file processing operations.
 type FileProcessor struct {
-	rootPath        string
-	sizeLimit       int64
-	resourceMonitor *ResourceMonitor
+	rootPath  string
+	sizeLimit int64
 }
 
 // NewFileProcessor creates a new file processor.
 func NewFileProcessor(rootPath string) *FileProcessor {
 	return &FileProcessor{
-		rootPath:        rootPath,
-		sizeLimit:       config.FileSizeLimit(),
-		resourceMonitor: NewResourceMonitor(),
-	}
-}
-
-// NewFileProcessorWithMonitor creates a new file processor with a shared resource monitor.
-func NewFileProcessorWithMonitor(rootPath string, monitor *ResourceMonitor) *FileProcessor {
-	return &FileProcessor{
-		rootPath:        rootPath,
-		sizeLimit:       config.FileSizeLimit(),
-		resourceMonitor: monitor,
+		rootPath:  rootPath,
+		sizeLimit: config.FileSizeLimit(),
 	}
 }
 
 // ProcessFile reads the file at filePath and sends a formatted output to outCh.
 // It automatically chooses between loading the entire file or streaming based on file size.
 func ProcessFile(filePath string, outCh chan<- WriteRequest, rootPath string) {
-	processor := NewFileProcessor(rootPath)
-	ctx := context.Background()
-	if err := processor.ProcessWithContext(ctx, filePath, outCh); err != nil {
+	if err := ProcessFileContext(context.Background(), filePath, outCh, rootPath); err != nil {
 		shared.LogErrorf(err, shared.FileProcessingMsgFailedToProcess, filePath)
 	}
 }
 
-// ProcessFileWithMonitor processes a file using a shared resource monitor.
-func ProcessFileWithMonitor(
-	ctx context.Context,
-	filePath string,
-	outCh chan<- WriteRequest,
-	rootPath string,
-	monitor *ResourceMonitor,
-) error {
-	if monitor == nil {
-		monitor = NewResourceMonitor()
-	}
-	processor := NewFileProcessorWithMonitor(rootPath, monitor)
-
-	return processor.ProcessWithContext(ctx, filePath, outCh)
+// ProcessFileContext processes a file, honoring context cancellation.
+func ProcessFileContext(ctx context.Context, filePath string, outCh chan<- WriteRequest, rootPath string) error {
+	return NewFileProcessor(rootPath).ProcessWithContext(ctx, filePath, outCh)
 }
 
 // Process handles file processing with the configured settings.
 func (p *FileProcessor) Process(filePath string, outCh chan<- WriteRequest) {
-	ctx := context.Background()
-	if err := p.ProcessWithContext(ctx, filePath, outCh); err != nil {
+	if err := p.ProcessWithContext(context.Background(), filePath, outCh); err != nil {
 		shared.LogErrorf(err, shared.FileProcessingMsgFailedToProcess, filePath)
 	}
 }
 
-// ProcessWithContext handles file processing with context and resource monitoring.
+// ProcessWithContext handles file processing with context cancellation.
 func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string, outCh chan<- WriteRequest) error {
-	// Create file processing context with timeout
-	fileCtx, fileCancel := p.resourceMonitor.CreateFileProcessingContext(ctx)
-	defer fileCancel()
-
-	// Wait for rate limiting
-	if err := p.resourceMonitor.WaitForRateLimit(fileCtx); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			structErr := shared.NewStructuredError(
-				shared.ErrorTypeValidation,
-				shared.CodeResourceLimitTimeout,
-				"file processing timeout during rate limiting",
-				filePath,
-				nil,
-			)
-			shared.LogErrorf(structErr, "File processing timeout during rate limiting: %s", filePath)
-
-			return structErr
-		}
-
-		return err
-	}
-
-	// Validate file and check resource limits
-	fileInfo, err := p.validateFileWithLimits(fileCtx, filePath)
+	fileInfo, err := p.validateFile(ctx, filePath)
 	if err != nil {
 		return err // Error already logged
 	}
 
-	// Acquire read slot for concurrent processing
-	if err := p.resourceMonitor.AcquireReadSlot(fileCtx); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) {
-			structErr := shared.NewStructuredError(
-				shared.ErrorTypeValidation,
-				shared.CodeResourceLimitTimeout,
-				"file processing timeout waiting for read slot",
-				filePath,
-				nil,
-			)
-			shared.LogErrorf(structErr, "File processing timeout waiting for read slot: %s", filePath)
-
-			return structErr
-		}
-
-		return err
-	}
-	defer p.resourceMonitor.ReleaseReadSlot()
-
-	// Check hard memory limits before processing
-	if err := p.resourceMonitor.CheckHardMemoryLimit(); err != nil {
-		shared.LogErrorf(err, "Hard memory limit check failed for file: %s", filePath)
-
-		return err
-	}
-
-	// Get relative path
 	relPath := p.getRelativePath(filePath)
-
-	// Process file with timeout
-	processStart := time.Now()
 
 	// Choose processing strategy based on file size
 	if fileInfo.Size() <= shared.FileProcessingStreamThreshold {
-		err = p.processInMemoryWithContext(fileCtx, filePath, relPath, outCh)
-	} else {
-		err = p.processStreamingWithContext(fileCtx, filePath, relPath, outCh, fileInfo.Size())
+		return p.processInMemoryWithContext(ctx, filePath, relPath, outCh)
 	}
 
-	// Only record success if processing completed without error
-	if err != nil {
-		return err
-	}
-
-	// Record successful processing only on success path
-	p.resourceMonitor.RecordFileProcessed(fileInfo.Size())
-	logger := shared.GetLogger()
-	logger.Debugf("File processed in %v: %s", time.Since(processStart), filePath)
-
-	return nil
+	return p.processStreamingWithContext(ctx, filePath, relPath, outCh, fileInfo.Size())
 }
 
-// validateFileWithLimits checks if the file can be processed with resource limits.
-func (p *FileProcessor) validateFileWithLimits(ctx context.Context, filePath string) (os.FileInfo, error) {
-	// Check context cancellation
+// validateFile stats the file and enforces the configured size limit.
+func (p *FileProcessor) validateFile(ctx context.Context, filePath string) (os.FileInfo, error) {
 	if err := shared.CheckContextCancellation(ctx, "file validation"); err != nil {
 		return nil, fmt.Errorf("context check during file validation: %w", err)
 	}
@@ -186,29 +93,17 @@ func (p *FileProcessor) validateFileWithLimits(ctx context.Context, filePath str
 		return nil, structErr
 	}
 
-	// Check traditional size limit
 	if fileInfo.Size() > p.sizeLimit {
-		c := map[string]any{
-			"file_size":  fileInfo.Size(),
-			"size_limit": p.sizeLimit,
-		}
 		structErr := shared.NewStructuredError(
 			shared.ErrorTypeValidation,
 			shared.CodeValidationSize,
 			fmt.Sprintf(shared.FileProcessingMsgSizeExceeds, fileInfo.Size(), p.sizeLimit),
 			filePath,
-			c,
+			map[string]any{"file_size": fileInfo.Size(), "size_limit": p.sizeLimit},
 		)
 		shared.LogErrorf(structErr, "Skipping large file %s", filePath)
 
 		return nil, structErr
-	}
-
-	// Check resource limits
-	if err := p.resourceMonitor.ValidateFileProcessing(filePath, fileInfo.Size()); err != nil {
-		shared.LogErrorf(err, "Resource limit validation failed for file: %s", filePath)
-
-		return nil, err
 	}
 
 	return fileInfo, nil
@@ -230,20 +125,8 @@ func (p *FileProcessor) processInMemoryWithContext(
 	filePath, relPath string,
 	outCh chan<- WriteRequest,
 ) error {
-	// Check context before reading
-	select {
-	case <-ctx.Done():
-		structErr := shared.NewStructuredError(
-			shared.ErrorTypeValidation,
-			shared.CodeResourceLimitTimeout,
-			"file processing canceled",
-			filePath,
-			nil,
-		)
-		shared.LogErrorf(structErr, "File processing canceled: %s", filePath)
-
-		return structErr
-	default:
+	if err := shared.CheckContextCancellation(ctx, "file read"); err != nil {
+		return fmt.Errorf("context check before read: %w", err)
 	}
 
 	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated by walker
@@ -259,35 +142,9 @@ func (p *FileProcessor) processInMemoryWithContext(
 		return structErr
 	}
 
-	// Check context again after reading
 	select {
 	case <-ctx.Done():
-		structErr := shared.NewStructuredError(
-			shared.ErrorTypeValidation,
-			shared.CodeResourceLimitTimeout,
-			"file processing canceled after read",
-			filePath,
-			nil,
-		)
-		shared.LogErrorf(structErr, "File processing canceled after read: %s", filePath)
-
-		return structErr
-	default:
-	}
-
-	// Try to send the result, but respect context cancellation
-	select {
-	case <-ctx.Done():
-		structErr := shared.NewStructuredError(
-			shared.ErrorTypeValidation,
-			shared.CodeResourceLimitTimeout,
-			"file processing canceled before output",
-			filePath,
-			nil,
-		)
-		shared.LogErrorf(structErr, "File processing canceled before output: %s", filePath)
-
-		return structErr
+		return fmt.Errorf("file processing canceled before output: %w", ctx.Err())
 	case outCh <- WriteRequest{
 		Path:     relPath,
 		Content:  p.formatContent(relPath, string(content)),
@@ -306,25 +163,8 @@ func (p *FileProcessor) processStreamingWithContext(
 	outCh chan<- WriteRequest,
 	size int64,
 ) error {
-	// Check context before creating reader
-	select {
-	case <-ctx.Done():
-		structErr := shared.NewStructuredError(
-			shared.ErrorTypeValidation,
-			shared.CodeResourceLimitTimeout,
-			"streaming processing canceled",
-			filePath,
-			nil,
-		)
-		shared.LogErrorf(structErr, "Streaming processing canceled: %s", filePath)
-
-		return structErr
-	default:
-	}
-
-	reader := p.createStreamReaderWithContext(ctx, filePath, relPath)
+	reader := p.createStreamReader(filePath, relPath)
 	if reader == nil {
-		// Error already logged, create and return error
 		return shared.NewStructuredError(
 			shared.ErrorTypeProcessing,
 			shared.CodeProcessingFileRead,
@@ -334,19 +174,9 @@ func (p *FileProcessor) processStreamingWithContext(
 		)
 	}
 
-	// Try to send the result, but respect context cancellation
 	select {
 	case <-ctx.Done():
-		structErr := shared.NewStructuredError(
-			shared.ErrorTypeValidation,
-			shared.CodeResourceLimitTimeout,
-			"streaming processing canceled before output",
-			filePath,
-			nil,
-		)
-		shared.LogErrorf(structErr, "Streaming processing canceled before output: %s", filePath)
-
-		return structErr
+		return fmt.Errorf("streaming processing canceled before output: %w", ctx.Err())
 	case outCh <- WriteRequest{
 		Path:     relPath,
 		Content:  "", // Empty since content is in Reader
@@ -359,17 +189,8 @@ func (p *FileProcessor) processStreamingWithContext(
 	return nil
 }
 
-// createStreamReaderWithContext creates a reader that combines header and file content with context awareness.
-func (p *FileProcessor) createStreamReaderWithContext(
-	ctx context.Context, filePath, relPath string,
-) io.Reader {
-	// Check context before opening file
-	select {
-	case <-ctx.Done():
-		return nil
-	default:
-	}
-
+// createStreamReader creates a reader that combines header and file content.
+func (p *FileProcessor) createStreamReader(filePath, relPath string) io.Reader {
 	file, err := os.Open(filePath) // #nosec G304 - filePath is validated by walker
 	if err != nil {
 		structErr := shared.WrapError(
@@ -382,9 +203,8 @@ func (p *FileProcessor) createStreamReaderWithContext(
 
 		return nil
 	}
-	header := p.formatHeader(relPath)
 
-	return newHeaderFileReader(header, file)
+	return newHeaderFileReader(p.formatHeader(relPath), file)
 }
 
 // formatContent formats the file content with header.
