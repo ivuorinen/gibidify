@@ -4,8 +4,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/spf13/viper"
-
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
 	"github.com/ivuorinen/gibidify/testutil"
@@ -23,7 +21,7 @@ func TestDefaultConfig(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Point Viper to the temp directory with no config file.
-	originalConfigPaths := viper.ConfigFileUsed()
+	originalConfigPaths := config.FileUsed()
 	testutil.ResetViperConfig(t, tmpDir)
 
 	// Check defaults
@@ -38,7 +36,7 @@ func TestDefaultConfig(t *testing.T) {
 	}
 
 	// Restore Viper state
-	viper.SetConfigFile(originalConfigPaths)
+	config.SetConfigFile(originalConfigPaths)
 }
 
 // TestLoadConfigFile verifies that when a valid config file is present,
@@ -57,18 +55,18 @@ ignoreDirectories:
 	testutil.CreateTestFile(t, tmpDir, "config.yaml", configContent)
 
 	// Reset viper and point to the new config path
-	viper.Reset()
-	viper.AddConfigPath(tmpDir)
+	config.Reset()
+	config.AddConfigPath(tmpDir)
 
 	// Force Viper to read our config file
-	testutil.MustSucceed(t, viper.ReadInConfig(), "reading config file")
+	testutil.MustSucceed(t, config.ReadInConfig(), "reading config file")
 
 	// Validate loaded data
-	if got := viper.GetInt64("fileSizeLimit"); got != testFileSizeLimit {
+	if got := config.GetInt64("fileSizeLimit"); got != testFileSizeLimit {
 		t.Errorf("Expected fileSizeLimit=123456, got %d", got)
 	}
 
-	ignored := viper.GetStringSlice("ignoreDirectories")
+	ignored := config.GetStringSlice("ignoreDirectories")
 	if len(ignored) != 2 || ignored[0] != "testdir1" || ignored[1] != "testdir2" {
 		t.Errorf("Expected [\"testdir1\", \"testdir2\"], got %v", ignored)
 	}
@@ -92,8 +90,8 @@ func TestLoadConfigWithValidation(t *testing.T) {
 	}
 
 	// Reset viper and set config path
-	viper.Reset()
-	viper.AddConfigPath(tempDir)
+	config.Reset()
+	config.AddConfigPath(tempDir)
 
 	// This should load the config but validation should fail and fall back to defaults
 	config.LoadConfig()

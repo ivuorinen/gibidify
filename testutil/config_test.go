@@ -5,8 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/spf13/viper"
-
+	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
 )
 
@@ -21,11 +20,11 @@ func TestResetViperConfig(t *testing.T) {
 			name:       "reset with empty config path",
 			configPath: "",
 			preSetup: func() {
-				viper.Set(shared.TestKeyName, "value")
+				config.Set(shared.TestKeyName, "value")
 			},
 			verify: func(t *testing.T) {
 				t.Helper()
-				if viper.IsSet(shared.TestKeyName) {
+				if config.IsSet(shared.TestKeyName) {
 					t.Error("Viper config not reset properly")
 				}
 			},
@@ -34,15 +33,15 @@ func TestResetViperConfig(t *testing.T) {
 			name:       "reset with config path",
 			configPath: t.TempDir(),
 			preSetup: func() {
-				viper.Set(shared.TestKeyName, "value")
+				config.Set(shared.TestKeyName, "value")
 			},
 			verify: func(t *testing.T) {
 				t.Helper()
-				if viper.IsSet(shared.TestKeyName) {
+				if config.IsSet(shared.TestKeyName) {
 					t.Error("Viper config not reset properly")
 				}
 				// Verify config path was added
-				paths := viper.ConfigFileUsed()
+				paths := config.FileUsed()
 				if paths == "" {
 					// This is expected as no config file exists
 					return
