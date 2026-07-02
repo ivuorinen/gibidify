@@ -175,7 +175,6 @@ const (
 	// Resource Limit Error Codes.
 	CodeResourceLimitFiles       = "FILE_COUNT_LIMIT"
 	CodeResourceLimitTotalSize   = "TOTAL_SIZE_LIMIT"
-	CodeResourceLimitTimeout     = "TIMEOUT"
 	CodeResourceLimitMemory      = "MEMORY_LIMIT"
 	CodeResourceLimitConcurrency = "CONCURRENCY_LIMIT"
 	CodeResourceLimitRate        = "RATE_LIMIT"

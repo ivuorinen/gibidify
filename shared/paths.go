@@ -85,8 +85,9 @@ func ValidateSourcePath(path string) error {
 			)
 		}
 
-		// Check if the absolute path tries to escape the current working directory
-		if !strings.HasPrefix(abs, cwdAbs) {
+		// Check if the absolute path tries to escape the current working directory.
+		// Require a path-separator boundary so /cwd does not match a sibling /cwd-evil.
+		if abs != cwdAbs && !strings.HasPrefix(abs, cwdAbs+string(filepath.Separator)) {
 			return NewStructuredError(
 				ErrorTypeValidation,
 				CodeValidationPath,
