@@ -56,8 +56,6 @@ func SetDefaultConfig() {
 	SetDefault(shared.ConfigKeyFileSizeLimit, shared.ConfigFileSizeLimitDefault)
 	SetDefault(shared.ConfigKeyIgnoreDirectories, shared.ConfigIgnoredDirectoriesDefault)
 	SetDefault(shared.ConfigKeyMaxConcurrency, shared.ConfigMaxConcurrencyDefault)
-	SetDefault(shared.ConfigKeySupportedFormats, shared.ConfigSupportedFormatsDefault)
-	SetDefault(shared.ConfigKeyFilePatterns, shared.ConfigFilePatternsDefault)
 
 	// FileTypeRegistry defaults
 	SetDefault(shared.ConfigKeyFileTypesEnabled, shared.ConfigFileTypesEnabledDefault)

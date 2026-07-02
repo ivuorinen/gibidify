@@ -58,14 +58,6 @@ func TestValidateConfig(t *testing.T) {
 			errContains: "path separator",
 		},
 		{
-			name: "invalid supported format",
-			config: map[string]any{
-				"supportedFormats": []string{"json", "xml", "yaml"},
-			},
-			wantErr:     true,
-			errContains: "not a valid format",
-		},
-		{
 			name: "invalid max concurrency",
 			config: map[string]any{
 				"maxConcurrency": 0,
@@ -78,9 +70,7 @@ func TestValidateConfig(t *testing.T) {
 			config: map[string]any{
 				"fileSizeLimit":     shared.ConfigFileSizeLimitDefault,
 				"ignoreDirectories": []string{"node_modules", ".git", ".vscode"},
-				"supportedFormats":  []string{"json", "yaml", "markdown"},
 				"maxConcurrency":    8,
-				"filePatterns":      []string{"*.go", "*.js", "*.py"},
 			},
 			wantErr: false,
 		},
@@ -132,30 +122,6 @@ func TestIsValidFormat(t *testing.T) {
 		result := config.IsValidFormat(tt.format)
 		if result != tt.valid {
 			t.Errorf("IsValidFormat(%q) = %v, want %v", tt.format, result, tt.valid)
-		}
-	}
-}
-
-// TestValidateFileSize tests the ValidateFileSize function.
-func TestValidateFileSize(t *testing.T) {
-	config.Reset()
-	config.Set("fileSizeLimit", shared.ConfigFileSizeLimitDefault)
-
-	tests := []struct {
-		name    string
-		size    int64
-		wantErr bool
-	}{
-		{"size within limit", shared.ConfigFileSizeLimitDefault - 1, false},
-		{"size at limit", shared.ConfigFileSizeLimitDefault, false},
-		{"size exceeds limit", shared.ConfigFileSizeLimitDefault + 1, true},
-		{"zero size", 0, false},
-	}
-
-	for _, tt := range tests {
-		err := config.ValidateFileSize(tt.size)
-		if (err != nil) != tt.wantErr {
-			t.Errorf("%s: ValidateFileSize(%d) error = %v, wantErr %v", tt.name, tt.size, err, tt.wantErr)
 		}
 	}
 }

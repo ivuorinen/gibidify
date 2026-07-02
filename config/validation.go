@@ -36,9 +36,7 @@ func validateBasicSettings() []string {
 
 	validationErrors = append(validationErrors, validateFileSizeLimit()...)
 	validationErrors = append(validationErrors, validateIgnoreDirectories()...)
-	validationErrors = append(validationErrors, validateSupportedFormats()...)
 	validationErrors = append(validationErrors, validateConcurrencySettings()...)
-	validationErrors = append(validationErrors, validateFilePatterns()...)
 
 	return validationErrors
 }
@@ -95,29 +93,6 @@ func validateIgnoreDirectories() []string {
 	return validationErrors
 }
 
-// validateSupportedFormats validates the supported formats setting.
-func validateSupportedFormats() []string {
-	var validationErrors []string
-
-	if !IsSet(shared.ConfigKeySupportedFormats) {
-		return validationErrors
-	}
-
-	supportedFormats := GetStringSlice(shared.ConfigKeySupportedFormats)
-	validFormats := map[string]bool{shared.FormatJSON: true, shared.FormatYAML: true, shared.FormatMarkdown: true}
-	for i, format := range supportedFormats {
-		format = strings.ToLower(strings.TrimSpace(format))
-		if !validFormats[format] {
-			validationErrors = append(
-				validationErrors,
-				fmt.Sprintf("supportedFormats[%d] (%s) is not a valid format (json, yaml, markdown)", i, format),
-			)
-		}
-	}
-
-	return validationErrors
-}
-
 // validateConcurrencySettings validates the concurrency settings.
 func validateConcurrencySettings() []string {
 	var validationErrors []string
@@ -137,34 +112,6 @@ func validateConcurrencySettings() []string {
 			validationErrors,
 			fmt.Sprintf("maxConcurrency (%d) is unreasonably high (max 100)", maxConcurrency),
 		)
-	}
-
-	return validationErrors
-}
-
-// validateFilePatterns validates the file patterns setting.
-func validateFilePatterns() []string {
-	var validationErrors []string
-
-	if !IsSet(shared.ConfigKeyFilePatterns) {
-		return validationErrors
-	}
-
-	filePatterns := GetStringSlice(shared.ConfigKeyFilePatterns)
-	for i, pattern := range filePatterns {
-		if errMsg := validateEmptyElement(shared.ConfigKeyFilePatterns, pattern, i); errMsg != "" {
-			validationErrors = append(validationErrors, errMsg)
-
-			continue
-		}
-		pattern = strings.TrimSpace(pattern)
-		// Basic validation - patterns should contain at least one alphanumeric character
-		if !strings.ContainsAny(pattern, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") {
-			validationErrors = append(
-				validationErrors,
-				fmt.Sprintf("filePatterns[%d] (%s) appears to be invalid", i, pattern),
-			)
-		}
 	}
 
 	return validationErrors
@@ -297,22 +244,6 @@ func validateMaxTotalSizeLimit() []string {
 	}
 
 	return validationErrors
-}
-
-// ValidateFileSize checks if a file size is within the configured limit.
-func ValidateFileSize(size int64) error {
-	limit := FileSizeLimit()
-	if size > limit {
-		return shared.NewStructuredError(
-			shared.ErrorTypeValidation,
-			shared.CodeValidationSize,
-			fmt.Sprintf(shared.FileProcessingMsgSizeExceeds, size, limit),
-			"",
-			map[string]any{"file_size": size, "size_limit": limit},
-		)
-	}
-
-	return nil
 }
 
 // ValidateOutputFormat checks if an output format is valid.

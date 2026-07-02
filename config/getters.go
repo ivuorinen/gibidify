@@ -25,18 +25,6 @@ func MaxConcurrency() int {
 	return GetInt(shared.ConfigKeyMaxConcurrency)
 }
 
-// SupportedFormats returns the list of supported output formats.
-// Returns empty slice if not set.
-func SupportedFormats() []string {
-	return GetStringSlice(shared.ConfigKeySupportedFormats)
-}
-
-// FilePatterns returns the list of file patterns.
-// Returns empty slice if not set.
-func FilePatterns() []string {
-	return GetStringSlice(shared.ConfigKeyFilePatterns)
-}
-
 // IsValidFormat checks if the given format is valid.
 func IsValidFormat(format string) bool {
 	format = strings.ToLower(strings.TrimSpace(format))

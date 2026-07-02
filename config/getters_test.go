@@ -40,21 +40,6 @@ func TestConfigGetters(t *testing.T) {
 			getterFunc:     func() any { return config.MaxConcurrency() },
 			expectedResult: 8,
 		},
-		{
-			name:           "GetSupportedFormats",
-			configKey:      "supportedFormats",
-			configValue:    []string{"json", "yaml", "markdown"},
-			getterFunc:     func() any { return config.SupportedFormats() },
-			expectedResult: []string{"json", "yaml", "markdown"},
-		},
-		{
-			name:           "GetFilePatterns",
-			configKey:      "filePatterns",
-			configValue:    []string{"*.go", "*.js", "*.py"},
-			getterFunc:     func() any { return config.FilePatterns() },
-			expectedResult: []string{"*.go", "*.js", "*.py"},
-		},
-
 		// File type configuration getters
 		{
 			name:           "GetFileTypesEnabled",
