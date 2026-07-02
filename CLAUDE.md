@@ -5,11 +5,9 @@ Supports markdown/JSON/YAML with concurrent processing.
 
 ## Architecture
 
-**Core**: `main.go`, `cli/`, `fileproc/`, `config/`, `shared/`, `testutil/`, `cmd/`
+**Core**: `main.go`, `cli/`, `fileproc/`, `config/`, `shared/`, `testutil/`
 
-**Advanced**: `metrics/`, `templates/`, `benchmark/`
-
-**Modules**: Collection, processing, writers, registry (~63ns cache), resource limits, metrics, templating
+**Modules**: Collection, processing, writers, file-type registry, file-size/count caps
 
 **Patterns**: Producer-consumer, thread-safe registry, streaming, modular (50-200 lines)
 
@@ -24,7 +22,7 @@ make lint-fix && make lint && make test
 ## Config
 
 `~/.config/gibidify/config.yaml`
-Size limit 5MB, ignore dirs, custom types, 100MB memory limit
+Size limit 5MB, ignore dirs, custom types, max file count/total size caps
 
 ## Linting Standards (MANDATORY)
 
@@ -46,7 +44,7 @@ Size limit 5MB, ignore dirs, custom types, 100MB memory limit
 
 ## Development Patterns
 
-**Logging**: Use `shared.GetLogger()` for all logging (replaces logrus). Default WARN level, set via `--log-level` flag
+**Logging**: Use `shared.GetLogger()` for all logging (stdlib `log/slog` backend). Default WARN level, set via `--log-level` flag
 **Error Handling**: Use `shared.WrapError` family for structured errors with context
 **Streaming**: Use `shared.StreamContent/StreamLines` for consistent file processing
 **Context**: Use `shared.CheckContextCancellation` for standardized cancellation
@@ -66,7 +64,7 @@ The linting configuration is carefully tuned and should not be altered during no
 
 **Health**: lint 0 issues; tests pass with `-race`. Run `make lint && go test -race ./...` to verify.
 
-**Done**: Deduplication, errors, benchmarks, config, optimization, modularization, linting, metrics system, templating
+**Done**: Deduplication, errors, benchmarks, config, optimization, modularization, linting
 
 ## Workflow
 
