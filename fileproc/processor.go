@@ -4,6 +4,7 @@ package fileproc
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -32,7 +33,7 @@ func NewFileProcessor(rootPath string) *FileProcessor {
 }
 
 // ProcessFile reads the file at filePath and sends a formatted output to outCh.
-// It automatically chooses between loading the entire file or streaming based on file size.
+// The file is buffered whole within the configured file-size limit.
 func ProcessFile(filePath string, outCh chan<- WriteRequest, rootPath string) {
 	if err := ProcessFileContext(context.Background(), filePath, outCh, rootPath); err != nil {
 		shared.LogErrorf(err, shared.FileProcessingMsgFailedToProcess, filePath)
@@ -52,9 +53,10 @@ func (p *FileProcessor) Process(filePath string, outCh chan<- WriteRequest) {
 }
 
 // ProcessWithContext handles file processing with context cancellation.
-// ponytail: files are always buffered whole; the memory ceiling per file is
-// config.FileSizeLimit (default 5MB). Reintroduce streaming only if the cap is
-// raised high enough that concurrent buffering becomes a memory problem.
+// Files are always buffered whole; the per-file memory ceiling is
+// config.FileSizeLimit (default 5MB), enforced during the read. Streaming would
+// only be worth reintroducing if that cap were raised high enough that
+// concurrent buffering became a memory problem.
 func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string, outCh chan<- WriteRequest) error {
 	if err := p.validateFile(ctx, filePath); err != nil {
 		return err // Error already logged
@@ -120,17 +122,9 @@ func (p *FileProcessor) processInMemoryWithContext(
 		return fmt.Errorf("context check before read: %w", err)
 	}
 
-	content, err := os.ReadFile(filePath) // #nosec G304 - filePath is validated by walker
+	content, err := p.readCapped(filePath)
 	if err != nil {
-		structErr := shared.WrapError(
-			err,
-			shared.ErrorTypeProcessing,
-			shared.CodeProcessingFileRead,
-			"failed to read file",
-		).WithFilePath(filePath)
-		shared.LogErrorf(structErr, "Failed to read file %s", filePath)
-
-		return structErr
+		return err // Error already logged
 	}
 
 	select {
@@ -143,6 +137,54 @@ func (p *FileProcessor) processInMemoryWithContext(
 	}
 
 	return nil
+}
+
+// readCapped reads the whole file but never buffers more than sizeLimit bytes,
+// so a file that grows or is replaced after the os.Stat check cannot blow past
+// the per-file memory ceiling. Exceeding the cap is reported as a size error.
+func (p *FileProcessor) readCapped(filePath string) ([]byte, error) {
+	f, err := os.Open(filePath) // #nosec G304 - filePath is validated by walker
+	if err != nil {
+		return nil, p.wrapReadError(err, filePath)
+	}
+	defer func() {
+		if cerr := f.Close(); cerr != nil {
+			shared.LogErrorf(cerr, "Failed to close file %s", filePath)
+		}
+	}()
+
+	// Read up to sizeLimit+1 so an over-limit file is detectable.
+	content, err := io.ReadAll(io.LimitReader(f, p.sizeLimit+1))
+	if err != nil {
+		return nil, p.wrapReadError(err, filePath)
+	}
+	if int64(len(content)) > p.sizeLimit {
+		structErr := shared.NewStructuredError(
+			shared.ErrorTypeValidation,
+			shared.CodeValidationSize,
+			fmt.Sprintf(shared.FileProcessingMsgSizeExceeds, len(content), p.sizeLimit),
+			filePath,
+			map[string]any{"size_limit": p.sizeLimit},
+		)
+		shared.LogErrorf(structErr, "File grew past size limit during read %s", filePath)
+
+		return nil, structErr
+	}
+
+	return content, nil
+}
+
+// wrapReadError wraps a file-read failure and logs it.
+func (p *FileProcessor) wrapReadError(err error, filePath string) error {
+	structErr := shared.WrapError(
+		err,
+		shared.ErrorTypeProcessing,
+		shared.CodeProcessingFileRead,
+		"failed to read file",
+	).WithFilePath(filePath)
+	shared.LogErrorf(structErr, "Failed to read file %s", filePath)
+
+	return structErr
 }
 
 // formatContent formats the file content with header.

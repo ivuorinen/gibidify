@@ -84,7 +84,7 @@ func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	return nil
 }
 
-// startYAMLWriter handles YAML format output with streaming support.
+// startYAMLWriter handles YAML format output.
 func startYAMLWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
 	startFormatWriter(outFile, writeCh, done, prefix, suffix, func(f *os.File) FormatWriter {
 		return NewYAMLWriter(f)

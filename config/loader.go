@@ -16,6 +16,10 @@ import (
 func LoadConfig() {
 	logger := shared.GetLogger()
 
+	// Populate defaults first so keys absent from a loaded config file still fall
+	// back to their defaults (the store's lookup checks values, then defaults).
+	SetDefaultConfig()
+
 	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
 		// Validate XDG_CONFIG_HOME for path traversal attempts
 		if err := shared.ValidateConfigPath(xdgConfig); err != nil {
@@ -33,8 +37,7 @@ func LoadConfig() {
 	}
 
 	if err := ReadInConfig(); err != nil {
-		logger.Infof("Config file not found, using default values: %v", err)
-		SetDefaultConfig()
+		logger.Infof("No usable config file, using default values: %v", err)
 
 		return
 	}

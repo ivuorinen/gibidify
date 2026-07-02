@@ -10,7 +10,7 @@ file sections with separators, and a suffix.
 - **Recursive directory scanning** with smart file filtering
 - **Configurable file type detection** - add/remove extensions and languages
 - **Multiple output formats** - markdown, JSON, YAML
-- **Memory-optimized processing** - streaming for large files, intelligent back-pressure
+- **Safety caps** - configurable max file count and total size limits
 - **Concurrent processing** with configurable worker pools
 - **Comprehensive configuration** via YAML with validation
 - **Production-ready** with structured error handling

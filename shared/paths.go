@@ -86,8 +86,14 @@ func ValidateSourcePath(path string) error {
 		}
 
 		// Check if the absolute path tries to escape the current working directory.
-		// Require a path-separator boundary so /cwd does not match a sibling /cwd-evil.
-		if abs != cwdAbs && !strings.HasPrefix(abs, cwdAbs+string(filepath.Separator)) {
+		// Require a path-separator boundary so /cwd does not match a sibling
+		// /cwd-evil. When cwd is the filesystem root the boundary already ends in a
+		// separator, so avoid doubling it (which would reject every path).
+		boundary := cwdAbs
+		if !strings.HasSuffix(boundary, string(filepath.Separator)) {
+			boundary += string(filepath.Separator)
+		}
+		if abs != cwdAbs && !strings.HasPrefix(abs, boundary) {
 			return NewStructuredError(
 				ErrorTypeValidation,
 				CodeValidationPath,

@@ -113,7 +113,11 @@ func ReadInConfig() error {
 	for _, path := range candidates {
 		data, err := os.ReadFile(path) // #nosec G304 -- paths come from validated config dirs
 		if err != nil {
-			continue
+			if os.IsNotExist(err) {
+				continue // try the next candidate
+			}
+
+			return fmt.Errorf("reading config file %s: %w", path, err)
 		}
 		parsed := map[string]any{}
 		if err := yaml.Unmarshal(data, &parsed); err != nil {

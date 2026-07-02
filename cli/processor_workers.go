@@ -3,7 +3,6 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -71,7 +70,7 @@ func (p *Processor) sendFiles(ctx context.Context, files []string, fileCh chan s
 		select {
 		case fileCh <- fp:
 		case <-ctx.Done():
-			return errors.New("context canceled during channel send")
+			return fmt.Errorf("context canceled during channel send: %w", ctx.Err())
 		}
 	}
 

@@ -159,10 +159,10 @@ func ResetViperConfig(t *testing.T, configPath string) {
 func SetViperKeys(t *testing.T, keyValues map[string]any) {
 	t.Helper()
 	config.Reset()
+	config.SetDefaultConfig()
 	for key, value := range keyValues {
 		config.Set(key, value)
 	}
-	config.LoadConfig()
 }
 
 // SetupCLIArgs configures os.Args for CLI testing.

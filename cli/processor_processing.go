@@ -11,9 +11,9 @@ import (
 	"github.com/ivuorinen/gibidify/shared"
 )
 
-// channelBuffer bounds the file and write channels. A small multiple of the
-// worker count keeps producers slightly ahead of consumers without unbounded
-// memory growth. ponytail: fixed heuristic, revisit only if profiling shows stalls.
+// channelBuffer is the fixed capacity of the file and write channels. It keeps
+// producers slightly ahead of consumers without unbounded memory growth;
+// revisit only if profiling shows workers stalling on the channel.
 const channelBuffer = 64
 
 // Process executes the main file processing workflow.

@@ -4,6 +4,7 @@ package fileproc
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ivuorinen/gibidify/shared"
 )
@@ -52,7 +53,8 @@ func (w *MarkdownWriter) Close() error {
 // writeInline writes a file directly from content.
 func (w *MarkdownWriter) writeInline(req WriteRequest) error {
 	language := detectLanguage(req.Path)
-	formatted := fmt.Sprintf("## File: `%s`\n```%s\n%s\n```\n\n", req.Path, language, req.Content)
+	fence := codeFence(req.Content)
+	formatted := fmt.Sprintf("## File: `%s`\n%s%s\n%s\n%s\n\n", req.Path, fence, language, req.Content, fence)
 
 	if _, err := w.outFile.WriteString(formatted); err != nil {
 		return shared.WrapError(
@@ -66,7 +68,31 @@ func (w *MarkdownWriter) writeInline(req WriteRequest) error {
 	return nil
 }
 
-// startMarkdownWriter handles Markdown format output with streaming support.
+// codeFence returns a backtick fence long enough that content cannot close it
+// early. It uses one more backtick than the longest backtick run in content,
+// with a minimum of three (the standard Markdown fence).
+func codeFence(content string) string {
+	longest, run := 0, 0
+	for _, r := range content {
+		if r == '`' {
+			run++
+			if run > longest {
+				longest = run
+			}
+			continue
+		}
+		run = 0
+	}
+
+	n := longest + 1
+	if n < 3 {
+		n = 3
+	}
+
+	return strings.Repeat("`", n)
+}
+
+// startMarkdownWriter handles Markdown format output.
 func startMarkdownWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
 	startFormatWriter(outFile, writeCh, done, prefix, suffix, func(f *os.File) FormatWriter {
 		return NewMarkdownWriter(f)
