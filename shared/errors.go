@@ -54,7 +54,6 @@ type StructuredError struct {
 	Cause    error
 	Context  map[string]any
 	FilePath string
-	Line     int
 }
 
 // Error implements the error interface.
@@ -71,26 +70,9 @@ func (e *StructuredError) Unwrap() error {
 	return e.Cause
 }
 
-// WithContext adds context information to the error.
-func (e *StructuredError) WithContext(key string, value any) *StructuredError {
-	if e.Context == nil {
-		e.Context = make(map[string]any)
-	}
-	e.Context[key] = value
-
-	return e
-}
-
 // WithFilePath adds file path information to the error.
 func (e *StructuredError) WithFilePath(filePath string) *StructuredError {
 	e.FilePath = filePath
-
-	return e
-}
-
-// WithLine adds line number information to the error.
-func (e *StructuredError) WithLine(line int) *StructuredError {
-	e.Line = line
 
 	return e
 }
@@ -106,15 +88,6 @@ func NewStructuredError(errorType ErrorType, code, message, filePath string, con
 	}
 }
 
-// NewStructuredErrorf creates a new structured error with formatted message.
-func NewStructuredErrorf(errorType ErrorType, code, format string, args ...any) *StructuredError {
-	return &StructuredError{
-		Type:    errorType,
-		Code:    code,
-		Message: fmt.Sprintf(format, args...),
-	}
-}
-
 // WrapError wraps an existing error with structured error information.
 func WrapError(err error, errorType ErrorType, code, message string) *StructuredError {
 	return &StructuredError{
@@ -125,25 +98,10 @@ func WrapError(err error, errorType ErrorType, code, message string) *Structured
 	}
 }
 
-// WrapErrorf wraps an existing error with formatted message.
-func WrapErrorf(err error, errorType ErrorType, code, format string, args ...any) *StructuredError {
-	return &StructuredError{
-		Type:    errorType,
-		Code:    code,
-		Message: fmt.Sprintf(format, args...),
-		Cause:   err,
-	}
-}
-
 // Common error codes for each type.
 const (
-	// CodeCLIMissingSource CLI Error Codes.
-	CodeCLIMissingSource = "MISSING_SOURCE"
-	CodeCLIInvalidArgs   = "INVALID_ARGS"
-
 	// CodeFSPathResolution FileSystem Error Codes.
 	CodeFSPathResolution = "PATH_RESOLUTION"
-	CodeFSPermission     = "PERMISSION_DENIED"
 	CodeFSNotFound       = "NOT_FOUND"
 	CodeFSAccess         = "ACCESS_DENIED"
 
@@ -155,64 +113,21 @@ const (
 
 	// CodeConfigValidation Configuration Error Codes.
 	CodeConfigValidation = "VALIDATION"
-	CodeConfigMissing    = "MISSING"
 
 	// CodeIOFileCreate IO Error Codes.
 	CodeIOFileCreate = "FILE_CREATE"
-	CodeIOFileWrite  = "FILE_WRITE"
-	CodeIOEncoding   = "ENCODING"
 	CodeIOWrite      = "WRITE"
-	CodeIORead       = "READ"
-	CodeIOClose      = "CLOSE"
 
 	// Validation Error Codes.
 	CodeValidationFormat   = "FORMAT"
-	CodeValidationFileType = "FILE_TYPE"
 	CodeValidationSize     = "SIZE_LIMIT"
 	CodeValidationRequired = "REQUIRED"
 	CodeValidationPath     = "PATH_TRAVERSAL"
 
 	// Resource Limit Error Codes.
-	CodeResourceLimitFiles       = "FILE_COUNT_LIMIT"
-	CodeResourceLimitTotalSize   = "TOTAL_SIZE_LIMIT"
-	CodeResourceLimitMemory      = "MEMORY_LIMIT"
-	CodeResourceLimitConcurrency = "CONCURRENCY_LIMIT"
-	CodeResourceLimitRate        = "RATE_LIMIT"
+	CodeResourceLimitFiles     = "FILE_COUNT_LIMIT"
+	CodeResourceLimitTotalSize = "TOTAL_SIZE_LIMIT"
 )
-
-// Predefined error constructors for common error scenarios
-
-// NewMissingSourceError creates a CLI error for missing source argument.
-func NewMissingSourceError() *StructuredError {
-	return NewStructuredError(
-		ErrorTypeCLI,
-		CodeCLIMissingSource,
-		"usage: gibidify -source <source_directory> [--destination <output_file>] "+
-			"[--format=json|yaml|markdown (default: json)]",
-		"",
-		nil,
-	)
-}
-
-// NewFileSystemError creates a file system error.
-func NewFileSystemError(code, message string) *StructuredError {
-	return NewStructuredError(ErrorTypeFileSystem, code, message, "", nil)
-}
-
-// NewProcessingError creates a processing error.
-func NewProcessingError(code, message string) *StructuredError {
-	return NewStructuredError(ErrorTypeProcessing, code, message, "", nil)
-}
-
-// NewIOError creates an IO error.
-func NewIOError(code, message string) *StructuredError {
-	return NewStructuredError(ErrorTypeIO, code, message, "", nil)
-}
-
-// NewValidationError creates a validation error.
-func NewValidationError(code, message string) *StructuredError {
-	return NewStructuredError(ErrorTypeValidation, code, message, "", nil)
-}
 
 // LogError logs an error with a consistent format if the error is not nil.
 // The operation parameter describes what was being attempted.
@@ -234,7 +149,6 @@ func LogError(operation string, err error, args ...any) {
 				"error_code": structErr.Code,
 				"context":    structErr.Context,
 				"file_path":  structErr.FilePath,
-				"line":       structErr.Line,
 			}
 			logger.WithFields(fields).Errorf(ErrorFmtWithCause, msg, err)
 		} else {

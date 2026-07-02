@@ -395,42 +395,6 @@ func TestStructuredErrorUnwrap(t *testing.T) {
 	}
 }
 
-func TestStructuredErrorWithContext(t *testing.T) {
-	err := &StructuredError{
-		Type:    ErrorTypeProcessing,
-		Code:    "PROCESSING_FAILED",
-		Message: "processing error",
-	}
-
-	// Test adding context to error without existing context
-	result := err.WithContext("key1", "value1")
-
-	// Should return the same error instance
-	if !errors.Is(result, err) {
-		t.Error("WithContext() should return the same error instance")
-	}
-
-	// Check that context was added
-	if len(err.Context) != 1 {
-		t.Errorf("Expected context length 1, got %d", len(err.Context))
-	}
-
-	if err.Context["key1"] != "value1" {
-		t.Errorf("Expected context key1=value1, got %v", err.Context["key1"])
-	}
-
-	// Test adding more context
-	err = err.WithContext("key2", 42)
-
-	if len(err.Context) != 2 {
-		t.Errorf("Expected context length 2, got %d", len(err.Context))
-	}
-
-	if err.Context["key2"] != 42 {
-		t.Errorf("Expected context key2=42, got %v", err.Context["key2"])
-	}
-}
-
 func TestStructuredErrorWithFilePath(t *testing.T) {
 	err := &StructuredError{
 		Type:    ErrorTypeFileSystem,
@@ -457,81 +421,6 @@ func TestStructuredErrorWithFilePath(t *testing.T) {
 
 	if err.FilePath != newPath {
 		t.Errorf(TestFmtExpectedFilePath, newPath, err.FilePath)
-	}
-}
-
-func TestStructuredErrorWithLine(t *testing.T) {
-	err := &StructuredError{
-		Type:    ErrorTypeValidation,
-		Code:    "SYNTAX_ERROR",
-		Message: "syntax error",
-	}
-
-	lineNum := 42
-	result := err.WithLine(lineNum)
-
-	// Should return the same error instance
-	if !errors.Is(result, err) {
-		t.Error("WithLine() should return the same error instance")
-	}
-
-	// Check that line number was set
-	if err.Line != lineNum {
-		t.Errorf(TestFmtExpectedLine, lineNum, err.Line)
-	}
-
-	// Test overwriting existing line number
-	newLine := 100
-	err = err.WithLine(newLine)
-
-	if err.Line != newLine {
-		t.Errorf(TestFmtExpectedLine, newLine, err.Line)
-	}
-}
-
-// validateStructuredErrorBasics validates basic structured error fields.
-func validateStructuredErrorBasics(
-	t *testing.T,
-	err *StructuredError,
-	errorType ErrorType,
-	code, message, filePath string,
-) {
-	t.Helper()
-
-	if err.Type != errorType {
-		t.Errorf(TestFmtExpectedType, errorType, err.Type)
-	}
-	if err.Code != code {
-		t.Errorf(TestFmtExpectedCode, code, err.Code)
-	}
-	if err.Message != message {
-		t.Errorf(TestFmtExpectedMessage, message, err.Message)
-	}
-	if err.FilePath != filePath {
-		t.Errorf(TestFmtExpectedFilePath, filePath, err.FilePath)
-	}
-}
-
-// validateStructuredErrorContext validates context fields.
-func validateStructuredErrorContext(t *testing.T, err *StructuredError, expectedContext map[string]any) {
-	t.Helper()
-
-	if expectedContext == nil {
-		if len(err.Context) != 0 {
-			t.Errorf("Expected empty context, got %v", err.Context)
-		}
-
-		return
-	}
-
-	if len(err.Context) != len(expectedContext) {
-		t.Errorf("Expected context length %d, got %d", len(expectedContext), len(err.Context))
-	}
-
-	for k, v := range expectedContext {
-		if err.Context[k] != v {
-			t.Errorf("Expected context[%q] = %v, got %v", k, v, err.Context[k])
-		}
 	}
 }
 
@@ -587,88 +476,6 @@ func TestNewStructuredError(t *testing.T) {
 	}
 }
 
-func TestNewStructuredErrorf(t *testing.T) {
-	tests := []struct {
-		name        string
-		errorType   ErrorType
-		code        string
-		format      string
-		args        []any
-		expectedMsg string
-	}{
-		{
-			name:        "formatted error without args",
-			errorType:   ErrorTypeProcessing,
-			code:        "PROCESSING_FAILED",
-			format:      TestErrProcessingFailed,
-			args:        nil,
-			expectedMsg: TestErrProcessingFailed,
-		},
-		{
-			name:        "formatted error with args",
-			errorType:   ErrorTypeValidation,
-			code:        "INVALID_VALUE",
-			format:      "invalid value %q, expected between %d and %d",
-			args:        []any{"150", 0, 100},
-			expectedMsg: "invalid value \"150\", expected between 0 and 100",
-		},
-		{
-			name:        "formatted error with multiple types",
-			errorType:   ErrorTypeIO,
-			code:        "READ_ERROR",
-			format:      "failed to read %d bytes from %s",
-			args:        []any{1024, "/tmp/file.txt"},
-			expectedMsg: "failed to read 1024 bytes from /tmp/file.txt",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(
-			tt.name, func(t *testing.T) {
-				err := NewStructuredErrorf(tt.errorType, tt.code, tt.format, tt.args...)
-
-				if err.Type != tt.errorType {
-					t.Errorf(TestFmtExpectedType, tt.errorType, err.Type)
-				}
-				if err.Code != tt.code {
-					t.Errorf(TestFmtExpectedCode, tt.code, err.Code)
-				}
-				if err.Message != tt.expectedMsg {
-					t.Errorf(TestFmtExpectedMessage, tt.expectedMsg, err.Message)
-				}
-			},
-		)
-	}
-}
-
-// validateWrapErrorResult validates wrap error results.
-func validateWrapErrorResult(
-	t *testing.T,
-	result *StructuredError,
-	originalErr error,
-	errorType ErrorType,
-	code, message string,
-) {
-	t.Helper()
-
-	if result.Type != errorType {
-		t.Errorf(TestFmtExpectedType, errorType, result.Type)
-	}
-	if result.Code != code {
-		t.Errorf(TestFmtExpectedCode, code, result.Code)
-	}
-	if result.Message != message {
-		t.Errorf(TestFmtExpectedMessage, message, result.Message)
-	}
-	if !errors.Is(result.Cause, originalErr) {
-		t.Errorf("Expected Cause %v, got %v", originalErr, result.Cause)
-	}
-
-	if originalErr != nil && !errors.Is(result, originalErr) {
-		t.Error("Expected errors.Is to return true for wrapped error")
-	}
-}
-
 func TestWrapError(t *testing.T) {
 	originalErr := errors.New("original error")
 
@@ -705,140 +512,13 @@ func TestWrapError(t *testing.T) {
 	}
 }
 
-func TestWrapErrorf(t *testing.T) {
-	originalErr := errors.New(TestErrDiskFull)
-
-	tests := []struct {
-		name        string
-		err         error
-		errorType   ErrorType
-		code        string
-		format      string
-		args        []any
-		expectedMsg string
-	}{
-		{
-			name:        "wrap with formatted message",
-			err:         originalErr,
-			errorType:   ErrorTypeIO,
-			code:        "WRITE_FAILED",
-			format:      "failed to write %d bytes to %s",
-			args:        []any{1024, "/tmp/output.txt"},
-			expectedMsg: "failed to write 1024 bytes to /tmp/output.txt",
-		},
-		{
-			name:        "wrap without args",
-			err:         originalErr,
-			errorType:   ErrorTypeProcessing,
-			code:        "PROCESSING_ERROR",
-			format:      TestErrProcessingFailed,
-			args:        nil,
-			expectedMsg: TestErrProcessingFailed,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(
-			tt.name, func(t *testing.T) {
-				result := WrapErrorf(tt.err, tt.errorType, tt.code, tt.format, tt.args...)
-
-				if result.Type != tt.errorType {
-					t.Errorf(TestFmtExpectedType, tt.errorType, result.Type)
-				}
-				if result.Code != tt.code {
-					t.Errorf(TestFmtExpectedCode, tt.code, result.Code)
-				}
-				if result.Message != tt.expectedMsg {
-					t.Errorf(TestFmtExpectedMessage, tt.expectedMsg, result.Message)
-				}
-				if !errors.Is(result.Cause, tt.err) {
-					t.Errorf("Expected Cause %v, got %v", tt.err, result.Cause)
-				}
-			},
-		)
-	}
-}
-
-// validatePredefinedError validates predefined error constructor results.
-func validatePredefinedError(t *testing.T, err *StructuredError, expectedType ErrorType, name, code, message string) {
-	t.Helper()
-
-	if err.Type != expectedType {
-		t.Errorf(TestFmtExpectedType, expectedType, err.Type)
-	}
-
-	if name != "NewMissingSourceError" {
-		if err.Code != code {
-			t.Errorf(TestFmtExpectedCode, code, err.Code)
-		}
-		if err.Message != message {
-			t.Errorf(TestFmtExpectedMessage, message, err.Message)
-		}
-	}
-}
-
-func TestPredefinedErrorConstructors(t *testing.T) {
-	tests := []struct {
-		name         string
-		constructor  func(string, string) *StructuredError
-		expectedType ErrorType
-	}{
-		{
-			name:         "NewMissingSourceError",
-			constructor:  func(_, _ string) *StructuredError { return NewMissingSourceError() },
-			expectedType: ErrorTypeCLI,
-		},
-		{
-			name:         "NewFileSystemError",
-			constructor:  NewFileSystemError,
-			expectedType: ErrorTypeFileSystem,
-		},
-		{
-			name:         "NewProcessingError",
-			constructor:  NewProcessingError,
-			expectedType: ErrorTypeProcessing,
-		},
-		{
-			name:         "NewIOError",
-			constructor:  NewIOError,
-			expectedType: ErrorTypeIO,
-		},
-		{
-			name:         "NewValidationError",
-			constructor:  NewValidationError,
-			expectedType: ErrorTypeValidation,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(
-			tt.name, func(t *testing.T) {
-				code := "TEST_CODE"
-				message := "test message"
-
-				var err *StructuredError
-				if tt.name == "NewMissingSourceError" {
-					err = NewMissingSourceError()
-				} else {
-					err = tt.constructor(code, message)
-				}
-
-				validatePredefinedError(t, err, tt.expectedType, tt.name, code, message)
-			},
-		)
-	}
-}
-
 func TestStructuredErrorIntegration(t *testing.T) {
 	// Test a complete structured error workflow
 	originalErr := errors.New("connection timeout")
 
 	// Create and modify error through chaining
 	err := WrapError(originalErr, ErrorTypeIO, "READ_TIMEOUT", "failed to read from network").
-		WithFilePath(TestPathTmpNetworkData).
-		WithLine(42).
-		WithContext("host", "example.com").
-		WithContext("port", 8080)
+		WithFilePath(TestPathTmpNetworkData)
 
 	// Test error interface implementation
 	errorMsg := err.Error()
@@ -855,18 +535,6 @@ func TestStructuredErrorIntegration(t *testing.T) {
 	// Test properties
 	if err.FilePath != TestPathTmpNetworkData {
 		t.Errorf(TestFmtExpectedFilePath, TestPathTmpNetworkData, err.FilePath)
-	}
-	if err.Line != 42 {
-		t.Errorf(TestFmtExpectedLine, 42, err.Line)
-	}
-	if len(err.Context) != 2 {
-		t.Errorf("Expected context length 2, got %d", len(err.Context))
-	}
-	if err.Context["host"] != "example.com" {
-		t.Errorf("Expected context host=example.com, got %v", err.Context["host"])
-	}
-	if err.Context["port"] != 8080 {
-		t.Errorf("Expected context port=8080, got %v", err.Context["port"])
 	}
 }
 
@@ -923,10 +591,76 @@ func BenchmarkStructuredErrorError(b *testing.B) {
 	}
 }
 
-func BenchmarkStructuredErrorWithContext(b *testing.B) {
-	err := NewStructuredError(ErrorTypeProcessing, "PROC_FAILED", TestErrProcessingFailed, "", nil)
+// validateStructuredErrorBasics validates the core fields of a structured error.
+func validateStructuredErrorBasics(
+	t *testing.T,
+	err *StructuredError,
+	errorType ErrorType,
+	code, message, filePath string,
+) {
+	t.Helper()
 
-	for i := 0; b.Loop(); i++ {
-		_ = err.WithContext(fmt.Sprintf("key%d", i), fmt.Sprintf("value%d", i)) // nolint:errcheck // benchmark test
+	if err.Type != errorType {
+		t.Errorf(TestFmtExpectedType, errorType, err.Type)
+	}
+	if err.Code != code {
+		t.Errorf(TestFmtExpectedCode, code, err.Code)
+	}
+	if err.Message != message {
+		t.Errorf(TestFmtExpectedMessage, message, err.Message)
+	}
+	if err.FilePath != filePath {
+		t.Errorf(TestFmtExpectedFilePath, filePath, err.FilePath)
+	}
+}
+
+// validateStructuredErrorContext validates context fields.
+func validateStructuredErrorContext(t *testing.T, err *StructuredError, expectedContext map[string]any) {
+	t.Helper()
+
+	if expectedContext == nil {
+		if len(err.Context) != 0 {
+			t.Errorf("Expected empty context, got %v", err.Context)
+		}
+
+		return
+	}
+
+	if len(err.Context) != len(expectedContext) {
+		t.Errorf("Expected context length %d, got %d", len(expectedContext), len(err.Context))
+	}
+
+	for k, v := range expectedContext {
+		if err.Context[k] != v {
+			t.Errorf("Expected context[%q] = %v, got %v", k, v, err.Context[k])
+		}
+	}
+}
+
+// validateWrapErrorResult validates the result of a WrapError call.
+func validateWrapErrorResult(
+	t *testing.T,
+	result *StructuredError,
+	originalErr error,
+	errorType ErrorType,
+	code, message string,
+) {
+	t.Helper()
+
+	if result.Type != errorType {
+		t.Errorf(TestFmtExpectedType, errorType, result.Type)
+	}
+	if result.Code != code {
+		t.Errorf(TestFmtExpectedCode, code, result.Code)
+	}
+	if result.Message != message {
+		t.Errorf(TestFmtExpectedMessage, message, result.Message)
+	}
+	if !errors.Is(result.Cause, originalErr) {
+		t.Errorf("Expected Cause %v, got %v", originalErr, result.Cause)
+	}
+
+	if originalErr != nil && !errors.Is(result, originalErr) {
+		t.Error("Expected errors.Is to return true for wrapped error")
 	}
 }

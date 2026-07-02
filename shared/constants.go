@@ -50,10 +50,6 @@ const (
 	ConfigKeyFileSizeLimit = "fileSizeLimit"
 	// ConfigKeyMaxConcurrency is the config key for max concurrency.
 	ConfigKeyMaxConcurrency = "maxConcurrency"
-	// ConfigKeySupportedFormats is the config key for supported formats.
-	ConfigKeySupportedFormats = "supportedFormats"
-	// ConfigKeyFilePatterns is the config key for file patterns.
-	ConfigKeyFilePatterns = "filePatterns"
 	// ConfigKeyIgnoreDirectories is the config key for ignored directories.
 	ConfigKeyIgnoreDirectories = "ignoreDirectories"
 
@@ -103,12 +99,6 @@ var (
 
 	// ConfigCustomLanguagesDefault is the default custom language mappings.
 	ConfigCustomLanguagesDefault = map[string]string{}
-
-	// ConfigSupportedFormatsDefault is the default list of supported output formats.
-	ConfigSupportedFormatsDefault = []string{"json", "yaml", "markdown"}
-
-	// ConfigFilePatternsDefault is the default list of file patterns (empty = all files).
-	ConfigFilePatternsDefault = []string{}
 )
 
 // Test Paths and Files
@@ -147,8 +137,6 @@ const (
 	TestContent = "Hello World"
 	// TestSharedGoContent is content for shared.go test files.
 	TestSharedGoContent = "package main\n\nfunc Helper() {}"
-	// TestSafeConversion is used in safe conversion tests.
-	TestSafeConversion = "safe conversion"
 	// TestContentTest is generic test content string.
 	TestContentTest = "test content"
 	// TestContentEmpty is empty content test string.
@@ -189,8 +177,6 @@ const (
 	TestMsgFailedToWriteContent = "Failed to write content: %v"
 	// TestMsgFailedToCloseFile is used for file close failures.
 	TestMsgFailedToCloseFile = "Failed to close temp file: %v"
-	// TestFileStreamTest is a stream test filename.
-	TestFileStreamTest = "stream_test.txt"
 )
 
 // Test UI Strings
@@ -223,8 +209,6 @@ const (
 	TestErrDiskFull = "disk full"
 	// TestErrAccessDenied is an access denied error message.
 	TestErrAccessDenied = "access denied"
-	// TestErrProcessingFailed is a processing failed error message.
-	TestErrProcessingFailed = "processing failed"
 	// TestErrCannotAccessFile is an error message for file access errors.
 	TestErrCannotAccessFile = "cannot access file"
 )
@@ -351,8 +335,6 @@ const (
 const (
 	// TestFmtExpectedFilePath is format string for file path assertions.
 	TestFmtExpectedFilePath = "Expected FilePath %q, got %q"
-	// TestFmtExpectedLine is format string for line number assertions.
-	TestFmtExpectedLine = "Expected Line %d, got %d"
 	// TestFmtExpectedType is format string for type assertions.
 	TestFmtExpectedType = "Expected Type %v, got %v"
 	// TestFmtExpectedCode is format string for code assertions.
@@ -405,14 +387,6 @@ const (
 	ErrorFmtWithCause = "%s: %v"
 	// LogLevelWarningAlias is an alias for the warning log level used in validation.
 	LogLevelWarningAlias = "warning"
-)
-
-// File Processing Constants
-const (
-	// FileProcessingStreamChunkSize is the size of chunks when streaming large files (64KB).
-	FileProcessingStreamChunkSize = 64 * BytesPerKB
-	// FileProcessingStreamThreshold is the file size above which we use streaming (1MB).
-	FileProcessingStreamThreshold = BytesPerMB
 )
 
 // File Processing Error Messages
