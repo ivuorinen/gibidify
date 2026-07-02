@@ -4,11 +4,8 @@ package fileproc
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
-	"strings"
-	"sync"
 
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
@@ -16,11 +13,8 @@ import (
 
 // WriteRequest represents the content to be written.
 type WriteRequest struct {
-	Path     string
-	Content  string
-	IsStream bool
-	Reader   io.Reader
-	Size     int64 // File size for streaming files
+	Path    string
+	Content string
 }
 
 // FileProcessor handles file processing operations.
@@ -58,26 +52,23 @@ func (p *FileProcessor) Process(filePath string, outCh chan<- WriteRequest) {
 }
 
 // ProcessWithContext handles file processing with context cancellation.
+// ponytail: files are always buffered whole; the memory ceiling per file is
+// config.FileSizeLimit (default 5MB). Reintroduce streaming only if the cap is
+// raised high enough that concurrent buffering becomes a memory problem.
 func (p *FileProcessor) ProcessWithContext(ctx context.Context, filePath string, outCh chan<- WriteRequest) error {
-	fileInfo, err := p.validateFile(ctx, filePath)
-	if err != nil {
+	if err := p.validateFile(ctx, filePath); err != nil {
 		return err // Error already logged
 	}
 
 	relPath := p.getRelativePath(filePath)
 
-	// Choose processing strategy based on file size
-	if fileInfo.Size() <= shared.FileProcessingStreamThreshold {
-		return p.processInMemoryWithContext(ctx, filePath, relPath, outCh)
-	}
-
-	return p.processStreamingWithContext(ctx, filePath, relPath, outCh, fileInfo.Size())
+	return p.processInMemoryWithContext(ctx, filePath, relPath, outCh)
 }
 
 // validateFile stats the file and enforces the configured size limit.
-func (p *FileProcessor) validateFile(ctx context.Context, filePath string) (os.FileInfo, error) {
+func (p *FileProcessor) validateFile(ctx context.Context, filePath string) error {
 	if err := shared.CheckContextCancellation(ctx, "file validation"); err != nil {
-		return nil, fmt.Errorf("context check during file validation: %w", err)
+		return fmt.Errorf("context check during file validation: %w", err)
 	}
 
 	fileInfo, err := os.Stat(filePath)
@@ -90,7 +81,7 @@ func (p *FileProcessor) validateFile(ctx context.Context, filePath string) (os.F
 		).WithFilePath(filePath)
 		shared.LogErrorf(structErr, "Failed to stat file %s", filePath)
 
-		return nil, structErr
+		return structErr
 	}
 
 	if fileInfo.Size() > p.sizeLimit {
@@ -103,10 +94,10 @@ func (p *FileProcessor) validateFile(ctx context.Context, filePath string) (os.F
 		)
 		shared.LogErrorf(structErr, "Skipping large file %s", filePath)
 
-		return nil, structErr
+		return structErr
 	}
 
-	return fileInfo, nil
+	return nil
 }
 
 // getRelativePath computes the path relative to rootPath.
@@ -146,136 +137,15 @@ func (p *FileProcessor) processInMemoryWithContext(
 	case <-ctx.Done():
 		return fmt.Errorf("file processing canceled before output: %w", ctx.Err())
 	case outCh <- WriteRequest{
-		Path:     relPath,
-		Content:  p.formatContent(relPath, string(content)),
-		IsStream: false,
-		Size:     int64(len(content)),
+		Path:    relPath,
+		Content: p.formatContent(relPath, string(content)),
 	}:
 	}
 
 	return nil
-}
-
-// processStreamingWithContext creates a streaming reader for large files with context awareness.
-func (p *FileProcessor) processStreamingWithContext(
-	ctx context.Context,
-	filePath, relPath string,
-	outCh chan<- WriteRequest,
-	size int64,
-) error {
-	reader := p.createStreamReader(filePath, relPath)
-	if reader == nil {
-		return shared.NewStructuredError(
-			shared.ErrorTypeProcessing,
-			shared.CodeProcessingFileRead,
-			"failed to create stream reader",
-			filePath,
-			nil,
-		)
-	}
-
-	select {
-	case <-ctx.Done():
-		return fmt.Errorf("streaming processing canceled before output: %w", ctx.Err())
-	case outCh <- WriteRequest{
-		Path:     relPath,
-		Content:  "", // Empty since content is in Reader
-		IsStream: true,
-		Reader:   reader,
-		Size:     size,
-	}:
-	}
-
-	return nil
-}
-
-// createStreamReader creates a reader that combines header and file content.
-func (p *FileProcessor) createStreamReader(filePath, relPath string) io.Reader {
-	file, err := os.Open(filePath) // #nosec G304 - filePath is validated by walker
-	if err != nil {
-		structErr := shared.WrapError(
-			err,
-			shared.ErrorTypeProcessing,
-			shared.CodeProcessingFileRead,
-			"failed to open file for streaming",
-		).WithFilePath(filePath)
-		shared.LogErrorf(structErr, "Failed to open file for streaming %s", filePath)
-
-		return nil
-	}
-
-	return newHeaderFileReader(p.formatHeader(relPath), file)
 }
 
 // formatContent formats the file content with header.
 func (p *FileProcessor) formatContent(relPath, content string) string {
 	return fmt.Sprintf("\n---\n%s\n%s\n", relPath, content)
-}
-
-// formatHeader creates a reader for the file header.
-func (p *FileProcessor) formatHeader(relPath string) io.Reader {
-	return strings.NewReader(fmt.Sprintf("\n---\n%s\n", relPath))
-}
-
-// headerFileReader wraps a MultiReader and closes the file when EOF is reached.
-type headerFileReader struct {
-	reader io.Reader
-	file   *os.File
-	mu     sync.Mutex
-	closed bool
-}
-
-// newHeaderFileReader creates a new headerFileReader.
-func newHeaderFileReader(header io.Reader, file *os.File) *headerFileReader {
-	return &headerFileReader{
-		reader: io.MultiReader(header, file),
-		file:   file,
-	}
-}
-
-// Read implements io.Reader and closes the file on EOF.
-func (r *headerFileReader) Read(p []byte) (n int, err error) {
-	n, err = r.reader.Read(p)
-	if err == io.EOF {
-		r.closeFile()
-		// EOF is a sentinel value that must be passed through unchanged for io.Reader interface
-		return n, err //nolint:wrapcheck // EOF must not be wrapped
-	}
-	if err != nil {
-		return n, shared.WrapError(
-			err, shared.ErrorTypeIO, shared.CodeIORead,
-			"failed to read from header file reader",
-		)
-	}
-
-	return n, nil
-}
-
-// closeFile closes the file once.
-func (r *headerFileReader) closeFile() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if !r.closed && r.file != nil {
-		if err := r.file.Close(); err != nil {
-			shared.LogError("Failed to close file", err)
-		}
-		r.closed = true
-	}
-}
-
-// Close implements io.Closer and ensures the underlying file is closed.
-// This allows explicit cleanup when consumers stop reading before EOF.
-func (r *headerFileReader) Close() error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.closed || r.file == nil {
-		return nil
-	}
-	err := r.file.Close()
-	if err != nil {
-		shared.LogError("Failed to close file", err)
-	}
-	r.closed = true
-
-	return err
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/ivuorinen/gibidify/shared"
 )
 
-// YAMLWriter handles YAML format output with streaming support.
+// YAMLWriter handles YAML format output.
 type YAMLWriter struct {
 	outFile *os.File
 }
@@ -36,10 +36,6 @@ func (w *YAMLWriter) Start(prefix, suffix string) error {
 
 // WriteFile writes a file entry in YAML format.
 func (w *YAMLWriter) WriteFile(req WriteRequest) error {
-	if req.IsStream {
-		return w.writeStreaming(req)
-	}
-
 	return w.writeInline(req)
 }
 
@@ -48,40 +44,7 @@ func (w *YAMLWriter) Close() error {
 	return nil
 }
 
-// writeStreaming writes a large file as YAML in streaming chunks.
-func (w *YAMLWriter) writeStreaming(req WriteRequest) error {
-	defer shared.SafeCloseReader(req.Reader, req.Path)
-
-	language := detectLanguage(req.Path)
-
-	// Write YAML file entry start
-	if _, err := fmt.Fprintf(
-		w.outFile,
-		shared.YAMLFmtFileEntry,
-		shared.EscapeForYAML(req.Path),
-		language,
-	); err != nil {
-		return shared.WrapError(
-			err,
-			shared.ErrorTypeIO,
-			shared.CodeIOWrite,
-			"failed to write YAML file start",
-		).WithFilePath(req.Path)
-	}
-
-	// Stream content with YAML indentation
-	if err := shared.StreamLines(
-		req.Reader, w.outFile, req.Path, func(line string) string {
-			return "      " + line
-		},
-	); err != nil {
-		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "streaming YAML content")
-	}
-
-	return nil
-}
-
-// writeInline writes a small file directly as YAML.
+// writeInline writes a file directly as YAML.
 func (w *YAMLWriter) writeInline(req WriteRequest) error {
 	language := detectLanguage(req.Path)
 	fileData := FileData{

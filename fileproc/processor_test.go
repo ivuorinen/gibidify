@@ -3,7 +3,6 @@ package fileproc_test
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,7 +126,7 @@ func TestProcess(t *testing.T) {
 	}
 }
 
-// createLargeTestFile creates a large test file for streaming tests.
+// createLargeTestFile creates a large test file (> 1MB) for large-file tests.
 func createLargeTestFile(t *testing.T) *os.File {
 	t.Helper()
 
@@ -152,62 +151,9 @@ func createLargeTestFile(t *testing.T) *os.File {
 	return tmpFile
 }
 
-// processFileForStreaming processes a file and returns streaming/inline requests.
-func processFileForStreaming(t *testing.T, filePath string) (streamingReq, inlineReq *fileproc.WriteRequest) {
-	t.Helper()
-
-	ch := make(chan fileproc.WriteRequest, 1)
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		fileproc.ProcessFile(filePath, ch, "")
-	})
-
-	var streamingRequest *fileproc.WriteRequest
-	var inlineRequest *fileproc.WriteRequest
-
-	for req := range ch {
-		if req.IsStream {
-			reqCopy := req
-			streamingRequest = &reqCopy
-		} else {
-			reqCopy := req
-			inlineRequest = &reqCopy
-		}
-	}
-	wg.Wait()
-
-	return streamingRequest, inlineRequest
-}
-
-// validateStreamingRequest validates a streaming request.
-func validateStreamingRequest(t *testing.T, streamingRequest *fileproc.WriteRequest, tmpFile *os.File) {
-	t.Helper()
-
-	if streamingRequest.Reader == nil {
-		t.Error("Expected reader in streaming request")
-	}
-	if streamingRequest.Content != "" {
-		t.Error("Expected empty content for streaming request")
-	}
-
-	buffer := make([]byte, 1024)
-	n, err := streamingRequest.Reader.Read(buffer)
-	if err != nil && err != io.EOF {
-		t.Errorf("Failed to read from streaming request: %v", err)
-	}
-
-	content := string(buffer[:n])
-	if !strings.Contains(content, tmpFile.Name()) {
-		t.Error("Expected file path in streamed header content")
-	}
-
-	t.Log("Successfully triggered streaming for large file and tested reader")
-}
-
-// TestProcessorStreamingIntegration tests streaming functionality in processor.
-func TestProcessorStreamingIntegration(t *testing.T) {
+// TestProcessorLargeFileInline verifies a large file (within the size cap) is
+// buffered and emitted as a single inline request.
+func TestProcessorLargeFileInline(t *testing.T) {
 	configDir := writeTempConfig(t, `
 fileSizeLimit: 5242880
 `)
@@ -220,16 +166,24 @@ fileSizeLimit: 5242880
 		}
 	}()
 
-	streamingRequest, inlineRequest := processFileForStreaming(t, tmpFile.Name())
+	ch := make(chan fileproc.WriteRequest, 1)
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		defer close(ch)
+		fileproc.ProcessFile(tmpFile.Name(), ch, "")
+	})
 
-	if streamingRequest == nil && inlineRequest == nil {
-		t.Error("Expected either streaming or inline request but got none")
+	var reqs []fileproc.WriteRequest
+	for req := range ch {
+		reqs = append(reqs, req)
 	}
+	wg.Wait()
 
-	if streamingRequest != nil {
-		validateStreamingRequest(t, streamingRequest, tmpFile)
-	} else {
-		t.Log("File processed inline instead of streaming")
+	if len(reqs) != 1 {
+		t.Fatalf("Expected 1 inline request, got %d", len(reqs))
+	}
+	if reqs[0].Content == "" {
+		t.Error("Expected non-empty content for buffered large file")
 	}
 }
 
@@ -411,22 +365,22 @@ func TestProcessorInMemoryProcessingEdgeCases(t *testing.T) {
 	}
 }
 
-// TestProcessorStreamingEdgeCases tests edge cases in streaming processing.
-func TestProcessorStreamingEdgeCases(t *testing.T) {
+// TestProcessorLargeFileCancellation tests context cancellation while processing a large file.
+func TestProcessorLargeFileCancellation(t *testing.T) {
 	testutil.ResetViperConfig(t, "")
 
 	tmpDir := t.TempDir()
 
-	// Create a file larger than streaming threshold but test error conditions
+	// Create a large file (within the size cap) and cancel mid-processing.
 	largeFile := filepath.Join(tmpDir, "large_stream.go")
-	largeContent := strings.Repeat("// Large streaming file content line\n", 50000) // > 1MB
+	largeContent := strings.Repeat("// Large file content line\n", 50000) // > 1MB
 	if err := os.WriteFile(largeFile, []byte(largeContent), 0o600); err != nil {
 		t.Fatalf("Failed to create large file: %v", err)
 	}
 
 	processor := fileproc.NewFileProcessor(tmpDir)
 
-	// Test with context that gets canceled during streaming
+	// Test with context that gets canceled during processing
 	ctx, cancel := context.WithCancel(context.Background())
 	ch := make(chan fileproc.WriteRequest, 1)
 
@@ -451,19 +405,10 @@ func TestProcessorStreamingEdgeCases(t *testing.T) {
 	results := make([]fileproc.WriteRequest, 0)
 	for req := range ch {
 		results = append(results, req)
-
-		// If we get a streaming request, try to read from it with canceled context
-		if req.IsStream && req.Reader != nil {
-			buffer := make([]byte, 1024)
-			_, err := req.Reader.Read(buffer)
-			if err != nil && err != io.EOF {
-				t.Logf("Expected error reading from canceled stream: %v", err)
-			}
-		}
 	}
 	wg.Wait()
 
-	t.Logf("Results with streaming context cancellation: %d", len(results))
+	t.Logf("Results with large-file context cancellation: %d", len(results))
 }
 
 // Benchmarks for processor hot paths
@@ -503,20 +448,20 @@ func BenchmarkProcessFileInline(b *testing.B) {
 	}
 }
 
-// BenchmarkProcessFileStreaming benchmarks streaming file processing for large files.
-func BenchmarkProcessFileStreaming(b *testing.B) {
+// BenchmarkProcessFileLarge benchmarks buffered processing for large files (> 1MB).
+func BenchmarkProcessFileLarge(b *testing.B) {
 	// Initialize config for file processing
 	config.Reset()
 	config.LoadConfig()
 
-	// Create a large test file that triggers streaming
-	tmpFile, err := os.CreateTemp(b.TempDir(), "bench_streaming_*.go")
+	// Create a large test file (within the size cap).
+	tmpFile, err := os.CreateTemp(b.TempDir(), "bench_large_*.go")
 	if err != nil {
 		b.Fatalf(shared.TestMsgFailedToCreateFile, err)
 	}
 
-	// Create content larger than streaming threshold (1MB)
-	lineContent := "// Streaming benchmark content line that will be repeated\n"
+	// Create content larger than 1MB.
+	lineContent := "// Large-file benchmark content line that will be repeated\n"
 	repeatCount := (1048576 / len(lineContent)) + 1000
 	content := strings.Repeat(lineContent, repeatCount)
 
@@ -536,16 +481,7 @@ func BenchmarkProcessFileStreaming(b *testing.B) {
 			fileproc.ProcessFile(tmpFile.Name(), ch, "")
 		})
 		for req := range ch {
-			// If streaming, read some content to exercise the reader
-			if req.IsStream && req.Reader != nil {
-				buffer := make([]byte, 4096)
-				for {
-					_, err := req.Reader.Read(buffer)
-					if err != nil {
-						break
-					}
-				}
-			}
+			_ = req // Drain channel
 		}
 		wg.Wait()
 	}
