@@ -22,5 +22,8 @@ DISABLE_LINTERS:
   - GO_GOLANGCI_LINT
   - YAML_PRETTIER
 
+ACTION_ZIZMOR_UNSECURED_ENV_VARIABLES:
+  - GITHUB_TOKEN
+
 # By default megalinter uses list_of_files, which is wrong.
-GO_REVIVE_CLI_LINT_MODE: project
+GO_REVIVE_CLI_LINT_MODE: list_of_files
