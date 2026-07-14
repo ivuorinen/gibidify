@@ -13,15 +13,19 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
     permissions:
-      actions: read
+      actions: read # read workflow run data for the actions analysis
       contents: read
-      packages: read
-      security-events: write
+      packages: read # read dependency packages during analysis
+      security-events: write # upload CodeQL results to code scanning
     strategy:
       fail-fast: false
       matrix:

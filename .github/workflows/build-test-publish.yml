@@ -12,17 +12,21 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Run Tests with Coverage and SARIF
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
-      checks: write
-      pull-requests: write
-      security-events: write
-      statuses: write
+      contents: write # write coverage/result artifacts and release assets
+      checks: write # publish the test/coverage check run
+      pull-requests: write # comment coverage results on pull requests
+      security-events: write # upload test SARIF to code scanning
+      statuses: write # set the coverage commit status
 
     steps:
       - name: Checkout repository
@@ -88,8 +92,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
-      packages: write
+      contents: write # upload build artifacts / release assets
+      packages: write # push build artifacts to GitHub Packages
 
     strategy:
       matrix:
@@ -143,8 +147,8 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
-      packages: write
+      contents: write # attach the built image metadata to the release
+      packages: write # push the container image to GHCR
 
     steps:
       - name: Checkout repository

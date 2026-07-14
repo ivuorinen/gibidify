@@ -16,15 +16,19 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   security:
     name: Security Analysis
     runs-on: ubuntu-latest
 
     permissions:
-      security-events: write
+      security-events: write # upload gosec/govulncheck SARIF to code scanning
       contents: read
-      actions: read
+      actions: read # read workflow metadata for the analysis
 
     steps:
       - name: Checkout repository
