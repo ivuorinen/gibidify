@@ -11,15 +11,19 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   Linter:
     name: PR Lint
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-      statuses: write
+      contents: write # allow the linter to push autofix commits if enabled
+      issues: write # create/update issues from lint findings
+      pull-requests: write # post lint results as PR comments
+      statuses: write # set the PR lint commit status
     steps:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -31,4 +35,4 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      - uses: ivuorinen/actions/pr-lint@de31e11dda6488eabe95e951ebb61c6d9d500865 # v2026.06.30
+      - uses: ivuorinen/actions/pr-lint@f7725f210c6740ae8042fbe89f2024dabad8a535 # v2026.07.11

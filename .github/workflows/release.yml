@@ -9,15 +9,19 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     name: Build, package, and publish release artifacts
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
-      packages: write
-      id-token: write
+      contents: write # create the GitHub release and upload assets
+      packages: write # push release container images to GHCR
+      id-token: write # OIDC token for keyless signing / provenance
 
     steps:
       - name: Checkout
