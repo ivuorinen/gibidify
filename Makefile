@@ -33,7 +33,7 @@ CHECKMAKE_VERSION := v0.3.2
 # scanner, "always run the newest one" beats reproducibility.
 GOVULNCHECK_VERSION := latest
 # renovate: datasource=npm depName=markdownlint-cli2
-MARKDOWNLINT_CLI2_VERSION := 0.23.1
+MARKDOWNLINT_CLI2_VERSION := 0.23.2
 
 # Default goal — invoking `make` with no args prints the help table.
 .DEFAULT_GOAL := help
