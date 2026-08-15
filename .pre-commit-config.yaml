@@ -6,7 +6,7 @@
 # Tool versions are duplicated from the Makefile; keep them in sync via Renovate.
 repos:
   - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 3.8.0
+    rev: 3.11.1
     hooks:
       - id: editorconfig-checker
         alias: ec
