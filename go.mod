@@ -1,6 +1,6 @@
 module github.com/ivuorinen/gibidify
 
-go 1.26.6
+go 1.27.0
 
 require (
 	github.com/fatih/color v1.19.0
