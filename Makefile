@@ -10,7 +10,7 @@
 
 # Tool versions (managed by Renovate)
 # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
-GOLANGCI_LINT_VERSION := v2.12.2
+GOLANGCI_LINT_VERSION := v2.13.1
 # renovate: datasource=go depName=github.com/google/yamlfmt/cmd/yamlfmt
 YAMLFMT_VERSION := v0.21.0
 # renovate: datasource=go depName=github.com/rhysd/actionlint/cmd/actionlint
@@ -20,7 +20,7 @@ GOIMPORTS_VERSION := v0.47.0
 # renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
 GOSEC_VERSION := v2.28.0
 # renovate: datasource=go depName=honnef.co/go/tools/cmd/staticcheck
-STATICCHECK_VERSION := v0.7.0
+STATICCHECK_VERSION := v0.8.1
 # renovate: datasource=go depName=github.com/mgechev/revive
 # Pinned to v1.11.0 — newer revive added var-naming rules that flag the existing
 # `shared` and `metrics` package names; revive.toml is intentionally off-limits.
