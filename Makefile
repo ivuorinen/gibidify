@@ -10,7 +10,7 @@
 
 # Tool versions (managed by Renovate)
 # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
-GOLANGCI_LINT_VERSION := v2.13.1
+GOLANGCI_LINT_VERSION := v2.13.2
 # renovate: datasource=go depName=github.com/google/yamlfmt/cmd/yamlfmt
 YAMLFMT_VERSION := v0.21.0
 # renovate: datasource=go depName=github.com/rhysd/actionlint/cmd/actionlint
