@@ -1,5 +1,5 @@
 # Use a minimal base image
-FROM alpine:3.24.1
+FROM alpine:3.24.2
 
 # Add unprivileged user (Alpine uses BusyBox adduser)
 RUN adduser -D -s /bin/sh gibidify
