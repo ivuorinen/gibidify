@@ -70,12 +70,37 @@ func (w *YAMLWriter) Close() error {
 
 // encode writes v as one YAML document fragment. A fresh encoder per value
 // emits no "---" separator.
+//
+// yaml.v3 reports a failed write as a text-only "yaml: write error: …", which
+// drops the cause, so the destination's own error is returned instead to keep
+// errors.Is working (e.g. for syscall.ENOSPC), as the JSON and Markdown
+// writers do.
 func (w *YAMLWriter) encode(v any) error {
-	enc := yaml.NewEncoder(w.out)
+	out := &yamlWriteRecorder{w: w.out}
+	enc := yaml.NewEncoder(out)
 	enc.SetIndent(yamlIndent)
-	if err := enc.Encode(v); err != nil {
-		return err
+	err := enc.Encode(v)
+	if err == nil {
+		err = enc.Close()
+	}
+	if err != nil && out.err != nil {
+		return out.err
 	}
 
-	return enc.Close()
+	return err
+}
+
+// yamlWriteRecorder passes writes through to w and keeps the first error.
+type yamlWriteRecorder struct {
+	w   io.Writer
+	err error
+}
+
+func (r *yamlWriteRecorder) Write(p []byte) (int, error) {
+	n, err := r.w.Write(p)
+	if err != nil && r.err == nil {
+		r.err = err
+	}
+
+	return n, err
 }

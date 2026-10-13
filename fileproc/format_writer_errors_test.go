@@ -57,13 +57,13 @@ func assertWriteErrors(t *testing.T, cases []writeErrorCase) {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &tokenFailWriter{token: tt.token, exact: tt.exact}
 			err := tt.run(w)
-			// yaml.v3 flattens the writer's error into its own message, so the
-			// cause is checked by text rather than errors.Is.
 			var se *shared.StructuredError
 			if !errors.As(err, &se) || se.Code != shared.CodeIOWrite {
 				t.Fatalf("error = %v, want code %s", err, shared.CodeIOWrite)
 			}
-			testutil.AssertErrorContains(t, err, errInjectedWrite.Error(), tt.name)
+			if !errors.Is(err, errInjectedWrite) {
+				t.Fatalf("error = %v, want it to wrap %v", err, errInjectedWrite)
+			}
 			testutil.AssertErrorContains(t, err, tt.wantMsg, tt.name)
 			if !strings.Contains(w.buf.String(), tt.written) {
 				t.Fatalf("output = %q, want it to contain %q", w.buf.String(), tt.written)
