@@ -29,10 +29,6 @@ var (
 )
 
 func main() {
-	// Initialize UI for error handling
-	ui := cli.NewUIManager()
-	errorFormatter := cli.NewErrorFormatter(ui)
-
 	// Ctrl-C and SIGTERM cancel the run; processing then stops the workers,
 	// waits for the writer and discards its temporary output, leaving any
 	// previous output in place.
@@ -40,27 +36,41 @@ func main() {
 	err := run(ctx)
 	stop()
 
-	if err == nil {
-		return
+	// A successful run returns from main instead of calling os.Exit(0).
+	if code := exitCode(err); code != 0 {
+		os.Exit(code)
 	}
+}
+
+// exitCode reports err to the user and returns the process exit status for it:
+// 0 for nil, 130 for an interrupt, 1 for a user error and 2 for anything else.
+func exitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+
+	ui := cli.NewUIManager()
 
 	// Ctrl-C or SIGTERM is not a failure of gibidify: report it plainly and use
 	// the conventional 128+SIGINT status instead of the "unexpected error" path.
 	if errors.Is(err, context.Canceled) {
 		ui.PrintError("Interrupted")
-		os.Exit(exitInterrupted)
+
+		return exitInterrupted
 	}
 
 	// Handle errors with better formatting and suggestions
 	if cli.IsUserError(err) {
-		errorFormatter.FormatError(err)
-		os.Exit(1)
+		cli.NewErrorFormatter(ui).FormatError(err)
+
+		return 1
 	}
+
 	// System errors still go to logger for debugging
-	logger := shared.GetLogger()
-	logger.Errorf("System error: %v", err)
+	shared.GetLogger().Errorf("System error: %v", err)
 	ui.PrintError("An unexpected error occurred. Please check the logs.")
-	os.Exit(2)
+
+	return 2
 }
 
 // printVersion writes build metadata to w. Extracted for testability.
