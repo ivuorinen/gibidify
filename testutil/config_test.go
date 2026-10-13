@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gibidify/config"
+	"github.com/ivuorinen/gibidify/shared"
 )
 
 func TestResetConfig(t *testing.T) {
@@ -146,5 +147,34 @@ func verifySetupCLIArgs(t *testing.T, srcDir, outFile, prefix, suffix string, co
 	// Verify the -no-ui flag is present
 	if os.Args[11] != "-no-ui" {
 		t.Errorf("NoUI flag = %s, want -no-ui", os.Args[11])
+	}
+}
+
+// TestSetConfigKeys verifies SetConfigKeys drops earlier values, keeps the
+// defaults and applies the explicit keys on top.
+func TestSetConfigKeys(t *testing.T) {
+	t.Cleanup(config.Reset)
+
+	config.Reset()
+	config.SetDefaultConfig()
+	defaultMaxFiles := config.MaxFiles()
+
+	config.Set(TestKeyName, "value")
+	SetConfigKeys(t, map[string]any{
+		shared.ConfigKeyFileSizeLimit:  int64(2048),
+		shared.ConfigKeyMaxConcurrency: 3,
+	})
+
+	if config.IsSet(TestKeyName) {
+		t.Errorf("%s survived SetConfigKeys", TestKeyName)
+	}
+	if got := config.FileSizeLimit(); got != 2048 {
+		t.Errorf("FileSizeLimit() = %d, want 2048", got)
+	}
+	if got := config.MaxConcurrency(); got != 3 {
+		t.Errorf("MaxConcurrency() = %d, want 3", got)
+	}
+	if got := config.MaxFiles(); got != defaultMaxFiles {
+		t.Errorf("MaxFiles() = %d, want default %d", got, defaultMaxFiles)
 	}
 }
