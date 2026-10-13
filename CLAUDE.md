@@ -11,8 +11,8 @@ Supports markdown/JSON/YAML with concurrent processing.
 file-size/count caps
 
 **Patterns**: Producer-consumer pipeline with ordered output, file-type
-registry (configured once, read-only afterwards); see
-`docs/audit/arch-profile.md`
+registry (configured once, read-only afterwards); see the
+[architecture profile](docs/audit/arch-profile.md)
 
 ## Commands
 
