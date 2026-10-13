@@ -56,9 +56,10 @@ func captureExitOutput(t *testing.T, fn func()) (stderr, logged string) {
 
 	origStderr := os.Stderr
 	logger := shared.GetLogger()
+	origOutput := logger.Output()
 	t.Cleanup(func() {
 		os.Stderr = origStderr
-		logger.SetOutput(os.Stderr)
+		logger.SetOutput(origOutput)
 	})
 
 	stderrFile, err := os.Create(filepath.Join(t.TempDir(), "stderr"))
@@ -74,7 +75,7 @@ func captureExitOutput(t *testing.T, fn func()) (stderr, logged string) {
 	fn()
 
 	os.Stderr = origStderr
-	logger.SetOutput(os.Stderr)
+	logger.SetOutput(origOutput)
 
 	captured, err := os.ReadFile(stderrFile.Name())
 	if err != nil {

@@ -110,8 +110,9 @@ func TestProcessorReplacesInvalidUTF8(t *testing.T) {
 	testutil.ResetConfig(t, "")
 	var logs strings.Builder
 	logger := shared.GetLogger()
+	origOutput := logger.Output()
 	logger.SetOutput(&logs)
-	t.Cleanup(func() { logger.SetOutput(os.Stderr) })
+	t.Cleanup(func() { logger.SetOutput(origOutput) })
 
 	tmpDir := t.TempDir()
 	latin1 := filepath.Join(tmpDir, "latin1.txt")

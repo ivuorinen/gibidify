@@ -20,8 +20,9 @@ func captureLogs(t *testing.T) *bytes.Buffer {
 	buf := &bytes.Buffer{}
 	logger := shared.GetLogger()
 	logger.SetLevel(shared.LogLevelWarn)
+	origOutput := logger.Output()
 	logger.SetOutput(buf)
-	t.Cleanup(func() { logger.SetOutput(os.Stderr) })
+	t.Cleanup(func() { logger.SetOutput(origOutput) })
 
 	return buf
 }

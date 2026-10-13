@@ -106,8 +106,9 @@ func captureWarnings(t *testing.T, fn func()) string {
 	var buf bytes.Buffer
 	logger := shared.GetLogger()
 	logger.SetLevel(shared.LogLevelWarn)
+	origOutput := logger.Output()
 	logger.SetOutput(&buf)
-	t.Cleanup(func() { logger.SetOutput(os.Stderr) })
+	t.Cleanup(func() { logger.SetOutput(origOutput) })
 	fn()
 
 	return buf.String()
