@@ -1,11 +1,12 @@
 package cli
 
 import (
+	"io"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 func TestNewUIManager(t *testing.T) {
@@ -69,28 +70,28 @@ func TestUIManagerStartProgress(t *testing.T) {
 		{
 			name:        "valid progress with enabled progress",
 			total:       10,
-			description: shared.TestProgressMessage,
+			description: testutil.TestProgressMessage,
 			enabled:     true,
 			expectBar:   true,
 		},
 		{
 			name:        "disabled progress should not create bar",
 			total:       10,
-			description: shared.TestProgressMessage,
+			description: testutil.TestProgressMessage,
 			enabled:     false,
 			expectBar:   false,
 		},
 		{
 			name:        "zero total should not create bar",
 			total:       0,
-			description: shared.TestProgressMessage,
+			description: testutil.TestProgressMessage,
 			enabled:     true,
 			expectBar:   false,
 		},
 		{
 			name:        "negative total should not create bar",
 			total:       -1,
-			description: shared.TestProgressMessage,
+			description: testutil.TestProgressMessage,
 			enabled:     true,
 			expectBar:   false,
 		},
@@ -99,7 +100,7 @@ func TestUIManagerStartProgress(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				ui, _ := createTestUI() //nolint:errcheck // Test helper output buffer not used in this test
+				ui, _ := createTestUI() // Test helper output buffer not used in this test
 				ui.SetProgressOutput(tt.enabled)
 
 				ui.StartProgress(tt.total, tt.description)
@@ -116,7 +117,7 @@ func TestUIManagerStartProgress(t *testing.T) {
 }
 
 func TestUIManagerUpdateProgress(t *testing.T) {
-	ui, _ := createTestUI() //nolint:errcheck // Test helper output buffer not used in this test
+	ui, _ := createTestUI() // Test helper output buffer not used in this test
 	ui.SetProgressOutput(true)
 
 	// Test with no progress bar (should not panic)
@@ -134,7 +135,7 @@ func TestUIManagerUpdateProgress(t *testing.T) {
 }
 
 func TestUIManagerFinishProgress(t *testing.T) {
-	ui, _ := createTestUI() //nolint:errcheck // Test helper output buffer not used in this test
+	ui, _ := createTestUI() // Test helper output buffer not used in this test
 	ui.SetProgressOutput(true)
 
 	// Test with no progress bar (should not panic)
@@ -190,7 +191,7 @@ func testPrintMethod(
 	// Test color method separately (doesn't capture output but shouldn't panic)
 	t.Run(
 		methodName+" with colors should not panic", func(_ *testing.T) {
-			ui, _ := createTestUI() //nolint:errcheck // Test helper output buffer not used in this test
+			ui, _ := createTestUI() // Test helper output buffer not used in this test
 			ui.SetColorOutput(true)
 			// Should not panic
 			printFunc(ui, "Test message")
@@ -417,26 +418,26 @@ func TestIsColorTerminal(t *testing.T) {
 		},
 		{
 			name:          "github actions with CI",
-			term:          shared.TestTerminalXterm256,
+			term:          testutil.TestTerminalXterm256,
 			ci:            "true",
 			githubActions: "true",
 			expected:      true,
 		},
 		{
 			name:     "CI without github actions",
-			term:     shared.TestTerminalXterm256,
+			term:     testutil.TestTerminalXterm256,
 			ci:       "true",
 			expected: false,
 		},
 		{
 			name:     "NO_COLOR set",
-			term:     shared.TestTerminalXterm256,
+			term:     testutil.TestTerminalXterm256,
 			noColor:  "1",
 			expected: false,
 		},
 		{
 			name:       "FORCE_COLOR set",
-			term:       shared.TestTerminalXterm256,
+			term:       testutil.TestTerminalXterm256,
 			forceColor: "1",
 			expected:   true,
 		},
@@ -457,14 +458,62 @@ func TestIsColorTerminal(t *testing.T) {
 	}
 }
 
-func TestIsInteractiveTerminal(_ *testing.T) {
-	// This test is limited because we can't easily mock os.Stderr.Stat()
-	// but we can at least verify it doesn't panic and returns a boolean
-	result := isInteractiveTerminal()
+// TestIsInteractiveTerminalFalseForPipe verifies a pipe on stderr is not
+// treated as a terminal.
+func TestIsInteractiveTerminalFalseForPipe(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	orig := os.Stderr
+	os.Stderr = w
+	t.Cleanup(func() {
+		os.Stderr = orig
+		_ = r.Close()
+		_ = w.Close()
+	})
 
-	// Result should be a boolean (true or false, both are valid)
-	// result is already a boolean, so this check is always satisfied
-	_ = result
+	if isInteractiveTerminal() {
+		t.Error("isInteractiveTerminal() = true for a pipe on stderr")
+	}
+}
+
+// TestColoredStatusGoesToOutputNotStdout verifies colored status lines are
+// written to ui.output. They were printed with fatih/color's package helpers,
+// which write to stdout, and corrupted `-destination /dev/stdout` output.
+func TestColoredStatusGoesToOutputNotStdout(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	origStdout := os.Stdout
+	os.Stdout = w
+	t.Cleanup(func() { os.Stdout = origStdout })
+
+	ui, output := createTestUI()
+	ui.SetColorOutput(true)
+	t.Cleanup(func() { ui.SetColorOutput(false) })
+	ui.PrintSuccess("done %d", 1)
+	ui.PrintError("bad")
+	ui.PrintWarning("careful")
+	ui.PrintInfo("note")
+	ui.PrintHeader("head")
+
+	if err := w.Close(); err != nil {
+		t.Fatalf("closing stdout pipe: %v", err)
+	}
+	leaked, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("reading stdout pipe: %v", err)
+	}
+	if len(leaked) != 0 {
+		t.Errorf("status output leaked to stdout: %q", leaked)
+	}
+	for _, msg := range []string{"done 1", "bad", "careful", "note", "head"} {
+		if !strings.Contains(output.String(), msg) {
+			t.Errorf("ui.output missing %q: %q", msg, output.String())
+		}
+	}
 }
 
 func TestUIManagerprintf(t *testing.T) {
@@ -497,14 +546,14 @@ func setEnvOrUnset(key, value string) {
 
 // Integration test for UI workflow.
 func TestUIManagerIntegration(t *testing.T) {
-	ui, output := createTestUI() //nolint:errcheck // Test helper, output buffer is used
+	ui, output := createTestUI() // Test helper, output buffer is used
 	ui.SetColorOutput(false)     // Disable colors for consistent output
 	ui.SetProgressOutput(false)  // Disable progress for testing
 
 	// Simulate a complete UI workflow
 	ui.PrintHeader("Starting Processing")
 	ui.PrintInfo("Initializing system")
-	ui.StartProgress(3, shared.TestProgressMessage)
+	ui.StartProgress(3, testutil.TestProgressMessage)
 	ui.UpdateProgress(1)
 	ui.PrintInfo("Processing file 1")
 	ui.UpdateProgress(1)

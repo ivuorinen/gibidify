@@ -1,7 +1,11 @@
 package config_test
 
 import (
+	"bytes"
+	"errors"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gibidify/config"
@@ -17,12 +21,13 @@ const (
 // TestDefaultConfig verifies that if no config file is found,
 // the default configuration values are correctly set.
 func TestDefaultConfig(t *testing.T) {
-	// Create a temporary directory to ensure no config file is present.
+	// Create a temporary directory to ensure no config file is present, and
+	// keep the user's real config out of the search path.
 	tmpDir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+	t.Setenv("HOME", tmpDir)
 
-	// Point Viper to the temp directory with no config file.
-	originalConfigPaths := config.FileUsed()
-	testutil.ResetViperConfig(t, tmpDir)
+	testutil.ResetConfig(t, tmpDir)
 
 	// Check defaults
 	defaultSizeLimit := config.FileSizeLimit()
@@ -34,13 +39,10 @@ func TestDefaultConfig(t *testing.T) {
 	if len(ignoredDirs) == 0 {
 		t.Error("Expected some default ignored directories, got none")
 	}
-
-	// Restore Viper state
-	config.SetConfigFile(originalConfigPaths)
 }
 
 // TestLoadConfigFile verifies that when a valid config file is present,
-// viper loads the specified values correctly.
+// the store loads the specified values correctly.
 func TestLoadConfigFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
@@ -54,11 +56,10 @@ ignoreDirectories:
 
 	testutil.CreateTestFile(t, tmpDir, "config.yaml", configContent)
 
-	// Reset viper and point to the new config path
+	// Reset the store and point it at the new config path
 	config.Reset()
 	config.AddConfigPath(tmpDir)
 
-	// Force Viper to read our config file
 	testutil.MustSucceed(t, config.ReadInConfig(), "reading config file")
 
 	// Validate loaded data
@@ -72,50 +73,158 @@ ignoreDirectories:
 	}
 }
 
-// TestLoadConfigWithValidation tests that invalid config files fall back to defaults.
-func TestLoadConfigWithValidation(t *testing.T) {
-	// Create a temporary config file with invalid content
-	configContent := "fileSizeLimit: 100\n" +
-		"ignoreDirectories:\n" +
-		"- node_modules\n" +
-		"- \"\"\n" +
-		"- .git\n"
-
-	tempDir := t.TempDir()
-	configFile := tempDir + "/config.yaml"
-
-	err := os.WriteFile(configFile, []byte(configContent), 0o600)
-	if err != nil {
-		t.Fatalf("Failed to write config file: %v", err)
+// loadWithConfig writes content as $XDG_CONFIG_HOME/gibidify/config.yaml, runs
+// LoadConfig, and returns its error plus everything logged at warn level or
+// above. An empty content writes no file.
+func loadWithConfig(t *testing.T, content string) (string, error) {
+	t.Helper()
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Setenv("HOME", t.TempDir())
+	if content != "" {
+		dir := filepath.Join(xdg, shared.AppName)
+		if err := os.MkdirAll(dir, 0o750); err != nil {
+			t.Fatal(err)
+		}
+		testutil.CreateTestFile(t, dir, "config.yaml", []byte(content))
 	}
 
-	// Reset viper and set config path
-	config.Reset()
-	config.AddConfigPath(tempDir)
+	var err error
+	out := captureWarnings(t, func() {
+		config.Reset()
+		err = config.LoadConfig()
+	})
 
-	// This should load the config but validation should fail and fall back to defaults
-	config.LoadConfig()
+	return out, err
+}
 
-	// Should have fallen back to defaults due to validation failure
-	if config.FileSizeLimit() != int64(shared.ConfigFileSizeLimitDefault) {
-		t.Errorf("Expected default file size limit after validation failure, got %d", config.FileSizeLimit())
+// captureWarnings runs fn with the logger at warn level writing to a buffer.
+func captureWarnings(t *testing.T, fn func()) string {
+	t.Helper()
+	var buf bytes.Buffer
+	logger := shared.GetLogger()
+	logger.SetLevel(shared.LogLevelWarn)
+	logger.SetOutput(&buf)
+	t.Cleanup(func() { logger.SetOutput(os.Stderr) })
+	fn()
+
+	return buf.String()
+}
+
+// requireConfigError fails the test unless err is a configuration
+// StructuredError whose message contains want.
+func requireConfigError(t *testing.T, err error, want string) *shared.StructuredError {
+	t.Helper()
+	var structErr *shared.StructuredError
+	if !errors.As(err, &structErr) {
+		t.Fatalf("expected a StructuredError, got %v", err)
 	}
-	if containsString(config.IgnoredDirectories(), "") {
-		t.Errorf(
-			"Expected ignored directories not to contain empty string after validation failure, got %v",
-			config.IgnoredDirectories(),
-		)
+	if structErr.Type != shared.ErrorTypeConfiguration {
+		t.Errorf("error type = %v, want Configuration", structErr.Type)
+	}
+	if !strings.Contains(err.Error(), want) {
+		t.Errorf("error %q does not contain %q", err, want)
+	}
+
+	return structErr
+}
+
+// TestLoadConfigInvalidValueFails verifies a config file that fails validation
+// is returned as an error naming the file. Falling back to the defaults used to
+// drop the user's ignoreDirectories, so excluded files reached the output.
+func TestLoadConfigInvalidValueFails(t *testing.T) {
+	_, err := loadWithConfig(t, "fileSizeLimit: 100\nignoreDirectories:\n- node_modules\n- \"\"\n")
+
+	structErr := requireConfigError(t, err, "fileSizeLimit (100) is below minimum")
+	if !strings.HasSuffix(structErr.FilePath, filepath.Join(shared.AppName, "config.yaml")) {
+		t.Errorf("FilePath = %q, want the loaded config file", structErr.FilePath)
 	}
 }
 
-// Helper functions
+// TestLoadConfigMalformedFileFails verifies a config file that exists but does
+// not parse aborts loading instead of being replaced by defaults.
+func TestLoadConfigMalformedFileFails(t *testing.T) {
+	_, err := loadWithConfig(t, "ignoreDirectories: [secrets\n")
 
-func containsString(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
+	requireConfigError(t, err, "parsing config file")
+}
+
+// TestLoadConfigMissingFileIsQuiet verifies the no-config case loads the
+// defaults and logs nothing at warn level.
+func TestLoadConfigMissingFileIsQuiet(t *testing.T) {
+	out, err := loadWithConfig(t, "")
+	if err != nil {
+		t.Fatalf("missing config must not be an error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("expected no warnings without a config file, got: %q", out)
+	}
+}
+
+// TestLoadConfigAcceptsDotDirectories verifies dot-prefixed directory names are
+// valid ignoreDirectories entries and the rest of the list is kept.
+func TestLoadConfigAcceptsDotDirectories(t *testing.T) {
+	_, err := loadWithConfig(t, "ignoreDirectories:\n  - secrets\n  - .venv\n")
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
 	}
 
-	return false
+	got := config.IgnoredDirectories()
+	if len(got) != 2 || got[0] != "secrets" || got[1] != ".venv" {
+		t.Errorf("IgnoredDirectories() = %v, want [secrets .venv]", got)
+	}
+}
+
+// TestLoadConfigUnknownKeysWarn verifies typos and removed settings are reported.
+func TestLoadConfigUnknownKeysWarn(t *testing.T) {
+	out, err := loadWithConfig(t, "fileSizeLimit: 2048\nbackpressure:\n  enabled: true\nfileTypes:\n  enabld: true\n")
+	if err != nil {
+		t.Fatalf("unknown keys must not fail loading: %v", err)
+	}
+
+	for _, key := range []string{"backpressure", "fileTypes.enabld"} {
+		if !strings.Contains(out, "Unknown configuration key "+key+" ") {
+			t.Errorf("expected warning for %s, got: %q", key, out)
+		}
+	}
+	if got := config.FileSizeLimit(); got != 2048 {
+		t.Errorf("known keys must still apply: fileSizeLimit = %d, want 2048", got)
+	}
+}
+
+// TestLoadConfigRejectsWrongTypes verifies a quoted boolean is rejected rather
+// than silently read as false.
+func TestLoadConfigRejectsWrongTypes(t *testing.T) {
+	_, err := loadWithConfig(t, "fileTypes:\n  enabled: \"false\"\n")
+
+	requireConfigError(t, err, "fileTypes.enabled must be a boolean")
+}
+
+// TestLoadConfigIgnoresRelativeXDG verifies a relative XDG_CONFIG_HOME is
+// ignored (per the XDG spec) and $HOME/.config is used instead.
+func TestLoadConfigIgnoresRelativeXDG(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", "relative/dir")
+	t.Setenv("HOME", home)
+	dir := filepath.Join(home, ".config", shared.AppName)
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	testutil.CreateTestFile(t, dir, "config.yaml", []byte("fileSizeLimit: 4096\n"))
+
+	var err error
+	out := captureWarnings(t, func() {
+		config.Reset()
+		err = config.LoadConfig()
+	})
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+
+	if !strings.Contains(out, "Ignoring relative XDG_CONFIG_HOME") {
+		t.Errorf("expected a relative XDG warning, got: %q", out)
+	}
+	if got := config.FileSizeLimit(); got != 4096 {
+		t.Errorf("fileSizeLimit = %d, want 4096 from $HOME/.config", got)
+	}
 }

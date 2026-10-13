@@ -6,95 +6,71 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"gopkg.in/yaml.v3"
 
 	"github.com/ivuorinen/gibidify/fileproc"
-	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
-func TestStartWriterFormats(t *testing.T) {
-	// Define table-driven test cases
-	tests := []struct {
-		name        string
-		format      string
-		expectError bool
-	}{
-		{"JSON format", "json", false},
-		{"YAML format", "yaml", false},
-		{"Markdown format", "markdown", false},
-		{"Invalid format", "invalid", true},
-	}
-
-	for _, tc := range tests {
-		t.Run(
-			tc.name, func(t *testing.T) {
-				data := runWriterTest(t, tc.format)
-				if tc.expectError {
-					verifyErrorOutput(t, data)
-				} else {
-					verifyValidOutput(t, data, tc.format)
-					verifyPrefixSuffix(t, data)
-				}
-			},
-		)
-	}
-}
-
-// runWriterTest executes the writer with the given format and returns the output data.
-func runWriterTest(t *testing.T, format string) []byte {
+// writeAll runs StartWriter over reqs and returns the output and writer error.
+func writeAll(t *testing.T, format, prefix, suffix string, reqs ...fileproc.WriteRequest) ([]byte, error) {
 	t.Helper()
 	outFile, err := os.CreateTemp(t.TempDir(), "gibidify_test_output")
 	if err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
+		t.Fatalf(testutil.TestMsgFailedToCreateFile, err)
 	}
 	defer func() {
 		if closeErr := outFile.Close(); closeErr != nil {
 			t.Errorf("close temp file: %v", closeErr)
 		}
-		if removeErr := os.Remove(outFile.Name()); removeErr != nil {
-			t.Errorf("remove temp file: %v", removeErr)
-		}
 	}()
 
-	// Prepare channels
-	writeCh := make(chan fileproc.WriteRequest, 2)
-	doneCh := make(chan struct{})
-
-	// Write a couple of sample requests
-	writeCh <- fileproc.WriteRequest{Path: "sample.go", Content: shared.LiteralPackageMain}
-	writeCh <- fileproc.WriteRequest{Path: "example.py", Content: "def foo(): pass"}
+	writeCh := make(chan fileproc.WriteRequest, len(reqs))
+	for _, req := range reqs {
+		writeCh <- req
+	}
 	close(writeCh)
 
-	// Start the writer
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		fileproc.StartWriter(outFile, writeCh, doneCh, format, "PREFIX", "SUFFIX")
-	})
+	writeErr := fileproc.StartWriter(outFile, writeCh, format, prefix, suffix)
 
-	// Wait until writer signals completion
-	wg.Wait()
-	select {
-	case <-doneCh: // make sure all writes finished
-	case <-time.After(3 * time.Second):
-		t.Fatal(shared.TestMsgTimeoutWriterCompletion)
-	}
-
-	// Read output
 	data, err := os.ReadFile(outFile.Name())
 	if err != nil {
 		t.Fatalf("Error reading output file: %v", err)
 	}
 
-	return data
+	return data, writeErr
 }
 
-// verifyErrorOutput checks that error cases produce no output.
-func verifyErrorOutput(t *testing.T, data []byte) {
-	t.Helper()
+func sampleRequests() []fileproc.WriteRequest {
+	return []fileproc.WriteRequest{
+		{Path: "sample.go", Content: testutil.LiteralPackageMain},
+		{Path: "example.py", Content: "def foo(): pass"},
+	}
+}
+
+func TestStartWriterFormats(t *testing.T) {
+	for _, format := range []string{"json", "yaml", "markdown"} {
+		t.Run(format, func(t *testing.T) {
+			data, err := writeAll(t, format, "PREFIX", "SUFFIX", sampleRequests()...)
+			if err != nil {
+				t.Fatalf(testutil.TestMsgUnexpectedError, err)
+			}
+			verifyValidOutput(t, data, format)
+			verifyPrefixSuffixWith(t, data, "PREFIX", "SUFFIX")
+		})
+	}
+}
+
+// TestStartWriterInvalidFormat verifies an unsupported format returns an error,
+// writes nothing and still drains the channel.
+func TestStartWriterInvalidFormat(t *testing.T) {
+	data, err := writeAll(t, "invalid", "PREFIX", "SUFFIX", sampleRequests()...)
+	if err == nil {
+		t.Fatal(testutil.TestMsgExpectedError)
+	}
 	if len(data) != 0 {
 		t.Errorf("Expected no output for invalid format, got:\n%s", data)
 	}
@@ -103,7 +79,6 @@ func verifyErrorOutput(t *testing.T, data []byte) {
 // verifyValidOutput checks format-specific output validity.
 func verifyValidOutput(t *testing.T, data []byte, format string) {
 	t.Helper()
-	content := string(data)
 	switch format {
 	case "json":
 		var outStruct fileproc.OutputData
@@ -116,26 +91,11 @@ func verifyValidOutput(t *testing.T, data []byte, format string) {
 			t.Errorf("YAML unmarshal failed: %v", err)
 		}
 	case "markdown":
-		if !strings.Contains(content, "```") {
+		if !strings.Contains(string(data), "```") {
 			t.Error("Expected markdown code fences not found")
 		}
 	default:
-		// Unknown format - basic validation that we have content
-		if len(content) == 0 {
-			t.Errorf("Unexpected format %s with empty content", format)
-		}
-	}
-}
-
-// verifyPrefixSuffix checks that output contains expected prefix and suffix.
-func verifyPrefixSuffix(t *testing.T, data []byte) {
-	t.Helper()
-	content := string(data)
-	if !strings.Contains(content, "PREFIX") {
-		t.Errorf("Missing prefix in output: %s", data)
-	}
-	if !strings.Contains(content, "SUFFIX") {
-		t.Errorf("Missing suffix in output: %s", data)
+		t.Fatalf("verifyValidOutput: unknown format %q", format)
 	}
 }
 
@@ -151,229 +111,162 @@ func verifyPrefixSuffixWith(t *testing.T, data []byte, expectedPrefix, expectedS
 	}
 }
 
-// setupReadOnlyFile creates a read-only file for error testing.
-func setupReadOnlyFile(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan struct{}) {
-	t.Helper()
+// TestStructuredOutputRoundTrips verifies JSON and YAML output parse back to
+// exactly the input: content bytes, paths, and a multi-line prefix. The cases
+// cover YAML block-scalar edges (leading indentation, missing or repeated
+// trailing newlines, empty content) and the characters YAML forbids or folds
+// in a block scalar (ESC, form feed, bare CR, CRLF, DEL, NEL, BOM), each of
+// which made the hand-written YAML output unparseable or altered it.
+func TestStructuredOutputRoundTrips(t *testing.T) {
+	reqs := []fileproc.WriteRequest{
+		{Path: "plain.go", Content: "package main\n"},
+		{Path: "indented.py", Content: "    x = 1\n  y = 2\n"},
+		{Path: "no-newline.txt", Content: "last line"},
+		{Path: "blank-tail.txt", Content: "a\n\n\n"},
+		{Path: "empty.txt", Content: ""},
+		{Path: "with space: and colon.md", Content: "# Title\n"},
+		{Path: "ansi.txt", Content: "x\x1b[31mred\x1b[0m\n"},
+		{Path: "formfeed.c", Content: "int a;\n\f\nint b;\n"},
+		{Path: "bare-cr.txt", Content: "a\rb\n"},
+		{Path: "crlf.txt", Content: "a\r\nb\r\n"},
+		{Path: "del.txt", Content: "x\x7fy\n"},
+		{Path: "nel.txt", Content: "x\u0085y\n"},
+		{Path: "bom.txt", Content: "\xef\xbb\xbfhead\n"},
+		{Path: "html.java", Content: "List<String> a && b > c\n"},
+	}
+	prefix, suffix := "line1\nline2 \"quoted\" \x1b", "tab\there\r"
 
-	outPath := filepath.Join(t.TempDir(), "readonly_out")
-	outFile, err := os.Create(outPath) //nolint:gosec // G304: path constructed from t.TempDir()
+	unmarshalers := map[string]func([]byte, any) error{"json": json.Unmarshal, "yaml": yaml.Unmarshal}
+	for format, unmarshal := range unmarshalers {
+		t.Run(format, func(t *testing.T) {
+			data, err := writeAll(t, format, prefix, suffix, reqs...)
+			if err != nil {
+				t.Fatalf(testutil.TestMsgUnexpectedError, err)
+			}
+
+			var out fileproc.OutputData
+			if err := unmarshal(data, &out); err != nil {
+				t.Fatalf("unmarshal failed: %v\n%s", err, data)
+			}
+			if out.Prefix != prefix || out.Suffix != suffix {
+				t.Errorf("prefix/suffix = %q/%q, want %q/%q", out.Prefix, out.Suffix, prefix, suffix)
+			}
+			assertFilesEqual(t, out.Files, reqs)
+		})
+	}
+}
+
+// TestJSONOutputKeepsHTMLCharacters verifies <, > and & are written literally.
+// json.Marshal's HTML escaping turned each into a six-byte \u escape, which
+// inflated LLM-bound output for generics, JSX and shell redirects.
+func TestJSONOutputKeepsHTMLCharacters(t *testing.T) {
+	content := "List<String> a && b > c\n"
+	data, err := writeAll(t, "json", "<p>", "&",
+		fileproc.WriteRequest{Path: "a.java", Content: content})
 	if err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
+		t.Fatalf(testutil.TestMsgUnexpectedError, err)
 	}
 
-	// Close writable FD and reopen as read-only so writes will fail
-	_ = outFile.Close()
-	outFile, err = os.OpenFile(outPath, os.O_RDONLY, 0) //nolint:gosec // G304: path constructed from t.TempDir()
+	// Built from parts so the source holds no \u sequence an editor could fold.
+	for _, code := range []string{"003c", "003e", "0026"} {
+		escaped := `\` + "u" + code
+		if strings.Contains(string(data), escaped) {
+			t.Errorf("output contains %s: %s", escaped, data)
+		}
+	}
+	if !strings.Contains(string(data), `List<String> a && b > c`) {
+		t.Errorf("content not written literally: %s", data)
+	}
+	if !json.Valid(data) {
+		t.Errorf("output is not valid JSON: %s", data)
+	}
+}
+
+// assertFilesEqual checks parsed output files match the requests exactly, in order.
+func assertFilesEqual(t *testing.T, got []fileproc.FileData, want []fileproc.WriteRequest) {
+	t.Helper()
+	if len(got) != len(want) {
+		t.Fatalf("got %d files, want %d", len(got), len(want))
+	}
+	for i, req := range want {
+		if got[i].Path != req.Path {
+			t.Errorf(testutil.TestFmtExpectedFilePath, req.Path, got[i].Path)
+		}
+		if got[i].Content != req.Content {
+			t.Errorf("%s: "+testutil.TestFmtExpectedContent, req.Path, req.Content, got[i].Content)
+		}
+	}
+}
+
+// TestStartWriterReadOnlyFileReturnsError verifies a write failure is returned,
+// not just logged.
+func TestStartWriterReadOnlyFileReturnsError(t *testing.T) {
+	outPath := filepath.Join(t.TempDir(), "readonly_out")
+	if err := os.WriteFile(outPath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	outFile, err := os.Open(filepath.Clean(outPath))
 	if err != nil {
 		t.Fatalf("Failed to reopen as read-only: %v", err)
 	}
+	defer func() { _ = outFile.Close() }()
 
 	writeCh := make(chan fileproc.WriteRequest, 1)
-	doneCh := make(chan struct{})
-
-	writeCh <- fileproc.WriteRequest{
-		Path:    shared.TestFileGo,
-		Content: shared.LiteralPackageMain,
-	}
+	writeCh <- fileproc.WriteRequest{Path: testutil.TestFileGo, Content: testutil.LiteralPackageMain}
 	close(writeCh)
 
-	return outFile, writeCh, doneCh
+	if err := fileproc.StartWriter(outFile, writeCh, "json", "PREFIX", "SUFFIX"); err == nil {
+		t.Fatal(testutil.TestMsgExpectedError)
+	}
 }
 
-// setupSpecialCharacters creates requests with special characters.
-func setupSpecialCharacters(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan struct{}) {
-	t.Helper()
-
-	outFile, err := os.CreateTemp(t.TempDir(), "markdown_special_*")
+// TestStartWriterDrainsAfterStartFailure guards against the deadlock where a
+// failed Start returned without reading writeCh, blocking every producer.
+func TestStartWriterDrainsAfterStartFailure(t *testing.T) {
+	outPath := filepath.Join(t.TempDir(), "readonly_out")
+	if err := os.WriteFile(outPath, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	outFile, err := os.Open(filepath.Clean(outPath))
 	if err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
+		t.Fatal(err)
 	}
+	defer func() { _ = outFile.Close() }()
 
-	writeCh := make(chan fileproc.WriteRequest, 2)
-	doneCh := make(chan struct{})
-
-	writeCh <- fileproc.WriteRequest{
-		Path:    "special\ncharacters.md",
-		Content: "Content with\x00null bytes and\ttabs",
-	}
-
-	writeCh <- fileproc.WriteRequest{
-		Path:    "empty.md",
-		Content: "",
-	}
-	close(writeCh)
-
-	return outFile, writeCh, doneCh
-}
-
-// runErrorHandlingTest runs a single error handling test.
-func runErrorHandlingTest(
-	t *testing.T,
-	outFile *os.File,
-	writeCh chan fileproc.WriteRequest,
-	doneCh chan struct{},
-	format string,
-	expectEmpty bool,
-) {
-	t.Helper()
-
-	defer func() {
-		if err := os.Remove(outFile.Name()); err != nil {
-			t.Logf("Failed to remove temp file: %v", err)
-		}
-	}()
-	defer func() {
-		if err := outFile.Close(); err != nil {
-			t.Logf("Failed to close temp file: %v", err)
+	writeCh := make(chan fileproc.WriteRequest) // unbuffered: every send needs the writer
+	producerDone := make(chan struct{})
+	go func() {
+		defer close(producerDone)
+		defer close(writeCh)
+		for i := range 200 {
+			writeCh <- fileproc.WriteRequest{Path: fmt.Sprintf("f%d.go", i), Content: "x"}
 		}
 	}()
 
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		fileproc.StartWriter(outFile, writeCh, doneCh, format, "PREFIX", "SUFFIX")
-	})
+	writerErr := make(chan error, 1)
+	go func() { writerErr <- fileproc.StartWriter(outFile, writeCh, "json", "PREFIX", "SUFFIX") }()
 
-	wg.Wait()
-
-	// Wait for doneCh with timeout to prevent test hangs
 	select {
-	case <-doneCh:
-	case <-time.After(3 * time.Second):
-		t.Fatal(shared.TestMsgTimeoutWriterCompletion)
+	case <-producerDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("producer blocked: writer stopped draining after Start failed")
 	}
+	if err := <-writerErr; err == nil {
+		t.Fatal(testutil.TestMsgExpectedError)
+	}
+}
 
-	// Read output file and verify based on expectation
-	data, err := os.ReadFile(outFile.Name())
+// TestMarkdownWriterSpecialCharacters verifies unusual paths and content are written.
+func TestMarkdownWriterSpecialCharacters(t *testing.T) {
+	data, err := writeAll(t, "markdown", "", "",
+		fileproc.WriteRequest{Path: "special\ncharacters.md", Content: "Content with\ttabs"},
+		fileproc.WriteRequest{Path: "empty.md", Content: ""},
+	)
 	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
+		t.Fatalf(testutil.TestMsgUnexpectedError, err)
 	}
-
-	if expectEmpty && len(data) != 0 {
-		t.Errorf("expected empty output on error, got %d bytes", len(data))
-	}
-	if !expectEmpty && len(data) == 0 {
-		t.Error("expected non-empty output, got empty")
-	}
-}
-
-// TestStartWriterErrorHandling tests error scenarios in writers.
-func TestStartWriterErrorHandling(t *testing.T) {
-	tests := []struct {
-		name              string
-		format            string
-		setupError        func(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan struct{})
-		expectEmptyOutput bool
-	}{
-		{
-			name:              "JSON writer with read-only file",
-			format:            "json",
-			setupError:        setupReadOnlyFile,
-			expectEmptyOutput: true,
-		},
-		{
-			name:              "Markdown writer with special characters",
-			format:            "markdown",
-			setupError:        setupSpecialCharacters,
-			expectEmptyOutput: false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(
-			tc.name, func(t *testing.T) {
-				outFile, writeCh, doneCh := tc.setupError(t)
-				runErrorHandlingTest(t, outFile, writeCh, doneCh, tc.format, tc.expectEmptyOutput)
-			},
-		)
-	}
-}
-
-// setupCloseTest sets up files and channels for close testing.
-func setupCloseTest(t *testing.T) (*os.File, chan fileproc.WriteRequest, chan struct{}) {
-	t.Helper()
-
-	outFile, err := os.CreateTemp(t.TempDir(), "close_test_*")
-	if err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
-	}
-
-	writeCh := make(chan fileproc.WriteRequest, 5)
-	doneCh := make(chan struct{})
-
-	for i := 0; i < 5; i++ {
-		writeCh <- fileproc.WriteRequest{
-			Path:    fmt.Sprintf("file%d.txt", i),
-			Content: fmt.Sprintf("Content %d", i),
-		}
-	}
-	close(writeCh)
-
-	return outFile, writeCh, doneCh
-}
-
-// runCloseTest executes writer and validates output.
-func runCloseTest(
-	t *testing.T,
-	outFile *os.File,
-	writeCh chan fileproc.WriteRequest,
-	doneCh chan struct{},
-	format string,
-) {
-	t.Helper()
-
-	defer func() {
-		if err := os.Remove(outFile.Name()); err != nil {
-			t.Logf("Failed to remove temp file: %v", err)
-		}
-	}()
-	defer func() {
-		if err := outFile.Close(); err != nil {
-			t.Logf("Failed to close temp file: %v", err)
-		}
-	}()
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		fileproc.StartWriter(outFile, writeCh, doneCh, format, "TEST_PREFIX", "TEST_SUFFIX")
-	})
-
-	wg.Wait()
-	select {
-	case <-doneCh:
-	case <-time.After(3 * time.Second):
-		t.Fatal(shared.TestMsgTimeoutWriterCompletion)
-	}
-
-	data, err := os.ReadFile(outFile.Name())
-	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
-	}
-
-	if len(data) == 0 {
-		t.Error("Expected non-empty output file")
-	}
-
-	verifyPrefixSuffixWith(t, data, "TEST_PREFIX", "TEST_SUFFIX")
-}
-
-// TestStartWriterWriterCloseErrors tests error handling during writer close operations.
-func TestStartWriterWriterCloseErrors(t *testing.T) {
-	tests := []struct {
-		name   string
-		format string
-	}{
-		{"JSON close handling", "json"},
-		{"YAML close handling", "yaml"},
-		{"Markdown close handling", "markdown"},
-	}
-
-	for _, tc := range tests {
-		t.Run(
-			tc.name, func(t *testing.T) {
-				outFile, writeCh, doneCh := setupCloseTest(t)
-				runCloseTest(t, outFile, writeCh, doneCh, tc.format)
-			},
-		)
+	if !strings.Contains(string(data), "Content with\ttabs") {
+		t.Errorf("content missing from output:\n%s", data)
 	}
 }
 
@@ -392,15 +285,11 @@ func BenchmarkStartWriter(b *testing.B) {
 				}
 
 				writeCh := make(chan fileproc.WriteRequest, 2)
-				doneCh := make(chan struct{})
-
-				writeCh <- fileproc.WriteRequest{Path: "sample.go", Content: shared.LiteralPackageMain}
+				writeCh <- fileproc.WriteRequest{Path: "sample.go", Content: testutil.LiteralPackageMain}
 				writeCh <- fileproc.WriteRequest{Path: "example.py", Content: "def foo(): pass"}
 				close(writeCh)
 
-				fileproc.StartWriter(outFile, writeCh, doneCh, format, "PREFIX", "SUFFIX")
-				<-doneCh
-
+				_ = fileproc.StartWriter(outFile, writeCh, format, "PREFIX", "SUFFIX")
 				_ = outFile.Close()
 			}
 		})

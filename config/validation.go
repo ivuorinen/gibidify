@@ -3,14 +3,43 @@ package config
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/ivuorinen/gibidify/shared"
 )
 
+// Value kinds a configuration key can require.
+const (
+	kindInteger = "integer"
+	kindBoolean = "boolean"
+	kindList    = "list"
+	kindMap     = "map"
+)
+
+// keyKinds maps each known key to the YAML shape it must have. The getters
+// return a zero value for a mistyped key (`enabled: "true"` read as false), so
+// a wrong type is rejected here instead of being silently coerced.
+var keyKinds = map[string]string{
+	shared.ConfigKeyFileSizeLimit:                     kindInteger,
+	shared.ConfigKeyMaxConcurrency:                    kindInteger,
+	shared.ConfigKeyIgnoreDirectories:                 kindList,
+	shared.ConfigKeyFileTypesEnabled:                  kindBoolean,
+	shared.ConfigKeyFileTypesCustomImageExtensions:    kindList,
+	shared.ConfigKeyFileTypesCustomBinaryExtensions:   kindList,
+	shared.ConfigKeyFileTypesCustomLanguages:          kindMap,
+	shared.ConfigKeyFileTypesDisabledImageExtensions:  kindList,
+	shared.ConfigKeyFileTypesDisabledBinaryExtensions: kindList,
+	shared.ConfigKeyFileTypesDisabledLanguageExts:     kindList,
+	shared.ConfigKeyResourceLimitsMaxFiles:            kindInteger,
+	shared.ConfigKeyResourceLimitsMaxTotalSize:        kindInteger,
+}
+
 // ValidateConfig validates the loaded configuration.
 func ValidateConfig() error {
-	var validationErrors []string
+	// Type errors first: the range checks below would otherwise report a
+	// mistyped value as its zero value ("fileSizeLimit (0) is below minimum").
+	validationErrors := validateTypes()
 
 	// Validate basic settings
 	validationErrors = append(validationErrors, validateBasicSettings()...)
@@ -28,6 +57,60 @@ func ValidateConfig() error {
 	}
 
 	return nil
+}
+
+// validateTypes reports explicitly set keys whose value has the wrong YAML shape.
+func validateTypes() []string {
+	var validationErrors []string
+
+	for _, key := range knownKeys {
+		v, ok := getNested(cfg.values, key)
+		if !ok {
+			continue
+		}
+		if want := keyKinds[key]; !hasKind(v, want) {
+			validationErrors = append(validationErrors, fmt.Sprintf("%s must be a %s (got %T)", key, want, v))
+		}
+	}
+
+	return validationErrors
+}
+
+// hasKind reports whether v has the given kind. Whole floats count as integers
+// because YAML decodes forms like 1e9 as float64.
+func hasKind(v any, kind string) bool {
+	switch kind {
+	case kindInteger:
+		return isInteger(v)
+	case kindBoolean:
+		_, ok := v.(bool)
+
+		return ok
+	case kindList:
+		_, isAnyList := v.([]any)
+		_, isStringList := v.([]string)
+
+		return isAnyList || isStringList
+	case kindMap:
+		_, isAnyMap := v.(map[string]any)
+		_, isStringMap := v.(map[string]string)
+
+		return isAnyMap || isStringMap
+	default:
+		return false
+	}
+}
+
+// isInteger reports whether v is an integer or a whole float.
+func isInteger(v any) bool {
+	switch n := v.(type) {
+	case int, int64:
+		return true
+	case float64:
+		return n == math.Trunc(n)
+	default:
+		return false
+	}
 }
 
 // validateBasicSettings validates basic configuration settings.
@@ -82,12 +165,6 @@ func validateIgnoreDirectories() []string {
 				),
 			)
 		}
-		if strings.HasPrefix(dir, ".") && dir != ".git" && dir != ".vscode" && dir != ".idea" {
-			validationErrors = append(
-				validationErrors,
-				fmt.Sprintf("ignoreDirectories[%d] (%s) starts with dot - this may cause unexpected behavior", i, dir),
-			)
-		}
 	}
 
 	return validationErrors
@@ -117,21 +194,29 @@ func validateConcurrencySettings() []string {
 	return validationErrors
 }
 
-// validateFileTypeSettings validates file type configuration settings.
+// validateFileTypeSettings validates file type configuration settings. The
+// disabled lists are checked like the custom ones: a dot-less "svg" matched no
+// registry key (keys are filepath.Ext results such as ".svg") and silently did
+// nothing.
 func validateFileTypeSettings() []string {
 	var validationErrors []string
 
-	validationErrors = append(validationErrors,
-		validateCustomExtensions(shared.ConfigKeyFileTypesCustomImageExtensions)...)
-	validationErrors = append(validationErrors,
-		validateCustomExtensions(shared.ConfigKeyFileTypesCustomBinaryExtensions)...)
+	for _, key := range []string{
+		shared.ConfigKeyFileTypesCustomImageExtensions,
+		shared.ConfigKeyFileTypesCustomBinaryExtensions,
+		shared.ConfigKeyFileTypesDisabledImageExtensions,
+		shared.ConfigKeyFileTypesDisabledBinaryExtensions,
+		shared.ConfigKeyFileTypesDisabledLanguageExts,
+	} {
+		validationErrors = append(validationErrors, validateCustomExtensions(key)...)
+	}
 	validationErrors = append(validationErrors, validateCustomLanguages()...)
 
 	return validationErrors
 }
 
-// validateCustomExtensions validates a custom extension slice under the given config key
-// (image or binary): each element must be non-empty and dot-prefixed.
+// validateCustomExtensions validates an extension list under the given config
+// key (custom or disabled): each element must be non-empty and dot-prefixed.
 func validateCustomExtensions(key string) []string {
 	var validationErrors []string
 
@@ -266,7 +351,7 @@ func ValidateConcurrency(concurrency int) error {
 	if concurrency < 1 {
 		return shared.NewStructuredError(
 			shared.ErrorTypeValidation,
-			shared.CodeValidationFormat,
+			shared.CodeValidationConcurrency,
 			fmt.Sprintf("concurrency (%d) must be at least 1", concurrency),
 			"",
 			map[string]any{"concurrency": concurrency},
@@ -278,7 +363,7 @@ func ValidateConcurrency(concurrency int) error {
 		if concurrency > maxConcurrency {
 			return shared.NewStructuredError(
 				shared.ErrorTypeValidation,
-				shared.CodeValidationFormat,
+				shared.CodeValidationConcurrency,
 				fmt.Sprintf("concurrency (%d) exceeds maximum (%d)", concurrency, maxConcurrency),
 				"",
 				map[string]any{"concurrency": concurrency, "max_concurrency": maxConcurrency},

@@ -2,6 +2,7 @@ package fileproc_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -30,99 +31,126 @@ func writeTempConfig(t *testing.T, content string) string {
 
 const testContent = "package main\nfunc main() {}\n"
 
-func TestProcessFile(t *testing.T) {
-	// Reset and load default config to ensure proper file size limits
-	testutil.ResetViperConfig(t, "")
-	// Create a temporary file with known content.
-	tmpFile, err := os.CreateTemp(t.TempDir(), "testfile")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func(name string) {
-		err := os.Remove(name)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}(tmpFile.Name())
+// processOne runs ProcessWithContext for one file and returns every request it
+// emitted together with its error.
+func processOne(
+	ctx context.Context,
+	processor *fileproc.FileProcessor,
+	path string,
+) ([]fileproc.WriteRequest, error) {
+	ch := make(chan fileproc.WriteRequest, 1)
+	var err error
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		defer close(ch)
+		err = processor.ProcessWithContext(ctx, path, ch)
+	})
 
-	content := "Test content"
-	if _, err := tmpFile.WriteString(content); err != nil {
+	var reqs []fileproc.WriteRequest
+	for req := range ch {
+		reqs = append(reqs, req)
+	}
+	wg.Wait()
+
+	return reqs, err
+}
+
+// TestProcessFileContentIsExact guards against the removed "\n---\n<path>\n"
+// header: Content must be the file's bytes and Path the path relative to root.
+func TestProcessFileContentIsExact(t *testing.T) {
+	testutil.ResetConfig(t, "")
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "sub", "test.go")
+	if err := os.MkdirAll(filepath.Dir(testFile), 0o750); err != nil {
 		t.Fatal(err)
 	}
-	errTmpFile := tmpFile.Close()
-	if errTmpFile != nil {
-		t.Fatal(errTmpFile)
+	if err := os.WriteFile(testFile, []byte(testContent), 0o600); err != nil {
+		t.Fatalf(testutil.TestMsgFailedToCreateTestFile, err)
 	}
 
 	ch := make(chan fileproc.WriteRequest, 1)
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		fileproc.ProcessFile(tmpFile.Name(), ch, "")
-	})
-
-	var result string
-	for req := range ch {
-		result = req.Content
+	if err := fileproc.ProcessFileContext(context.Background(), testFile, ch, tmpDir); err != nil {
+		t.Fatalf(testutil.TestMsgUnexpectedError, err)
 	}
-	wg.Wait()
+	close(ch)
+	req := <-ch
 
-	if !strings.Contains(result, tmpFile.Name()) {
-		t.Errorf("Output does not contain file path: %s", tmpFile.Name())
+	if req.Content != testContent {
+		t.Errorf(testutil.TestFmtExpectedContent, testContent, req.Content)
 	}
-	if !strings.Contains(result, content) {
-		t.Errorf("Output does not contain file content: %s", content)
+	if want := filepath.Join("sub", "test.go"); req.Path != want {
+		t.Errorf(testutil.TestFmtExpectedFilePath, want, req.Path)
 	}
 }
 
-func TestProcess(t *testing.T) {
-	testutil.ResetViperConfig(t, "")
-
-	// Create temporary directory
+// TestProcessorSkipsBinaryContent verifies a file with a NUL byte in its first
+// bytes is skipped even though its extension is not a known binary extension.
+func TestProcessorSkipsBinaryContent(t *testing.T) {
+	testutil.ResetConfig(t, "")
 	tmpDir := t.TempDir()
-
-	// Create test file with .go extension
-	testFile := filepath.Join(tmpDir, "test.go")
-	content := testContent
-	if err := os.WriteFile(testFile, []byte(content), 0o600); err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateTestFile, err)
+	blob := filepath.Join(tmpDir, "tool")
+	if err := os.WriteFile(blob, []byte("ELF\x00\x01\x02binary"), 0o600); err != nil {
+		t.Fatal(err)
 	}
 
-	processor := fileproc.NewFileProcessor(tmpDir)
-	ch := make(chan fileproc.WriteRequest, 10)
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		// Process the specific file, not the directory
-		processor.Process(testFile, ch)
-	})
-
-	// Collect results
-	results := make([]fileproc.WriteRequest, 0, 1) // Pre-allocate with expected capacity
-	for req := range ch {
-		results = append(results, req)
+	reqs, err := processOne(context.Background(), fileproc.NewFileProcessor(tmpDir), blob)
+	if !errors.Is(err, fileproc.ErrSkipped) {
+		t.Fatalf("expected ErrSkipped, got %v", err)
 	}
-	wg.Wait()
-
-	if len(results) == 0 {
-		t.Error("Expected at least one processed file")
-
-		return
+	if len(reqs) != 0 {
+		t.Errorf("expected no output for binary content, got %d requests", len(reqs))
 	}
+}
 
-	// Find our test file in results
-	found := false
-	for _, req := range results {
-		if strings.Contains(req.Path, shared.TestFileGo) && strings.Contains(req.Content, content) {
-			found = true
+// TestProcessorReplacesInvalidUTF8 verifies a non-UTF-8 file is emitted with its
+// invalid bytes replaced by U+FFFD and a warning naming it. Every output format
+// is UTF-8 text: JSON used to replace the bytes silently and YAML produced an
+// unparseable document.
+func TestProcessorReplacesInvalidUTF8(t *testing.T) {
+	testutil.ResetConfig(t, "")
+	var logs strings.Builder
+	logger := shared.GetLogger()
+	logger.SetOutput(&logs)
+	t.Cleanup(func() { logger.SetOutput(os.Stderr) })
 
-			break
-		}
+	tmpDir := t.TempDir()
+	latin1 := filepath.Join(tmpDir, "latin1.txt")
+	if err := os.WriteFile(latin1, []byte("caf\xe9\n"), 0o600); err != nil {
+		t.Fatal(err)
 	}
 
-	if !found {
-		t.Error("Test file not found in processed results")
+	reqs, err := processOne(context.Background(), fileproc.NewFileProcessor(tmpDir), latin1)
+	if err != nil {
+		t.Fatalf(shared.ErrorFmtWithCause, "processing", err)
+	}
+	if len(reqs) != 1 || reqs[0].Content != "caf\xef\xbf\xbd\n" {
+		t.Fatalf("content = %q, want invalid byte replaced with U+FFFD", reqs)
+	}
+	if !strings.Contains(logs.String(), "latin1.txt is not valid UTF-8") {
+		t.Errorf("expected a warning naming the file, got: %q", logs.String())
+	}
+}
+
+// TestProcessorRefusesSymlink verifies a symlink presented at processing time
+// (e.g. swapped in after collection) is skipped, not followed out of the tree.
+func TestProcessorRefusesSymlink(t *testing.T) {
+	testutil.ResetConfig(t, "")
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	if err := os.WriteFile(outside, []byte("secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	tmpDir := t.TempDir()
+	link := filepath.Join(tmpDir, "link.txt")
+	if err := os.Symlink(outside, link); err != nil {
+		t.Skipf("symlinks unsupported: %v", err)
+	}
+
+	reqs, err := processOne(context.Background(), fileproc.NewFileProcessor(tmpDir), link)
+	if !errors.Is(err, fileproc.ErrSkipped) {
+		t.Fatalf("expected ErrSkipped, got %v", err)
+	}
+	if len(reqs) != 0 {
+		t.Errorf("symlink target leaked into output: %+v", reqs)
 	}
 }
 
@@ -132,18 +160,18 @@ func createLargeTestFile(t *testing.T) *os.File {
 
 	tmpFile, err := os.CreateTemp(t.TempDir(), "large_file_*.go")
 	if err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateFile, err)
+		t.Fatalf(testutil.TestMsgFailedToCreateFile, err)
 	}
 
-	lineContent := "// Repeated comment line to exceed streaming threshold\n"
+	lineContent := "// Repeated comment line to make a file larger than 1MB\n"
 	repeatCount := (1048576 / len(lineContent)) + 1000
 	largeContent := strings.Repeat(lineContent, repeatCount)
 
 	if _, err := tmpFile.WriteString(largeContent); err != nil {
-		t.Fatalf(shared.TestMsgFailedToWriteContent, err)
+		t.Fatalf(testutil.TestMsgFailedToWriteContent, err)
 	}
 	if err := tmpFile.Close(); err != nil {
-		t.Fatalf(shared.TestMsgFailedToCloseFile, err)
+		t.Fatalf(testutil.TestMsgFailedToCloseFile, err)
 	}
 
 	t.Logf("Created test file size: %d bytes", len(largeContent))
@@ -152,348 +180,173 @@ func createLargeTestFile(t *testing.T) *os.File {
 }
 
 // TestProcessorLargeFileInline verifies a large file (within the size cap) is
-// buffered and emitted as a single inline request.
+// buffered and emitted as a single inline request with its full content.
 func TestProcessorLargeFileInline(t *testing.T) {
 	configDir := writeTempConfig(t, `
 fileSizeLimit: 5242880
 `)
-	testutil.ResetViperConfig(t, configDir)
+	testutil.ResetConfig(t, configDir)
 
 	tmpFile := createLargeTestFile(t)
-	defer func() {
-		if err := os.Remove(tmpFile.Name()); err != nil {
-			t.Logf("Failed to remove temp file: %v", err)
-		}
-	}()
-
-	ch := make(chan fileproc.WriteRequest, 1)
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		fileproc.ProcessFile(tmpFile.Name(), ch, "")
-	})
-
-	var reqs []fileproc.WriteRequest
-	for req := range ch {
-		reqs = append(reqs, req)
+	want, err := os.ReadFile(tmpFile.Name())
+	if err != nil {
+		t.Fatal(err)
 	}
-	wg.Wait()
 
+	processor := fileproc.NewFileProcessor(filepath.Dir(tmpFile.Name()))
+	reqs, err := processOne(context.Background(), processor, tmpFile.Name())
+	if err != nil {
+		t.Fatalf(testutil.TestMsgUnexpectedError, err)
+	}
 	if len(reqs) != 1 {
 		t.Fatalf("Expected 1 inline request, got %d", len(reqs))
 	}
-	if reqs[0].Content == "" {
-		t.Error("Expected non-empty content for buffered large file")
+	if reqs[0].Content != string(want) {
+		t.Errorf("large file content differs: got %d bytes, want %d", len(reqs[0].Content), len(want))
 	}
 }
 
-// TestProcessorContextCancellation tests context cancellation during processing.
+// TestProcessorContextCancellation tests that an already-canceled context
+// produces an error and no output.
 func TestProcessorContextCancellation(t *testing.T) {
-	testutil.ResetViperConfig(t, "")
+	testutil.ResetConfig(t, "")
 
-	// Create temporary directory with files
 	tmpDir := t.TempDir()
-
-	// Create multiple test files
-	for i := 0; i < 5; i++ {
-		testFile := filepath.Join(tmpDir, fmt.Sprintf("test%d.go", i))
-		content := testContent
-		if err := os.WriteFile(testFile, []byte(content), 0o600); err != nil {
-			t.Fatalf(shared.TestMsgFailedToCreateTestFile, err)
-		}
+	testFile := filepath.Join(tmpDir, "test.go")
+	if err := os.WriteFile(testFile, []byte(testContent), 0o600); err != nil {
+		t.Fatalf(testutil.TestMsgFailedToCreateTestFile, err)
 	}
 
-	processor := fileproc.NewFileProcessor("test_source")
-	ch := make(chan fileproc.WriteRequest, 10)
-
-	// Use ProcessWithContext with immediate cancellation
 	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
+	cancel()
 
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		// Error is expected due to cancellation
-		if err := processor.ProcessWithContext(ctx, tmpDir, ch); err != nil {
-			// Log error for debugging, but don't fail test since cancellation is expected
-			t.Logf("Expected error due to cancellation: %v", err)
-		}
-	})
-
-	// Collect results - should be minimal due to cancellation
-	results := make([]fileproc.WriteRequest, 0, 1) // Pre-allocate with expected capacity
-	for req := range ch {
-		results = append(results, req)
+	reqs, err := processOne(ctx, fileproc.NewFileProcessor(tmpDir), testFile)
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
 	}
-	wg.Wait()
-
-	// With immediate cancellation, we might get 0 results
-	// This tests that cancellation is respected
-	t.Logf("Processed %d files with immediate cancellation", len(results))
+	if len(reqs) != 0 {
+		t.Errorf("expected no output after cancellation, got %d", len(reqs))
+	}
 }
 
-// TestProcessorValidationEdgeCases tests edge cases in file validation.
+// TestProcessorValidationEdgeCases tests a missing file and a file over the size limit.
 func TestProcessorValidationEdgeCases(t *testing.T) {
 	configDir := writeTempConfig(t, `
 fileSizeLimit: 1024
 `)
-	testutil.ResetViperConfig(t, configDir)
+	testutil.ResetConfig(t, configDir)
 
 	tmpDir := t.TempDir()
-
-	// Test case 1: Non-existent file
-	nonExistentFile := filepath.Join(tmpDir, "does-not-exist.go")
 	processor := fileproc.NewFileProcessor(tmpDir)
-	ch := make(chan fileproc.WriteRequest, 1)
 
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		processor.Process(nonExistentFile, ch)
-	})
-
-	results := make([]fileproc.WriteRequest, 0)
-	for req := range ch {
-		results = append(results, req)
-	}
-	wg.Wait()
-
-	// Should get no results due to file not existing
-	if len(results) > 0 {
-		t.Error("Expected no results for non-existent file")
+	reqs, err := processOne(context.Background(), processor, filepath.Join(tmpDir, "does-not-exist.go"))
+	if err == nil || len(reqs) != 0 {
+		t.Errorf("missing file: want error and no output, got %d requests, err %v", len(reqs), err)
 	}
 
-	// Test case 2: File that exceeds size limit
 	largeFile := filepath.Join(tmpDir, "large.go")
 	largeContent := strings.Repeat("// Large file content\n", 100) // > 1KB
 	if err := os.WriteFile(largeFile, []byte(largeContent), 0o600); err != nil {
 		t.Fatalf("Failed to create large file: %v", err)
 	}
 
-	ch2 := make(chan fileproc.WriteRequest, 1)
-	wg.Go(func() {
-		defer close(ch2)
-		processor.Process(largeFile, ch2)
-	})
-
-	results2 := make([]fileproc.WriteRequest, 0)
-	for req := range ch2 {
-		results2 = append(results2, req)
+	reqs, err = processOne(context.Background(), processor, largeFile)
+	structErr := &shared.StructuredError{}
+	if !errors.As(err, &structErr) || structErr.Code != shared.CodeValidationSize {
+		t.Errorf("oversized file: want %s error, got %v", shared.CodeValidationSize, err)
 	}
-	wg.Wait()
-
-	// Should get results because even large files are processed (just different strategy)
-	t.Logf("Large file processing results: %d", len(results2))
+	if len(reqs) != 0 {
+		t.Errorf("oversized file: want no output, got %d requests", len(reqs))
+	}
 }
 
-// TestProcessorContextCancellationDuringValidation tests context cancellation during file validation.
+// TestProcessorContextCancellationDuringValidation tests an expired deadline before validation.
 func TestProcessorContextCancellationDuringValidation(t *testing.T) {
-	testutil.ResetViperConfig(t, "")
+	testutil.ResetConfig(t, "")
 
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "test.go")
-	content := testContent
-	if err := os.WriteFile(testFile, []byte(content), 0o600); err != nil {
-		t.Fatalf(shared.TestMsgFailedToCreateTestFile, err)
+	if err := os.WriteFile(testFile, []byte(testContent), 0o600); err != nil {
+		t.Fatalf(testutil.TestMsgFailedToCreateTestFile, err)
 	}
 
-	processor := fileproc.NewFileProcessor(tmpDir)
-
-	// Create context that we'll cancel during processing
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()
+	<-ctx.Done()
 
-	// Let context expire
-	time.Sleep(1 * time.Millisecond)
-
-	ch := make(chan fileproc.WriteRequest, 1)
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		if err := processor.ProcessWithContext(ctx, testFile, ch); err != nil {
-			t.Logf("ProcessWithContext error (may be expected): %v", err)
-		}
-	})
-
-	results := make([]fileproc.WriteRequest, 0)
-	for req := range ch {
-		results = append(results, req)
+	reqs, err := processOne(ctx, fileproc.NewFileProcessor(tmpDir), testFile)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("expected context.DeadlineExceeded, got %v", err)
 	}
-	wg.Wait()
-
-	// Should get no results due to context cancellation
-	t.Logf("Results with canceled context: %d", len(results))
+	if len(reqs) != 0 {
+		t.Errorf("expected no output after deadline, got %d", len(reqs))
+	}
 }
 
-// TestProcessorInMemoryProcessingEdgeCases tests edge cases in in-memory processing.
-func TestProcessorInMemoryProcessingEdgeCases(t *testing.T) {
-	testutil.ResetViperConfig(t, "")
+// TestProcessorEmptyFile verifies an empty file is emitted with empty content.
+func TestProcessorEmptyFile(t *testing.T) {
+	testutil.ResetConfig(t, "")
 
 	tmpDir := t.TempDir()
-
-	// Test with empty file
 	emptyFile := filepath.Join(tmpDir, "empty.go")
 	if err := os.WriteFile(emptyFile, []byte(""), 0o600); err != nil {
 		t.Fatalf("Failed to create empty file: %v", err)
 	}
 
-	processor := fileproc.NewFileProcessor(tmpDir)
-	ch := make(chan fileproc.WriteRequest, 1)
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-		processor.Process(emptyFile, ch)
-	})
-
-	results := make([]fileproc.WriteRequest, 0)
-	for req := range ch {
-		results = append(results, req)
+	reqs, err := processOne(context.Background(), fileproc.NewFileProcessor(tmpDir), emptyFile)
+	if err != nil {
+		t.Fatalf(testutil.TestMsgUnexpectedError, err)
 	}
-	wg.Wait()
-
-	if len(results) != 1 {
-		t.Errorf("Expected 1 result for empty file, got %d", len(results))
+	if len(reqs) != 1 {
+		t.Fatalf("Expected 1 result for empty file, got %d", len(reqs))
 	}
-
-	if len(results) > 0 {
-		result := results[0]
-		if result.Path == "" {
-			t.Error("Expected path in result for empty file")
-		}
-		// Empty file should still be processed
+	if reqs[0].Path != "empty.go" || reqs[0].Content != "" {
+		t.Errorf("unexpected result for empty file: %+v", reqs[0])
 	}
 }
 
 // TestProcessorLargeFileCancellation tests context cancellation while processing a large file.
 func TestProcessorLargeFileCancellation(t *testing.T) {
-	testutil.ResetViperConfig(t, "")
+	testutil.ResetConfig(t, "")
 
 	tmpDir := t.TempDir()
 
-	// Create a large file (within the size cap) and cancel mid-processing.
 	largeFile := filepath.Join(tmpDir, "large_stream.go")
 	largeContent := strings.Repeat("// Large file content line\n", 50000) // > 1MB
 	if err := os.WriteFile(largeFile, []byte(largeContent), 0o600); err != nil {
 		t.Fatalf("Failed to create large file: %v", err)
 	}
 
-	processor := fileproc.NewFileProcessor(tmpDir)
-
-	// Test with context that gets canceled during processing
 	ctx, cancel := context.WithCancel(context.Background())
-	ch := make(chan fileproc.WriteRequest, 1)
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		defer close(ch)
-
-		// Start processing
-		// Error is expected due to cancellation
-		if err := processor.ProcessWithContext(ctx, largeFile, ch); err != nil {
-			// Log error for debugging, but don't fail test since cancellation is expected
-			t.Logf("Expected error due to cancellation: %v", err)
-		}
-	})
-
-	// Cancel context after a very short time
 	go func() {
 		time.Sleep(1 * time.Millisecond)
 		cancel()
 	}()
 
-	results := make([]fileproc.WriteRequest, 0)
-	for req := range ch {
-		results = append(results, req)
+	reqs, err := processOne(ctx, fileproc.NewFileProcessor(tmpDir), largeFile)
+	// Either the read finished first (one complete request) or cancellation won.
+	switch {
+	case err == nil && len(reqs) == 1 && reqs[0].Content == largeContent:
+	case errors.Is(err, context.Canceled) && len(reqs) == 0:
+	default:
+		t.Errorf("unexpected outcome: %d requests, err %v", len(reqs), err)
 	}
-	wg.Wait()
-
-	t.Logf("Results with large-file context cancellation: %d", len(results))
 }
 
 // Benchmarks for processor hot paths
 
-// BenchmarkProcessFileInline benchmarks inline file processing for small files.
-func BenchmarkProcessFileInline(b *testing.B) {
-	// Initialize config for file processing
+// benchmarkProcessFile benchmarks ProcessWithContext on a file with the given content.
+func benchmarkProcessFile(b *testing.B, content string) {
+	b.Helper()
 	config.Reset()
-	config.LoadConfig()
-
-	// Create a small test file
-	tmpFile, err := os.CreateTemp(b.TempDir(), "bench_inline_*.go")
-	if err != nil {
-		b.Fatalf(shared.TestMsgFailedToCreateFile, err)
+	if err := config.LoadConfig(); err != nil {
+		b.Fatalf("loading config: %v", err)
 	}
 
-	content := strings.Repeat("// Inline benchmark content\n", 100) // ~2.6KB
-	if _, err := tmpFile.WriteString(content); err != nil {
-		b.Fatalf(shared.TestMsgFailedToWriteContent, err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		b.Fatalf(shared.TestMsgFailedToCloseFile, err)
-	}
-
-	b.ResetTimer()
-	for b.Loop() {
-		ch := make(chan fileproc.WriteRequest, 1)
-		var wg sync.WaitGroup
-		wg.Go(func() {
-			defer close(ch)
-			fileproc.ProcessFile(tmpFile.Name(), ch, "")
-		})
-		for req := range ch {
-			_ = req // Drain channel
-		}
-		wg.Wait()
-	}
-}
-
-// BenchmarkProcessFileLarge benchmarks buffered processing for large files (> 1MB).
-func BenchmarkProcessFileLarge(b *testing.B) {
-	// Initialize config for file processing
-	config.Reset()
-	config.LoadConfig()
-
-	// Create a large test file (within the size cap).
-	tmpFile, err := os.CreateTemp(b.TempDir(), "bench_large_*.go")
-	if err != nil {
-		b.Fatalf(shared.TestMsgFailedToCreateFile, err)
-	}
-
-	// Create content larger than 1MB.
-	lineContent := "// Large-file benchmark content line that will be repeated\n"
-	repeatCount := (1048576 / len(lineContent)) + 1000
-	content := strings.Repeat(lineContent, repeatCount)
-
-	if _, err := tmpFile.WriteString(content); err != nil {
-		b.Fatalf(shared.TestMsgFailedToWriteContent, err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		b.Fatalf(shared.TestMsgFailedToCloseFile, err)
-	}
-
-	b.ResetTimer()
-	for b.Loop() {
-		ch := make(chan fileproc.WriteRequest, 1)
-		var wg sync.WaitGroup
-		wg.Go(func() {
-			defer close(ch)
-			fileproc.ProcessFile(tmpFile.Name(), ch, "")
-		})
-		for req := range ch {
-			_ = req // Drain channel
-		}
-		wg.Wait()
-	}
-}
-
-// BenchmarkProcessorWithContext benchmarks ProcessWithContext for a single file.
-func BenchmarkProcessorWithContext(b *testing.B) {
 	tmpDir := b.TempDir()
-	testFile := filepath.Join(tmpDir, "bench_context.go")
-	content := strings.Repeat("// Benchmark file content\n", 50)
+	testFile := filepath.Join(tmpDir, "bench.go")
 	if err := os.WriteFile(testFile, []byte(content), 0o600); err != nil {
-		b.Fatalf(shared.TestMsgFailedToCreateTestFile, err)
+		b.Fatalf(testutil.TestMsgFailedToCreateTestFile, err)
 	}
 
 	processor := fileproc.NewFileProcessor(tmpDir)
@@ -502,16 +355,24 @@ func BenchmarkProcessorWithContext(b *testing.B) {
 	b.ResetTimer()
 	for b.Loop() {
 		ch := make(chan fileproc.WriteRequest, 1)
-		var wg sync.WaitGroup
-		wg.Go(func() {
-			defer close(ch)
-			_ = processor.ProcessWithContext(ctx, testFile, ch)
-		})
-		for req := range ch {
-			_ = req // Drain channel
-		}
-		wg.Wait()
+		_ = processor.ProcessWithContext(ctx, testFile, ch)
 	}
+}
+
+// BenchmarkProcessFileInline benchmarks processing of a small file.
+func BenchmarkProcessFileInline(b *testing.B) {
+	benchmarkProcessFile(b, strings.Repeat("// Inline benchmark content\n", 100)) // ~2.6KB
+}
+
+// BenchmarkProcessFileLarge benchmarks buffered processing for large files (> 1MB).
+func BenchmarkProcessFileLarge(b *testing.B) {
+	lineContent := "// Large-file benchmark content line that will be repeated\n"
+	benchmarkProcessFile(b, strings.Repeat(lineContent, (1048576/len(lineContent))+1000))
+}
+
+// BenchmarkProcessorWithContext benchmarks ProcessWithContext for a single file.
+func BenchmarkProcessorWithContext(b *testing.B) {
+	benchmarkProcessFile(b, strings.Repeat("// Benchmark file content\n", 50))
 }
 
 func BenchmarkProcessorConcurrent(b *testing.B) {
@@ -523,7 +384,7 @@ func BenchmarkProcessorConcurrent(b *testing.B) {
 		testFiles[i] = filepath.Join(tmpDir, fmt.Sprintf("bench_concurrent_%d.go", i))
 		content := strings.Repeat(fmt.Sprintf("// Concurrent file %d content\n", i), 50)
 		if err := os.WriteFile(testFiles[i], []byte(content), 0o600); err != nil {
-			b.Fatalf(shared.TestMsgFailedToCreateTestFile, err)
+			b.Fatalf(testutil.TestMsgFailedToCreateTestFile, err)
 		}
 	}
 
@@ -535,17 +396,8 @@ func BenchmarkProcessorConcurrent(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {
-			testFile := testFiles[i%fileCount]
 			ch := make(chan fileproc.WriteRequest, 1)
-			var wg sync.WaitGroup
-			wg.Go(func() {
-				defer close(ch)
-				_ = processor.ProcessWithContext(ctx, testFile, ch)
-			})
-			for req := range ch {
-				_ = req // Drain channel
-			}
-			wg.Wait()
+			_ = processor.ProcessWithContext(ctx, testFiles[i%fileCount], ch)
 			i++
 		}
 	})

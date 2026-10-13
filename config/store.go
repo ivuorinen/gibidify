@@ -2,9 +2,11 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -22,7 +24,6 @@ type store struct {
 	defaults    map[string]any
 	values      map[string]any
 	searchPaths []string
-	explicitCfg string // config file set via SetConfigFile, tried before searchPaths
 	file        string // path of the config file that was actually loaded
 }
 
@@ -93,25 +94,19 @@ func Reset() { cfg = newStore() }
 // AddConfigPath registers a directory to search for the config file.
 func AddConfigPath(dir string) { cfg.searchPaths = append(cfg.searchPaths, dir) }
 
-// SetConfigFile forces a specific config file path (tried before search paths).
-func SetConfigFile(path string) { cfg.explicitCfg = path }
-
 // FileUsed returns the path of the config file that was loaded, if any.
 func FileUsed() string { return cfg.file }
 
-// ReadInConfig loads the first config file found (explicit path, then each
-// search path's config.yaml) into the explicit values tree.
+// ReadInConfig loads the first config file found (each search path's
+// config.yaml, in order) into the explicit values tree.
 func ReadInConfig() error {
-	candidates := make([]string, 0, len(cfg.searchPaths)+1)
-	if cfg.explicitCfg != "" {
-		candidates = append(candidates, cfg.explicitCfg)
-	}
+	candidates := make([]string, 0, len(cfg.searchPaths))
 	for _, dir := range cfg.searchPaths {
 		candidates = append(candidates, filepath.Join(dir, "config."+shared.FormatYAML))
 	}
 
 	for _, path := range candidates {
-		data, err := os.ReadFile(path) // #nosec G304 -- paths come from validated config dirs
+		data, err := os.ReadFile(filepath.Clean(path))
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue // try the next candidate
@@ -129,7 +124,69 @@ func ReadInConfig() error {
 		return nil
 	}
 
-	return fmt.Errorf("no config file found in %v", candidates)
+	return fmt.Errorf("%w in %v", errNoConfigFile, candidates)
+}
+
+// errNoConfigFile reports that no candidate config file exists, as opposed to
+// one that exists but cannot be read or parsed.
+var errNoConfigFile = errors.New("no config file found")
+
+// knownKeys lists every configuration key the application reads. The store
+// keeps no schema, so without this list a typo or a removed setting in a config
+// file was dropped without any message.
+var knownKeys = []string{
+	shared.ConfigKeyFileSizeLimit,
+	shared.ConfigKeyMaxConcurrency,
+	shared.ConfigKeyIgnoreDirectories,
+	shared.ConfigKeyFileTypesEnabled,
+	shared.ConfigKeyFileTypesCustomImageExtensions,
+	shared.ConfigKeyFileTypesCustomBinaryExtensions,
+	shared.ConfigKeyFileTypesCustomLanguages,
+	shared.ConfigKeyFileTypesDisabledImageExtensions,
+	shared.ConfigKeyFileTypesDisabledBinaryExtensions,
+	shared.ConfigKeyFileTypesDisabledLanguageExts,
+	shared.ConfigKeyResourceLimitsMaxFiles,
+	shared.ConfigKeyResourceLimitsMaxTotalSize,
+}
+
+// unknownKeys returns the sorted dot-separated paths of explicitly set values
+// that are neither known keys nor parents of known keys.
+func unknownKeys() []string {
+	var unknown []string
+
+	var walk func(prefix string, m map[string]any)
+	walk = func(prefix string, m map[string]any) {
+		for k, v := range m {
+			path := k
+			if prefix != "" {
+				path = prefix + "." + k
+			}
+			if slices.Contains(knownKeys, path) {
+				continue
+			}
+			if child, ok := v.(map[string]any); ok && isKnownParent(path) {
+				walk(path, child)
+
+				continue
+			}
+			unknown = append(unknown, path)
+		}
+	}
+	walk("", cfg.values)
+	slices.Sort(unknown)
+
+	return unknown
+}
+
+// isKnownParent reports whether path is a section containing known keys.
+func isKnownParent(path string) bool {
+	for _, k := range knownKeys {
+		if strings.HasPrefix(k, path+".") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // GetInt returns key as an int.

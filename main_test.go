@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"flag"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,11 +18,9 @@ const (
 	testFileCount = 1000
 )
 
-// resetFlagState resets the global flag state to allow multiple test runs.
+// resetFlagState resets the cli global flag state to allow multiple test runs.
 func resetFlagState() {
-	// Reset both the flag.CommandLine and cli global state for clean testing
 	cli.ResetFlags()
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 }
 
 // TestIntegrationFullCLI simulates a full run of the CLI application using adaptive concurrency.
@@ -76,11 +74,7 @@ func setupCLIArgs(srcDir, outFilePath string) {
 // verifyOutput checks that the output file contains expected content.
 func verifyOutput(t *testing.T, outFilePath string) {
 	t.Helper()
-	data, err := os.ReadFile(outFilePath) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Fatalf("Failed to read output file: %v", err)
-	}
-	output := string(data)
+	output := string(testutil.ReadFile(t, outFilePath))
 	testutil.VerifyContentContains(t, output, []string{"PREFIX", "Hello World", "SUFFIX"})
 }
 
@@ -100,14 +94,10 @@ func TestIntegrationCancellation(t *testing.T) {
 		testutil.CreateTestFile(t, srcDir, fileName, []byte("Content"))
 	}
 
-	// Create a temporary output file.
-	outFile, outFilePath := testutil.CreateTempOutputFile(t, "gibidify_output.txt")
-	testutil.CloseFile(t, outFile)
-	defer func() {
-		if removeErr := os.Remove(outFilePath); removeErr != nil {
-			t.Fatalf("cleanup output file: %v", removeErr)
-		}
-	}()
+	// A previous run's output, which the canceled run must leave untouched.
+	outDir := t.TempDir()
+	previous := []byte("previous output")
+	outFilePath := testutil.CreateTestFile(t, outDir, "gibidify_output.txt", previous)
 
 	// Set up CLI arguments.
 	testutil.SetupCLIArgs(srcDir, outFilePath, "PREFIX", "SUFFIX", 2)
@@ -123,6 +113,23 @@ func TestIntegrationCancellation(t *testing.T) {
 	runErr := run(ctx)
 	if runErr == nil {
 		t.Error("Expected Run to fail due to cancellation, but it succeeded")
+	}
+
+	if !errors.Is(runErr, context.Canceled) && !errors.Is(runErr, context.DeadlineExceeded) {
+		t.Errorf("expected a cancellation error (exit 130 path), got %v", runErr)
+	}
+
+	// The canceled run writes to a temporary file, so the previous output
+	// survives and nothing else is left in the directory.
+	if got := testutil.ReadFile(t, outFilePath); string(got) != string(previous) {
+		t.Errorf("previous output changed: got %q, want %q", got, previous)
+	}
+	entries, err := os.ReadDir(outDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		t.Errorf("expected only the previous output in %s, found %d entries", outDir, len(entries))
 	}
 }
 
@@ -157,7 +164,6 @@ func BenchmarkRun(b *testing.B) {
 
 		// Reset flags for each iteration
 		cli.ResetFlags()
-		flag.CommandLine = flag.NewFlagSet("bench", flag.ContinueOnError)
 
 		os.Args = []string{"gibidify", "-source", srcDir, "-destination", outFilePath, "-no-ui"}
 
@@ -199,7 +205,6 @@ func BenchmarkRunLargeFiles(b *testing.B) {
 
 		// Reset flags for each iteration
 		cli.ResetFlags()
-		flag.CommandLine = flag.NewFlagSet("bench", flag.ContinueOnError)
 
 		os.Args = []string{"gibidify", "-source", srcDir, "-destination", outFilePath, "-no-ui"}
 

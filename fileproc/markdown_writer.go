@@ -3,7 +3,7 @@ package fileproc
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"strings"
 
 	"github.com/ivuorinen/gibidify/shared"
@@ -11,12 +11,12 @@ import (
 
 // MarkdownWriter handles Markdown format output.
 type MarkdownWriter struct {
-	outFile *os.File
+	outFile io.Writer
 	suffix  string
 }
 
 // NewMarkdownWriter creates a new markdown writer.
-func NewMarkdownWriter(outFile *os.File) *MarkdownWriter {
+func NewMarkdownWriter(outFile io.Writer) *MarkdownWriter {
 	return &MarkdownWriter{outFile: outFile}
 }
 
@@ -56,7 +56,7 @@ func (w *MarkdownWriter) writeInline(req WriteRequest) error {
 	fence := codeFence(req.Content)
 	formatted := fmt.Sprintf("## File: `%s`\n%s%s\n%s\n%s\n\n", req.Path, fence, language, req.Content, fence)
 
-	if _, err := w.outFile.WriteString(formatted); err != nil {
+	if _, err := io.WriteString(w.outFile, formatted); err != nil {
 		return shared.WrapError(
 			err,
 			shared.ErrorTypeIO,
@@ -90,11 +90,4 @@ func codeFence(content string) string {
 	}
 
 	return strings.Repeat("`", n)
-}
-
-// startMarkdownWriter handles Markdown format output.
-func startMarkdownWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
-	startFormatWriter(outFile, writeCh, done, prefix, suffix, func(f *os.File) FormatWriter {
-		return NewMarkdownWriter(f)
-	})
 }

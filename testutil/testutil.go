@@ -15,8 +15,9 @@
 //	  - Use AssertErrorContains() for substring validation
 //
 //	Configuration:
-//	  - Use ResetViperConfig() to reset between tests
-//	  - Remember to call config.LoadConfig() after ResetViperConfig()
+//	  - Use ResetConfig() to reset and reload between tests (it calls
+//	    config.LoadConfig() itself)
+//	  - Use SetConfigKeys() to start from defaults plus explicit values
 //
 //	Best Practices:
 //	  - Always use t.Helper() in test helper functions
@@ -36,6 +37,34 @@ import (
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
 )
+
+// RunIsolated runs m with XDG_CONFIG_HOME and HOME pointed at an empty
+// temporary directory and is meant to be the whole body of a package's
+// TestMain. config.LoadConfig searches both, so without it the suite read the
+// developer's own ~/.config/gibidify/config.yaml: a valid restrictive config
+// failed 11 tests, and a passing run tested that config instead of the defaults.
+// Tests that need a config file still pass their own path, which is searched
+// first.
+func RunIsolated(m *testing.M) {
+	dir, err := os.MkdirTemp("", "gibidify-test-home-*")
+	if err != nil {
+		panic("creating isolated config home: " + err.Error())
+	}
+	defer func() {
+		if err := os.RemoveAll(dir); err != nil {
+			panic("removing isolated config home: " + err.Error())
+		}
+	}()
+
+	for _, key := range []string{"XDG_CONFIG_HOME", "HOME"} {
+		if err := os.Setenv(key, dir); err != nil {
+			panic("setting " + key + ": " + err.Error())
+		}
+	}
+
+	// TestMain returning hands m.Run's result to os.Exit.
+	m.Run()
+}
 
 // SuppressLogs suppresses logger output during testing to keep test output clean.
 // Returns a function that should be called to restore the original log output.
@@ -97,11 +126,23 @@ func SuppressAllOutput(t *testing.T) OutputRestoreFunc {
 func CreateTestFile(t *testing.T, dir, filename string, content []byte) string {
 	t.Helper()
 	filePath := filepath.Join(dir, filename)
-	if err := os.WriteFile(filePath, content, shared.TestFilePermission); err != nil {
+	if err := os.WriteFile(filePath, content, TestFilePermission); err != nil {
 		t.Fatalf("Failed to write file %s: %v", filePath, err)
 	}
 
 	return filePath
+}
+
+// ReadFile returns the contents of a file the test created, failing the test
+// if it cannot be read.
+func ReadFile(t *testing.T, path string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Clean(path))
+	if err != nil {
+		t.Fatalf("Failed to read file %s: %v", path, err)
+	}
+
+	return data
 }
 
 // CreateTempOutputFile creates a temporary output file and returns the file handle and path.
@@ -120,7 +161,7 @@ func CreateTempOutputFile(t *testing.T, pattern string) (file *os.File, path str
 func CreateTestDirectory(t *testing.T, parent, name string) string {
 	t.Helper()
 	dirPath := filepath.Join(parent, name)
-	if err := os.Mkdir(dirPath, shared.TestDirPermission); err != nil {
+	if err := os.Mkdir(dirPath, TestDirPermission); err != nil {
 		t.Fatalf("Failed to create directory %s: %v", dirPath, err)
 	}
 
@@ -145,18 +186,22 @@ func CreateTestFiles(t *testing.T, rootDir string, fileSpecs []FileSpec) []strin
 	return createdFiles
 }
 
-// ResetViperConfig resets Viper configuration and optionally sets a config path.
-func ResetViperConfig(t *testing.T, configPath string) {
+// ResetConfig clears the config store, searches configPath first when it is
+// set, and loads the configuration, failing the test if it does not load.
+func ResetConfig(t *testing.T, configPath string) {
 	t.Helper()
 	config.Reset()
 	if configPath != "" {
 		config.AddConfigPath(configPath)
 	}
-	config.LoadConfig()
+	if err := config.LoadConfig(); err != nil {
+		t.Fatalf("loading config: %v", err)
+	}
 }
 
-// SetViperKeys sets specific configuration keys for testing.
-func SetViperKeys(t *testing.T, keyValues map[string]any) {
+// SetConfigKeys resets the config store to defaults and sets keyValues as
+// explicit values, without reading any config file.
+func SetConfigKeys(t *testing.T, keyValues map[string]any) {
 	t.Helper()
 	config.Reset()
 	config.SetDefaultConfig()
@@ -192,7 +237,7 @@ func VerifyContentContains(t *testing.T, content string, expectedSubstrings []st
 func MustSucceed(t *testing.T, err error, operation string) {
 	t.Helper()
 	if err != nil {
-		t.Fatalf(shared.TestMsgOperationFailed, operation, err)
+		t.Fatalf(TestMsgOperationFailed, operation, err)
 	}
 }
 
@@ -224,7 +269,7 @@ func CreateTestDirectoryStructure(t *testing.T, rootDir string, dirSpecs []DirSp
 
 	for _, dirSpec := range dirSpecs {
 		dirPath := filepath.Join(rootDir, dirSpec.Path)
-		if err := os.MkdirAll(dirPath, shared.TestDirPermission); err != nil {
+		if err := os.MkdirAll(dirPath, TestDirPermission); err != nil {
 			t.Fatalf("Failed to create directory structure %s: %v", dirPath, err)
 		}
 		createdPaths = append(createdPaths, dirPath)
@@ -257,7 +302,7 @@ func AssertError(t *testing.T, err error, wantErr bool, operation string) {
 	t.Helper()
 	if (err != nil) != wantErr {
 		if wantErr {
-			t.Errorf(shared.TestMsgOperationNoError, operation)
+			t.Errorf(TestMsgOperationNoError, operation)
 		} else {
 			t.Errorf("Operation %s unexpected error: %v", operation, err)
 		}
@@ -268,7 +313,7 @@ func AssertError(t *testing.T, err error, wantErr bool, operation string) {
 func AssertNoError(t *testing.T, err error, operation string) {
 	t.Helper()
 	if err != nil {
-		t.Errorf(shared.TestMsgOperationFailed, operation, err)
+		t.Errorf(TestMsgOperationFailed, operation, err)
 	}
 }
 
@@ -276,7 +321,7 @@ func AssertNoError(t *testing.T, err error, operation string) {
 func AssertExpectedError(t *testing.T, err error, operation string) {
 	t.Helper()
 	if err == nil {
-		t.Errorf(shared.TestMsgOperationNoError, operation)
+		t.Errorf(TestMsgOperationNoError, operation)
 	}
 }
 

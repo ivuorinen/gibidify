@@ -2,41 +2,65 @@
 package fileproc
 
 import (
-	"fmt"
-	"os"
-	"strings"
+	"io"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/ivuorinen/gibidify/shared"
 )
 
+// yamlIndent is the indentation of nested YAML nodes.
+const yamlIndent = 2
+
 // YAMLWriter handles YAML format output.
+//
+// Every scalar goes through the yaml.v3 encoder. The previous hand-written
+// block scalars copied raw bytes, so one file with an ESC, a form feed or a
+// bare CR made the whole document unparseable, and CRLF content lost its CRs;
+// the encoder picks literal style for printable text and an escaped
+// double-quoted scalar otherwise, so every string round-trips.
 type YAMLWriter struct {
-	outFile *os.File
+	out io.Writer
+}
+
+// yamlHeader is the document's leading mapping. Fields keep declaration order.
+type yamlHeader struct {
+	Prefix string `yaml:"prefix"`
+	Suffix string `yaml:"suffix"`
 }
 
 // NewYAMLWriter creates a new YAML writer.
-func NewYAMLWriter(outFile *os.File) *YAMLWriter {
-	return &YAMLWriter{outFile: outFile}
+func NewYAMLWriter(out io.Writer) *YAMLWriter {
+	return &YAMLWriter{out: out}
 }
 
-// Start writes the YAML header.
+// Start writes the prefix and suffix keys and opens the files sequence.
 func (w *YAMLWriter) Start(prefix, suffix string) error {
-	// Write YAML header
-	if _, err := fmt.Fprintf(
-		w.outFile,
-		"prefix: %s\nsuffix: %s\nfiles:\n",
-		shared.EscapeForYAML(prefix),
-		shared.EscapeForYAML(suffix),
-	); err != nil {
+	if err := w.encode(yamlHeader{Prefix: prefix, Suffix: suffix}); err != nil {
+		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write YAML header")
+	}
+	if _, err := io.WriteString(w.out, "files:\n"); err != nil {
 		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write YAML header")
 	}
 
 	return nil
 }
 
-// WriteFile writes a file entry in YAML format.
+// WriteFile writes one entry of the files sequence. A one-element sequence
+// encodes as "- path: …" at column zero, which YAML accepts as the value of the
+// preceding "files:" key.
 func (w *YAMLWriter) WriteFile(req WriteRequest) error {
-	return w.writeInline(req)
+	entry := []FileData{{Path: req.Path, Content: req.Content, Language: detectLanguage(req.Path)}}
+	if err := w.encode(entry); err != nil {
+		return shared.WrapError(
+			err,
+			shared.ErrorTypeIO,
+			shared.CodeIOWrite,
+			"failed to write YAML entry",
+		).WithFilePath(req.Path)
+	}
+
+	return nil
 }
 
 // Close writes the YAML footer (no footer needed for YAML).
@@ -44,49 +68,14 @@ func (w *YAMLWriter) Close() error {
 	return nil
 }
 
-// writeInline writes a file directly as YAML.
-func (w *YAMLWriter) writeInline(req WriteRequest) error {
-	language := detectLanguage(req.Path)
-	fileData := FileData{
-		Path:     req.Path,
-		Content:  req.Content,
-		Language: language,
+// encode writes v as one YAML document fragment. A fresh encoder per value
+// emits no "---" separator.
+func (w *YAMLWriter) encode(v any) error {
+	enc := yaml.NewEncoder(w.out)
+	enc.SetIndent(yamlIndent)
+	if err := enc.Encode(v); err != nil {
+		return err
 	}
 
-	// Write YAML entry
-	if _, err := fmt.Fprintf(
-		w.outFile,
-		shared.YAMLFmtFileEntry,
-		shared.EscapeForYAML(fileData.Path),
-		fileData.Language,
-	); err != nil {
-		return shared.WrapError(
-			err,
-			shared.ErrorTypeIO,
-			shared.CodeIOWrite,
-			"failed to write YAML entry start",
-		).WithFilePath(req.Path)
-	}
-
-	// Write indented content
-	lines := strings.Split(fileData.Content, "\n")
-	for _, line := range lines {
-		if _, err := fmt.Fprintf(w.outFile, "      %s\n", line); err != nil {
-			return shared.WrapError(
-				err,
-				shared.ErrorTypeIO,
-				shared.CodeIOWrite,
-				"failed to write YAML content line",
-			).WithFilePath(req.Path)
-		}
-	}
-
-	return nil
-}
-
-// startYAMLWriter handles YAML format output.
-func startYAMLWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
-	startFormatWriter(outFile, writeCh, done, prefix, suffix, func(f *os.File) FormatWriter {
-		return NewYAMLWriter(f)
-	})
+	return enc.Close()
 }

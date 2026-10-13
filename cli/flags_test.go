@@ -17,7 +17,7 @@ const testDirPlaceholder = "testdir"
 func setupTestArgs(t *testing.T, args []string, want *Flags) ([]string, *Flags) {
 	t.Helper()
 
-	if !containsFlag(args, shared.TestCLIFlagSource) {
+	if !containsFlag(args, testutil.TestCLIFlagSource) {
 		return args, want
 	}
 
@@ -111,7 +111,7 @@ func TestParseFlags(t *testing.T) {
 	}{
 		{
 			name: "valid basic flags",
-			args: []string{shared.TestCLIFlagSource, "testdir", shared.TestCLIFlagFormat, "markdown"},
+			args: []string{testutil.TestCLIFlagSource, "testdir", testutil.TestCLIFlagFormat, "markdown"},
 			want: &Flags{
 				SourceDir:   "testdir",
 				Format:      "markdown",
@@ -124,19 +124,19 @@ func TestParseFlags(t *testing.T) {
 		{
 			name: "valid with all flags",
 			args: []string{
-				shared.TestCLIFlagSource, "testdir",
-				shared.TestCLIFlagDestination, shared.TestOutputMD,
+				testutil.TestCLIFlagSource, "testdir",
+				testutil.TestCLIFlagDestination, testutil.TestOutputMD,
 				"-prefix", "# Header",
 				"-suffix", "# Footer",
-				shared.TestCLIFlagFormat, "json",
-				shared.TestCLIFlagConcurrency, "4",
+				testutil.TestCLIFlagFormat, "json",
+				testutil.TestCLIFlagConcurrency, "4",
 				"-verbose",
 				"-no-colors",
 				"-no-progress",
 			},
 			want: &Flags{
 				SourceDir:   "testdir",
-				Destination: shared.TestOutputMD,
+				Destination: testutil.TestOutputMD,
 				Prefix:      "# Header",
 				Suffix:      "# Footer",
 				Format:      "json",
@@ -144,33 +144,67 @@ func TestParseFlags(t *testing.T) {
 				Verbose:     true,
 				NoColors:    true,
 				NoProgress:  true,
-				LogLevel:    string(shared.LogLevelWarn),
+				LogLevel:    string(shared.LogLevelInfo), // -verbose raises the default level
+			},
+			wantErr: false,
+		},
+		{
+			name: "explicit log-level wins over verbose",
+			args: []string{
+				testutil.TestCLIFlagSource, "testdir",
+				testutil.TestCLIFlagDestination, testutil.TestOutputMD,
+				"-verbose",
+				"-log-level", "error",
+			},
+			want: &Flags{
+				SourceDir:   "testdir",
+				Destination: testutil.TestOutputMD,
+				Format:      "json",
+				Concurrency: runtime.NumCPU(),
+				Verbose:     true,
+				LogLevel:    string(shared.LogLevelError),
 			},
 			wantErr: false,
 		},
 		{
 			name:        "missing source directory",
-			args:        []string{shared.TestCLIFlagFormat, "markdown"},
+			args:        []string{testutil.TestCLIFlagFormat, "markdown"},
 			wantErr:     true,
 			errContains: "source directory is required",
 		},
 		{
 			name:        "invalid format",
-			args:        []string{shared.TestCLIFlagSource, "testdir", shared.TestCLIFlagFormat, "invalid"},
+			args:        []string{testutil.TestCLIFlagSource, "testdir", testutil.TestCLIFlagFormat, "invalid"},
 			wantErr:     true,
 			errContains: "validating output format",
 		},
 		{
 			name:        "invalid concurrency zero",
-			args:        []string{shared.TestCLIFlagSource, "testdir", shared.TestCLIFlagConcurrency, "0"},
+			args:        []string{testutil.TestCLIFlagSource, "testdir", testutil.TestCLIFlagConcurrency, "0"},
 			wantErr:     true,
-			errContains: shared.TestOpValidatingConcurrency,
+			errContains: testutil.TestOpValidatingConcurrency,
 		},
 		{
 			name:        "negative concurrency",
-			args:        []string{shared.TestCLIFlagSource, "testdir", shared.TestCLIFlagConcurrency, "-1"},
+			args:        []string{testutil.TestCLIFlagSource, "testdir", testutil.TestCLIFlagConcurrency, "-1"},
 			wantErr:     true,
-			errContains: shared.TestOpValidatingConcurrency,
+			errContains: testutil.TestOpValidatingConcurrency,
+		},
+		{
+			// flag stops parsing at "stray"; the flags after it used to be dropped.
+			name: "positional argument before flags",
+			args: []string{
+				testutil.TestCLIFlagSource, "testdir", "stray",
+				testutil.TestCLIFlagFormat, "yaml", testutil.TestCLIFlagDestination, "out.yaml",
+			},
+			wantErr:     true,
+			errContains: `unexpected argument "stray"`,
+		},
+		{
+			name:        "source given as an argument",
+			args:        []string{"testdir", testutil.TestCLIFlagFormat, "yaml"},
+			wantErr:     true,
+			errContains: `unexpected argument "testdir"`,
 		},
 	}
 
@@ -254,7 +288,7 @@ func TestFlagsvalidate(t *testing.T) {
 				LogLevel:    "warn",
 			},
 			wantErr:     true,
-			errContains: shared.TestOpValidatingConcurrency,
+			errContains: testutil.TestOpValidatingConcurrency,
 		},
 		{
 			name: "negative concurrency",
@@ -265,7 +299,7 @@ func TestFlagsvalidate(t *testing.T) {
 				LogLevel:    "warn",
 			},
 			wantErr:     true,
-			errContains: shared.TestOpValidatingConcurrency,
+			errContains: testutil.TestOpValidatingConcurrency,
 		},
 		{
 			name: "invalid log level",
@@ -408,7 +442,7 @@ func TestParseFlagsSingleton(t *testing.T) {
 	tempDir := t.TempDir()
 
 	// First call
-	setupCommandLineArgs([]string{shared.TestCLIFlagSource, tempDir, shared.TestCLIFlagFormat, "markdown"})
+	setupCommandLineArgs([]string{testutil.TestCLIFlagSource, tempDir, testutil.TestCLIFlagFormat, "markdown"})
 	flags1, err := ParseFlags()
 	if err != nil {
 		t.Fatalf("First ParseFlags() failed: %v", err)
@@ -431,8 +465,6 @@ func TestParseFlagsSingleton(t *testing.T) {
 func resetFlagsState() {
 	flagsParsed = false
 	globalFlags = nil
-	// Reset the flag.CommandLine for clean testing (use ContinueOnError to match ResetFlags)
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 }
 
 // setupCommandLineArgs sets up command line arguments for testing.
@@ -569,7 +601,7 @@ func TestResetFlagsIntegration(t *testing.T) {
 		t.Log("ResetFlags integration behavior:")
 		t.Log("1. Resets flagsParsed to false")
 		t.Log("2. Sets globalFlags to nil")
-		t.Log("3. Creates new flag.CommandLine FlagSet")
+		t.Log("3. Leaves flag.CommandLine untouched (ParseFlags uses its own FlagSet)")
 		t.Log("4. Allows subsequent ParseFlags calls")
 
 		// The actual mechanics are tested in TestResetFlags
@@ -585,8 +617,10 @@ func TestResetFlagsIntegration(t *testing.T) {
 		if globalFlags != nil {
 			t.Error("globalFlags should be nil after ResetFlags")
 		}
-		if flag.CommandLine == nil {
-			t.Error("flag.CommandLine should not be nil after ResetFlags")
+		before := flag.CommandLine
+		ResetFlags()
+		if flag.CommandLine != before {
+			t.Error("ResetFlags must not replace flag.CommandLine (drops testing flags)")
 		}
 	})
 }

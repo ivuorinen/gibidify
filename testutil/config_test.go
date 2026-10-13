@@ -6,10 +6,9 @@ import (
 	"testing"
 
 	"github.com/ivuorinen/gibidify/config"
-	"github.com/ivuorinen/gibidify/shared"
 )
 
-func TestResetViperConfig(t *testing.T) {
+func TestResetConfig(t *testing.T) {
 	tests := []struct {
 		name       string
 		configPath string
@@ -20,12 +19,12 @@ func TestResetViperConfig(t *testing.T) {
 			name:       "reset with empty config path",
 			configPath: "",
 			preSetup: func() {
-				config.Set(shared.TestKeyName, "value")
+				config.Set(TestKeyName, "value")
 			},
 			verify: func(t *testing.T) {
 				t.Helper()
-				if config.IsSet(shared.TestKeyName) {
-					t.Error("Viper config not reset properly")
+				if config.IsSet(TestKeyName) {
+					t.Error("config store not reset properly")
 				}
 			},
 		},
@@ -33,12 +32,12 @@ func TestResetViperConfig(t *testing.T) {
 			name:       "reset with config path",
 			configPath: t.TempDir(),
 			preSetup: func() {
-				config.Set(shared.TestKeyName, "value")
+				config.Set(TestKeyName, "value")
 			},
 			verify: func(t *testing.T) {
 				t.Helper()
-				if config.IsSet(shared.TestKeyName) {
-					t.Error("Viper config not reset properly")
+				if config.IsSet(TestKeyName) {
+					t.Error("config store not reset properly")
 				}
 				// Verify config path was added
 				paths := config.FileUsed()
@@ -54,7 +53,7 @@ func TestResetViperConfig(t *testing.T) {
 		t.Run(
 			tt.name, func(t *testing.T) {
 				tt.preSetup()
-				ResetViperConfig(t, tt.configPath)
+				ResetConfig(t, tt.configPath)
 				tt.verify(t)
 			},
 		)

@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/ivuorinen/gibidify/shared"
 )
 
 // verifySingleDirectoryFiles verifies single directory with files test case.
@@ -18,22 +16,14 @@ func verifySingleDirectoryFiles(t *testing.T, rootDir string, _ []string) {
 		t.Errorf("Directory %s should exist", srcDir)
 	}
 
-	mainFile := filepath.Join(srcDir, shared.TestFileMainGo)
-	content, err := os.ReadFile(mainFile) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read %s: %v", shared.TestFileMainGo, err)
-	}
-	if string(content) != shared.LiteralPackageMain {
-		t.Errorf("%s content = %q, want %q", shared.TestFileMainGo, content, shared.LiteralPackageMain)
+	content := ReadFile(t, filepath.Join(srcDir, TestFileMainGo))
+	if string(content) != LiteralPackageMain {
+		t.Errorf("%s content = %q, want %q", TestFileMainGo, content, LiteralPackageMain)
 	}
 
-	utilsFile := filepath.Join(srcDir, shared.TestFileSharedGo)
-	content, err = os.ReadFile(utilsFile) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read shared.go: %v", err)
-	}
-	if string(content) != shared.TestSharedGoContent {
-		t.Errorf("shared.go content = %q, want %q", content, shared.TestSharedGoContent)
+	content = ReadFile(t, filepath.Join(srcDir, TestFileSharedGo))
+	if string(content) != TestSharedGoContent {
+		t.Errorf("shared.go content = %q, want %q", content, TestSharedGoContent)
 	}
 }
 
@@ -48,18 +38,14 @@ func verifyMultipleDirectories(t *testing.T, rootDir string, _ []string) {
 	}
 	for _, dir := range expectedDirs {
 		if info, err := os.Stat(dir); err != nil {
-			t.Errorf(shared.TestFmtDirectoryShouldExist, dir, err)
+			t.Errorf(TestFmtDirectoryShouldExist, dir, err)
 		} else if !info.IsDir() {
-			t.Errorf(shared.TestFmtPathShouldBeDirectory, dir)
+			t.Errorf(TestFmtPathShouldBeDirectory, dir)
 		}
 	}
 
-	handlerFile := filepath.Join(rootDir, "src", "handlers", "handler.go")
-	content, err := os.ReadFile(handlerFile) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read handler.go: %v", err)
-	}
-	if string(content) != shared.TestContentPackageHandlers {
+	content := ReadFile(t, filepath.Join(rootDir, "src", "handlers", "handler.go"))
+	if string(content) != TestContentPackageHandlers {
 		t.Errorf("handler.go content = %q, want 'package handlers'", content)
 	}
 }
@@ -70,9 +56,9 @@ func verifyEmptyDirectory(t *testing.T, rootDir string, _ []string) {
 
 	emptyDir := filepath.Join(rootDir, "empty")
 	if info, err := os.Stat(emptyDir); err != nil {
-		t.Errorf(shared.TestFmtDirectoryShouldExist, emptyDir, err)
+		t.Errorf(TestFmtDirectoryShouldExist, emptyDir, err)
 	} else if !info.IsDir() {
-		t.Errorf(shared.TestFmtPathShouldBeDirectory, emptyDir)
+		t.Errorf(TestFmtPathShouldBeDirectory, emptyDir)
 	}
 }
 
@@ -90,11 +76,7 @@ func verifySpecialCharacters(t *testing.T, rootDir string, _ []string) {
 		t.Errorf("Spaced directory should exist: %v", err)
 	}
 
-	spacedFile := filepath.Join(spacedDir, "file with spaces.txt")
-	content, err := os.ReadFile(spacedFile) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read spaced file: %v", err)
-	}
+	content := ReadFile(t, filepath.Join(spacedDir, "file with spaces.txt"))
 	if string(content) != "spaced content" {
 		t.Errorf("Spaced file content = %q, want 'spaced content'", content)
 	}
@@ -139,8 +121,8 @@ func TestCreateTestDirectoryStructure(t *testing.T) {
 				{
 					Path: "src",
 					Files: []FileSpec{
-						{Name: shared.TestFileMainGo, Content: shared.LiteralPackageMain},
-						{Name: shared.TestFileSharedGo, Content: shared.TestSharedGoContent},
+						{Name: TestFileMainGo, Content: LiteralPackageMain},
+						{Name: TestFileSharedGo, Content: TestSharedGoContent},
 					},
 				},
 			},
@@ -153,13 +135,13 @@ func TestCreateTestDirectoryStructure(t *testing.T) {
 				{
 					Path: "src",
 					Files: []FileSpec{
-						{Name: shared.TestFileMainGo, Content: shared.LiteralPackageMain},
+						{Name: TestFileMainGo, Content: LiteralPackageMain},
 					},
 				},
 				{
 					Path: "src/handlers",
 					Files: []FileSpec{
-						{Name: "handler.go", Content: shared.TestContentPackageHandlers},
+						{Name: "handler.go", Content: TestContentPackageHandlers},
 						{Name: "middleware.go", Content: "package handlers\n\ntype Middleware struct {}"},
 					},
 				},
@@ -239,23 +221,15 @@ func verifyBasicDirectoryStructure(t *testing.T, rootDir string) {
 		t.Error("App path should be a directory")
 	}
 
-	mainFile := filepath.Join(appDir, shared.TestFileMainGo)
-	content, err := os.ReadFile(mainFile) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read %s: %v", shared.TestFileMainGo, err)
-	}
+	content := ReadFile(t, filepath.Join(appDir, TestFileMainGo))
 	expectedMain := "package main\n\nfunc main() {}"
 	if string(content) != expectedMain {
-		t.Errorf("%s content = %q, want %q", shared.TestFileMainGo, content, expectedMain)
+		t.Errorf("%s content = %q, want %q", TestFileMainGo, content, expectedMain)
 	}
 
-	configFile := filepath.Join(appDir, shared.TestFileConfigJSON)
-	content, err = os.ReadFile(configFile) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read %s: %v", shared.TestFileConfigJSON, err)
-	}
+	content = ReadFile(t, filepath.Join(appDir, TestFileConfigJSON))
 	if string(content) != `{"debug": true}` {
-		t.Errorf("%s content = %q, want %q", shared.TestFileConfigJSON, content, `{"debug": true}`)
+		t.Errorf("%s content = %q, want %q", TestFileConfigJSON, content, `{"debug": true}`)
 	}
 
 	docsDir := filepath.Join(rootDir, "docs")
@@ -265,13 +239,9 @@ func verifyBasicDirectoryStructure(t *testing.T, rootDir string) {
 		t.Error("Docs path should be a directory")
 	}
 
-	readmeFile := filepath.Join(docsDir, shared.TestFileReadmeMD)
-	content, err = os.ReadFile(readmeFile) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read %s: %v", shared.TestFileReadmeMD, err)
-	}
-	if string(content) != shared.TestContentDocumentation {
-		t.Errorf("%s content = %q, want '# Documentation'", shared.TestFileReadmeMD, content)
+	content = ReadFile(t, filepath.Join(docsDir, TestFileReadmeMD))
+	if string(content) != TestContentDocumentation {
+		t.Errorf("%s content = %q, want '# Documentation'", TestFileReadmeMD, content)
 	}
 }
 
@@ -298,11 +268,7 @@ func verifyEmptyDirectorySpecs(t *testing.T, rootDir string) {
 func verifyComplexNestedStructure(t *testing.T, rootDir string) {
 	t.Helper()
 
-	deepPath := filepath.Join(rootDir, "project", "internal", "handlers", "auth.go")
-	content, err := os.ReadFile(deepPath) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read deep nested file: %v", err)
-	}
+	content := ReadFile(t, filepath.Join(rootDir, "project", "internal", "handlers", "auth.go"))
 	expectedContent := "package handlers\n\ntype AuthHandler struct{}"
 	if string(content) != expectedContent {
 		t.Errorf("Deep nested file content = %q, want %q", content, expectedContent)
@@ -320,9 +286,9 @@ func verifyComplexNestedStructure(t *testing.T, rootDir string) {
 	for _, dir := range expectedDirs {
 		fullPath := filepath.Join(rootDir, dir)
 		if info, err := os.Stat(fullPath); err != nil {
-			t.Errorf(shared.TestFmtDirectoryShouldExist, fullPath, err)
+			t.Errorf(TestFmtDirectoryShouldExist, fullPath, err)
 		} else if !info.IsDir() {
-			t.Errorf(shared.TestFmtPathShouldBeDirectory, fullPath)
+			t.Errorf(TestFmtPathShouldBeDirectory, fullPath)
 		}
 	}
 }
@@ -355,14 +321,14 @@ func TestSetupTempDirWithStructure(t *testing.T) {
 				{
 					Path: "app",
 					Files: []FileSpec{
-						{Name: shared.TestFileMainGo, Content: "package main\n\nfunc main() {}"},
-						{Name: shared.TestFileConfigJSON, Content: `{"debug": true}`},
+						{Name: TestFileMainGo, Content: "package main\n\nfunc main() {}"},
+						{Name: TestFileConfigJSON, Content: `{"debug": true}`},
 					},
 				},
 				{
 					Path: "docs",
 					Files: []FileSpec{
-						{Name: shared.TestFileReadmeMD, Content: shared.TestContentDocumentation},
+						{Name: TestFileReadmeMD, Content: TestContentDocumentation},
 					},
 				},
 			},
@@ -385,13 +351,13 @@ func TestSetupTempDirWithStructure(t *testing.T) {
 				{
 					Path: "project/cmd/server",
 					Files: []FileSpec{
-						{Name: shared.TestFileMainGo, Content: shared.LiteralPackageMain},
+						{Name: TestFileMainGo, Content: LiteralPackageMain},
 					},
 				},
 				{
 					Path: "project/internal/handlers",
 					Files: []FileSpec{
-						{Name: "health.go", Content: shared.TestContentPackageHandlers},
+						{Name: "health.go", Content: TestContentPackageHandlers},
 						{Name: "auth.go", Content: "package handlers\n\ntype AuthHandler struct{}"},
 					},
 				},
@@ -427,13 +393,13 @@ func benchmarkDirectoryStructure(b *testing.B, dirSpecs []DirSpec) {
 
 		for _, dirSpec := range dirSpecs {
 			dirPath := filepath.Join(rootDir, dirSpec.Path)
-			if err := os.MkdirAll(dirPath, shared.TestDirPermission); err != nil {
+			if err := os.MkdirAll(dirPath, TestDirPermission); err != nil {
 				b.Fatalf("Failed to create directory: %v", err)
 			}
 
 			for _, fileSpec := range dirSpec.Files {
 				filePath := filepath.Join(dirPath, fileSpec.Name)
-				if err := os.WriteFile(filePath, []byte(fileSpec.Content), shared.TestFilePermission); err != nil {
+				if err := os.WriteFile(filePath, []byte(fileSpec.Content), TestFilePermission); err != nil {
 					b.Fatalf("Failed to create file: %v", err)
 				}
 			}
@@ -453,8 +419,8 @@ func BenchmarkDirectoryCreation(b *testing.B) {
 				{
 					Path: "src",
 					Files: []FileSpec{
-						{Name: shared.TestFileMainGo, Content: shared.LiteralPackageMain},
-						{Name: shared.TestFileSharedGo, Content: shared.TestSharedGoContent},
+						{Name: TestFileMainGo, Content: LiteralPackageMain},
+						{Name: TestFileSharedGo, Content: TestSharedGoContent},
 					},
 				},
 				{
@@ -471,14 +437,14 @@ func BenchmarkDirectoryCreation(b *testing.B) {
 				{
 					Path: "app",
 					Files: []FileSpec{
-						{Name: shared.TestFileMainGo, Content: shared.LiteralPackageMain},
-						{Name: shared.TestFileConfigJSON, Content: `{"debug": true}`},
+						{Name: TestFileMainGo, Content: LiteralPackageMain},
+						{Name: TestFileConfigJSON, Content: `{"debug": true}`},
 					},
 				},
 				{
 					Path: "docs",
 					Files: []FileSpec{
-						{Name: shared.TestFileReadmeMD, Content: shared.TestContentDocumentation},
+						{Name: TestFileReadmeMD, Content: TestContentDocumentation},
 					},
 				},
 			},

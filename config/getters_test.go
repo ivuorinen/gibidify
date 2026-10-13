@@ -112,8 +112,8 @@ func TestConfigGetters(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Reset viper and set the specific configuration
-			testutil.SetViperKeys(t, map[string]any{
+			// Reset the config store and set the specific configuration
+			testutil.SetConfigKeys(t, map[string]any{
 				tt.configKey: tt.configValue,
 			})
 
@@ -130,13 +130,14 @@ func TestConfigGetters(t *testing.T) {
 // TestConfigGettersWithDefaults tests that getters return appropriate default values
 // when configuration keys are not set.
 func TestConfigGettersWithDefaults(t *testing.T) {
-	// Reset viper to ensure clean state
-	testutil.ResetViperConfig(t, "")
+	// Reset the config store to ensure clean state
+	testutil.ResetConfig(t, "")
 
 	// Test numeric getters with concrete default assertions
 	t.Run("numeric_getters", func(t *testing.T) {
 		assertInt64Getter(t, "FileSizeLimit", config.FileSizeLimit, shared.ConfigFileSizeLimitDefault)
-		assertIntGetter(t, "MaxConcurrency", config.MaxConcurrency, shared.ConfigMaxConcurrencyDefault)
+		// maxConcurrency is an optional ceiling with no default.
+		assertIntGetter(t, "MaxConcurrency", config.MaxConcurrency, 0)
 		assertIntGetter(t, "MaxFiles", config.MaxFiles, shared.ConfigMaxFilesDefault)
 		assertInt64Getter(t, "MaxTotalSize", config.MaxTotalSize, shared.ConfigMaxTotalSizeDefault)
 	})

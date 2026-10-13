@@ -200,7 +200,7 @@ func verifyAbsolutePathResult(
 		return
 	}
 
-	//nolint:errcheck // Test helper, error intentionally ignored for testing
+	// Test helper, error intentionally ignored for testing
 	verifyAbsolutePathOutput(t, got, wantPrefix)
 }
 
@@ -309,7 +309,7 @@ func setupBrokenSymlink(t *testing.T) (string, func()) {
 func verifySpecialCaseAbsolutePath(t *testing.T, setup func(*testing.T) (string, func()), path string, wantErr bool) {
 	t.Helper()
 	testPath, cleanup := setup(t)
-	//nolint:errcheck // Test helper, error intentionally ignored for testing
+	// Test helper, error intentionally ignored for testing
 	defer cleanup()
 
 	if path == "" {
@@ -335,7 +335,7 @@ func TestAbsolutePathConcurrency(_ *testing.T) {
 
 	for _, p := range paths {
 		go func(path string) {
-			_, _ = AbsolutePath(path) //nolint:errcheck // Testing concurrency safety only, result not needed
+			_, _ = AbsolutePath(path) // Testing concurrency safety only, result not needed
 			done <- true
 		}(p)
 	}
@@ -373,7 +373,7 @@ func TestAbsolutePathErrorFormatting(t *testing.T) {
 func BenchmarkAbsolutePath(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = AbsolutePath("test/path/file.go") //nolint:errcheck // Benchmark test, result not needed
+		_, _ = AbsolutePath("test/path/file.go") // Benchmark test, result not needed
 	}
 }
 
@@ -386,7 +386,7 @@ func BenchmarkAbsolutePathAbs(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = AbsolutePath(absPath) //nolint:errcheck // Benchmark test, result not needed
+		_, _ = AbsolutePath(absPath) // Benchmark test, result not needed
 	}
 }
 
@@ -394,7 +394,7 @@ func BenchmarkAbsolutePathAbs(b *testing.B) {
 func BenchmarkAbsolutePathCurrent(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = AbsolutePath(".") //nolint:errcheck // Benchmark test, result not needed
+		_, _ = AbsolutePath(".") // Benchmark test, result not needed
 	}
 }
 
@@ -403,10 +403,13 @@ func TestValidateSourcePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	validDir := filepath.Join(tmpDir, "validdir")
 	validFile := filepath.Join(tmpDir, "validfile.txt")
+	dottedDir := filepath.Join(tmpDir, "a..b")
 
-	// Create test directory and file
-	if err := os.Mkdir(validDir, 0o750); err != nil {
-		t.Fatalf(TestMsgFailedToCreateTestDir, err)
+	// Create test directories and file
+	for _, dir := range []string{validDir, dottedDir} {
+		if err := os.Mkdir(dir, 0o750); err != nil {
+			t.Fatalf(TestMsgFailedToCreateTestDir, err)
+		}
 	}
 	if err := os.WriteFile(validFile, []byte("test"), 0o600); err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
@@ -422,20 +425,15 @@ func TestValidateSourcePath(t *testing.T) {
 			errContains: "source path is required",
 		},
 		{
-			name:        "path traversal with double dots",
-			path:        TestPathEtcPasswdTraversal,
-			wantErr:     true,
-			errType:     ErrorTypeValidation,
-			errCode:     CodeValidationPath,
-			errContains: TestMsgPathTraversalAttempt,
+			// ".." is a normal path element for a local CLI, not an attack.
+			name:    "relative path through parent element",
+			path:    "validdir/../validdir",
+			wantErr: false,
 		},
 		{
-			name:        "path traversal in middle",
-			path:        "valid/../../../secrets",
-			wantErr:     true,
-			errType:     ErrorTypeValidation,
-			errCode:     CodeValidationPath,
-			errContains: TestMsgPathTraversalAttempt,
+			name:    "directory name containing double dots",
+			path:    dottedDir,
+			wantErr: false,
 		},
 		{
 			name:        "nonexistent directory",
@@ -477,7 +475,7 @@ func TestValidateSourcePath(t *testing.T) {
 	}
 	defer func() {
 		// Need to use os.Chdir here since t.Chdir only works in the current function context
-		if err := os.Chdir(originalWd); err != nil { // nolint:usetesting // needed in defer function
+		if err := os.Chdir(originalWd); err != nil { // needed in defer function
 			t.Logf("Failed to restore working directory: %v", err)
 		}
 	}()
@@ -510,12 +508,9 @@ func TestValidateDestinationPath(t *testing.T) {
 			errContains: "destination path is required",
 		},
 		{
-			name:        "path traversal attack",
-			path:        "../../../tmp/malicious.txt",
-			wantErr:     true,
-			errType:     ErrorTypeValidation,
-			errCode:     CodeValidationPath,
-			errContains: TestMsgPathTraversalAttempt,
+			name:    "path through parent element",
+			path:    filepath.Join(existingDir, "..", TestFileOutputTXT),
+			wantErr: false,
 		},
 		{
 			name:        "destination is existing directory",
@@ -546,49 +541,6 @@ func TestValidateDestinationPath(t *testing.T) {
 	}
 
 	testPathValidation(t, "ValidateDestinationPath", ValidateDestinationPath, tests)
-}
-
-func TestValidateConfigPath(t *testing.T) {
-	tests := []validatePathTestCase{
-		{
-			name:    "empty path (allowed for config)",
-			path:    "",
-			wantErr: false,
-		},
-		{
-			name:        "path traversal attack",
-			path:        TestPathEtcPasswdTraversal,
-			wantErr:     true,
-			errType:     ErrorTypeValidation,
-			errCode:     CodeValidationPath,
-			errContains: TestMsgPathTraversalAttempt,
-		},
-		{
-			name:        "complex path traversal",
-			path:        "config/../../../secrets/" + TestFileConfigYAML,
-			wantErr:     true,
-			errType:     ErrorTypeValidation,
-			errCode:     CodeValidationPath,
-			errContains: TestMsgPathTraversalAttempt,
-		},
-		{
-			name:    "valid config path",
-			path:    TestFileConfigYAML,
-			wantErr: false,
-		},
-		{
-			name:    "valid absolute config path",
-			path:    "/etc/myapp/" + TestFileConfigYAML,
-			wantErr: false,
-		},
-		{
-			name:    "config in subdirectory",
-			path:    "configs/production.yaml",
-			wantErr: false,
-		},
-	}
-
-	testPathValidation(t, "ValidateConfigPath", ValidateConfigPath, tests)
 }
 
 func TestBaseName(t *testing.T) {
@@ -661,7 +613,7 @@ func TestBaseName(t *testing.T) {
 	}
 }
 
-// Security-focused integration tests.
+// TestPathValidationIntegration checks source and destination validation together.
 func TestPathValidationIntegration(t *testing.T) {
 	tmpDir := t.TempDir()
 	validSourceDir := filepath.Join(tmpDir, "source")
@@ -672,82 +624,48 @@ func TestPathValidationIntegration(t *testing.T) {
 		t.Fatalf(TestMsgFailedToCreateTestDir, err)
 	}
 
-	// Test complete validation workflow
 	tests := []struct {
 		name            string
 		sourcePath      string
 		destPath        string
-		configPath      string
 		expectSourceErr bool
 		expectDestErr   bool
-		expectConfigErr bool
 	}{
 		{
-			name:            "valid paths",
-			sourcePath:      validSourceDir,
-			destPath:        validDestFile,
-			configPath:      TestFileConfigYAML,
-			expectSourceErr: false,
-			expectDestErr:   false,
-			expectConfigErr: false,
+			name:       "valid paths",
+			sourcePath: validSourceDir,
+			destPath:   validDestFile,
 		},
 		{
-			name:            "source path traversal attack",
-			sourcePath:      "../../../etc",
+			name:       "sibling paths through parent elements",
+			sourcePath: filepath.Join(validSourceDir, "..", "source"),
+			destPath:   filepath.Join(validSourceDir, "..", "out.json"),
+		},
+		{
+			name:            "missing source",
+			sourcePath:      filepath.Join(tmpDir, "missing"),
 			destPath:        validDestFile,
-			configPath:      TestFileConfigYAML,
 			expectSourceErr: true,
-			expectDestErr:   false,
-			expectConfigErr: false,
 		},
 		{
-			name:            "destination path traversal attack",
-			sourcePath:      validSourceDir,
-			destPath:        "../../../tmp/malicious.txt",
-			configPath:      TestFileConfigYAML,
-			expectSourceErr: false,
-			expectDestErr:   true,
-			expectConfigErr: false,
-		},
-		{
-			name:            "config path traversal attack",
-			sourcePath:      validSourceDir,
-			destPath:        validDestFile,
-			configPath:      TestPathEtcPasswdTraversal,
-			expectSourceErr: false,
-			expectDestErr:   false,
-			expectConfigErr: true,
-		},
-		{
-			name:            "multiple path traversal attacks",
-			sourcePath:      "../../../var",
-			destPath:        "../../../tmp/bad.txt",
-			configPath:      "../../../etc/config",
-			expectSourceErr: true,
-			expectDestErr:   true,
-			expectConfigErr: true,
+			name:          "destination parent missing",
+			sourcePath:    validSourceDir,
+			destPath:      filepath.Join(tmpDir, "missing", "out.json"),
+			expectDestErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				// Test source validation
 				sourceErr := ValidateSourcePath(tt.sourcePath)
 				if (sourceErr != nil) != tt.expectSourceErr {
 					t.Errorf("Source validation: expected error %v, got %v", tt.expectSourceErr, sourceErr)
 				}
 
-				// Test destination validation
 				destErr := ValidateDestinationPath(tt.destPath)
 				if (destErr != nil) != tt.expectDestErr {
 					t.Errorf("Destination validation: expected error %v, got %v", tt.expectDestErr, destErr)
-				}
-
-				// Test config validation
-				configErr := ValidateConfigPath(tt.configPath)
-				if (configErr != nil) != tt.expectConfigErr {
-					t.Errorf("Config validation: expected error %v, got %v", tt.expectConfigErr, configErr)
 				}
 			},
 		)
@@ -764,7 +682,7 @@ func BenchmarkValidateSourcePath(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = ValidateSourcePath(validDir) // nolint:errcheck // benchmark test
+		_ = ValidateSourcePath(validDir) // benchmark test
 	}
 }
 
@@ -774,7 +692,7 @@ func BenchmarkValidateDestinationPath(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = ValidateDestinationPath(validDest) // nolint:errcheck // benchmark test
+		_ = ValidateDestinationPath(validDest) // benchmark test
 	}
 }
 

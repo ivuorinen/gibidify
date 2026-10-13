@@ -3,12 +3,11 @@ package cli
 import (
 	"bytes"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 func TestNewErrorFormatter(t *testing.T) {
@@ -41,21 +40,21 @@ func TestErrorFormatterFormatError(t *testing.T) {
 			err: &shared.StructuredError{
 				Type:     shared.ErrorTypeFileSystem,
 				Code:     shared.CodeFSAccess,
-				Message:  shared.TestErrCannotAccessFile,
-				FilePath: shared.TestPathBase,
+				Message:  testutil.TestErrCannotAccessFile,
+				FilePath: testutil.TestPathBase,
 				Context: map[string]any{
 					"permission": "0000",
 					"owner":      "root",
 				},
 			},
 			expectedOutput: []string{
-				"✗ Error: " + shared.TestErrCannotAccessFile,
+				"✗ Error: " + testutil.TestErrCannotAccessFile,
 				"Type: FileSystem, Code: ACCESS_DENIED",
-				"File: " + shared.TestPathBase,
+				"File: " + testutil.TestPathBase,
 				"Context:",
 				"permission: 0000",
 				"owner: root",
-				shared.TestSuggestionsWarning,
+				testutil.TestSuggestionsWarning,
 				"Check if the path exists",
 			},
 		},
@@ -69,7 +68,7 @@ func TestErrorFormatterFormatError(t *testing.T) {
 			expectedOutput: []string{
 				"✗ Error: invalid output format",
 				"Type: Validation, Code: FORMAT",
-				shared.TestSuggestionsWarning,
+				testutil.TestSuggestionsWarning,
 				"Use a supported format: markdown, json, yaml",
 			},
 		},
@@ -83,7 +82,7 @@ func TestErrorFormatterFormatError(t *testing.T) {
 			expectedOutput: []string{
 				"✗ Error: failed to collect files",
 				"Type: Processing, Code: COLLECTION",
-				shared.TestSuggestionsWarning,
+				testutil.TestSuggestionsWarning,
 				"Check if the source directory exists",
 			},
 		},
@@ -97,7 +96,7 @@ func TestErrorFormatterFormatError(t *testing.T) {
 			expectedOutput: []string{
 				"✗ Error: cannot create output file",
 				"Type: IO, Code: FILE_CREATE",
-				shared.TestSuggestionsWarning,
+				testutil.TestSuggestionsWarning,
 				"Check if the destination directory exists",
 			},
 		},
@@ -106,8 +105,8 @@ func TestErrorFormatterFormatError(t *testing.T) {
 			err:  errors.New("permission denied: access to /secret/file"),
 			expectedOutput: []string{
 				"✗ Error: permission denied: access to /secret/file",
-				shared.TestSuggestionsWarning,
-				shared.TestSuggestCheckPermissions,
+				testutil.TestSuggestionsWarning,
+				testutil.TestSuggestCheckPermissions,
 				"Try running with appropriate privileges",
 			},
 		},
@@ -116,18 +115,18 @@ func TestErrorFormatterFormatError(t *testing.T) {
 			err:  errors.New("no such file or directory"),
 			expectedOutput: []string{
 				"✗ Error: no such file or directory",
-				shared.TestSuggestionsWarning,
+				testutil.TestSuggestionsWarning,
 				"Verify the file/directory path is correct",
 				"Check if the file exists",
 			},
 		},
 		{
-			name: "generic error with flag redefined",
+			name: "generic error with undefined flag",
 			err:  errors.New("flag provided but not defined: -invalid"),
 			expectedOutput: []string{
 				"✗ Error: flag provided but not defined: -invalid",
-				shared.TestSuggestionsWarning,
-				shared.TestSuggestCheckArguments,
+				testutil.TestSuggestionsWarning,
+				testutil.TestSuggestCheckArguments,
 				"Run with --help for usage information",
 			},
 		},
@@ -136,8 +135,8 @@ func TestErrorFormatterFormatError(t *testing.T) {
 			err:  errors.New("some unknown error"),
 			expectedOutput: []string{
 				"✗ Error: some unknown error",
-				shared.TestSuggestionsWarning,
-				shared.TestSuggestCheckArguments,
+				testutil.TestSuggestionsWarning,
+				testutil.TestSuggestCheckArguments,
 				"Run with --help for usage information",
 			},
 		},
@@ -165,7 +164,7 @@ func TestErrorFormatterFormatError(t *testing.T) {
 			// Check that all expected substrings are present
 			for _, expected := range tt.expectedOutput {
 				if !strings.Contains(outputStr, expected) {
-					t.Errorf(shared.TestMsgOutputMissingSubstring, expected, outputStr)
+					t.Errorf(testutil.TestMsgOutputMissingSubstring, expected, outputStr)
 				}
 			}
 		})
@@ -177,14 +176,7 @@ func TestErrorFormatterSuggestFileAccess(t *testing.T) {
 	formatter := NewErrorFormatter(ui)
 
 	// Create a temporary file to test with existing file
-	tempDir := t.TempDir()
-	tempFile, err := os.Create(filepath.Join(tempDir, "testfile")) //nolint:gosec // G304: tempDir path
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-	if err := tempFile.Close(); err != nil {
-		t.Errorf("Failed to close temp file: %v", err)
-	}
+	tempFile := testutil.CreateTestFile(t, t.TempDir(), "testfile", nil)
 
 	tests := []struct {
 		name           string
@@ -192,18 +184,18 @@ func TestErrorFormatterSuggestFileAccess(t *testing.T) {
 		expectedOutput []string
 	}{
 		{
-			name:     shared.TestErrEmptyFilePath,
+			name:     testutil.TestErrEmptyFilePath,
 			filePath: "",
 			expectedOutput: []string{
-				shared.TestSuggestCheckExists,
+				testutil.TestSuggestCheckExists,
 				"Verify read permissions",
 			},
 		},
 		{
 			name:     "existing file",
-			filePath: tempFile.Name(),
+			filePath: tempFile,
 			expectedOutput: []string{
-				shared.TestSuggestCheckExists,
+				testutil.TestSuggestCheckExists,
 				"Path exists but may not be accessible",
 				"Mode:",
 			},
@@ -212,7 +204,7 @@ func TestErrorFormatterSuggestFileAccess(t *testing.T) {
 			name:     "nonexistent file",
 			filePath: "/nonexistent/file",
 			expectedOutput: []string{
-				shared.TestSuggestCheckExists,
+				testutil.TestSuggestCheckExists,
 				"Verify read permissions",
 			},
 		},
@@ -226,7 +218,7 @@ func TestErrorFormatterSuggestFileAccess(t *testing.T) {
 			outputStr := output.String()
 			for _, expected := range tt.expectedOutput {
 				if !strings.Contains(outputStr, expected) {
-					t.Errorf(shared.TestMsgOutputMissingSubstring, expected, outputStr)
+					t.Errorf(testutil.TestMsgOutputMissingSubstring, expected, outputStr)
 				}
 			}
 		})
@@ -238,13 +230,7 @@ func TestErrorFormatterSuggestFileNotFound(t *testing.T) {
 	tempDir := t.TempDir()
 	testFiles := []string{"similar-file.txt", "another-similar.go", "different.md"}
 	for _, filename := range testFiles {
-		file, err := os.Create(filepath.Join(tempDir, filename)) //nolint:gosec // G304: tempDir path
-		if err != nil {
-			t.Fatalf("Failed to create test file %s: %v", filename, err)
-		}
-		if err := file.Close(); err != nil {
-			t.Errorf("Failed to close test file %s: %v", filename, err)
-		}
+		testutil.CreateTestFile(t, tempDir, filename, nil)
 	}
 
 	ui, output := createTestUI()
@@ -256,17 +242,17 @@ func TestErrorFormatterSuggestFileNotFound(t *testing.T) {
 		expectedOutput []string
 	}{
 		{
-			name:     shared.TestErrEmptyFilePath,
+			name:     testutil.TestErrEmptyFilePath,
 			filePath: "",
 			expectedOutput: []string{
-				shared.TestSuggestCheckFileExists,
+				testutil.TestSuggestCheckFileExists,
 			},
 		},
 		{
 			name:     "file with similar matches",
 			filePath: tempDir + "/similar",
 			expectedOutput: []string{
-				shared.TestSuggestCheckFileExists,
+				testutil.TestSuggestCheckFileExists,
 				"Similar files in",
 				"similar-file.txt",
 			},
@@ -275,7 +261,7 @@ func TestErrorFormatterSuggestFileNotFound(t *testing.T) {
 			name:     "nonexistent directory",
 			filePath: "/nonexistent/dir/file.txt",
 			expectedOutput: []string{
-				shared.TestSuggestCheckFileExists,
+				testutil.TestSuggestCheckFileExists,
 			},
 		},
 	}
@@ -288,7 +274,7 @@ func TestErrorFormatterSuggestFileNotFound(t *testing.T) {
 			outputStr := output.String()
 			for _, expected := range tt.expectedOutput {
 				if !strings.Contains(outputStr, expected) {
-					t.Errorf(shared.TestMsgOutputMissingSubstring, expected, outputStr)
+					t.Errorf(testutil.TestMsgOutputMissingSubstring, expected, outputStr)
 				}
 			}
 		})
@@ -310,7 +296,7 @@ func TestErrorFormatterProvideSuggestions(t *testing.T) {
 				Type: shared.ErrorTypeFileSystem,
 				Code: shared.CodeFSAccess,
 			},
-			expectSuggestions: []string{shared.TestSuggestionsPlain, "Check if the path exists"},
+			expectSuggestions: []string{testutil.TestSuggestionsPlain, "Check if the path exists"},
 		},
 		{
 			name: "validation error",
@@ -318,7 +304,7 @@ func TestErrorFormatterProvideSuggestions(t *testing.T) {
 				Type: shared.ErrorTypeValidation,
 				Code: shared.CodeValidationFormat,
 			},
-			expectSuggestions: []string{shared.TestSuggestionsPlain, "Use a supported format"},
+			expectSuggestions: []string{testutil.TestSuggestionsPlain, "Use a supported format"},
 		},
 		{
 			name: "processing error",
@@ -326,7 +312,7 @@ func TestErrorFormatterProvideSuggestions(t *testing.T) {
 				Type: shared.ErrorTypeProcessing,
 				Code: shared.CodeProcessingCollection,
 			},
-			expectSuggestions: []string{shared.TestSuggestionsPlain, "Check if the source directory exists"},
+			expectSuggestions: []string{testutil.TestSuggestionsPlain, "Check if the source directory exists"},
 		},
 		{
 			name: "I/O error",
@@ -334,7 +320,7 @@ func TestErrorFormatterProvideSuggestions(t *testing.T) {
 				Type: shared.ErrorTypeIO,
 				Code: shared.CodeIOWrite,
 			},
-			expectSuggestions: []string{shared.TestSuggestionsPlain, "Check available disk space"},
+			expectSuggestions: []string{testutil.TestSuggestionsPlain, "Check available disk space"},
 		},
 		{
 			name: "unknown error type",
@@ -353,7 +339,7 @@ func TestErrorFormatterProvideSuggestions(t *testing.T) {
 			outputStr := output.String()
 			for _, expected := range tt.expectSuggestions {
 				if !strings.Contains(outputStr, expected) {
-					t.Errorf(shared.TestMsgOutputMissingSubstring, expected, outputStr)
+					t.Errorf(testutil.TestMsgOutputMissingSubstring, expected, outputStr)
 				}
 			}
 		})
@@ -419,11 +405,11 @@ func TestIsUserError(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "non-validation structured error",
+			name: "filesystem structured error is user-facing",
 			err: &shared.StructuredError{
 				Type: shared.ErrorTypeFileSystem,
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name:     "generic error with flag keyword",
@@ -509,7 +495,7 @@ func TestErrorFormatterIntegration(t *testing.T) {
 		"Context:",
 		"attempted_path: /missing/directory",
 		"current_dir: /working/dir",
-		shared.TestSuggestionsWarning,
+		testutil.TestSuggestionsWarning,
 		"Check if the file/directory exists",
 	}
 
@@ -531,22 +517,22 @@ func TestErrorFormatterSuggestPathResolution(t *testing.T) {
 			name:     "with file path",
 			filePath: "relative/path/file.txt",
 			expectedOutput: []string{
-				shared.TestSuggestUseAbsolutePath,
+				testutil.TestSuggestUseAbsolutePath,
 				"Try:",
 			},
 		},
 		{
-			name:     shared.TestErrEmptyFilePath,
+			name:     testutil.TestErrEmptyFilePath,
 			filePath: "",
 			expectedOutput: []string{
-				shared.TestSuggestUseAbsolutePath,
+				testutil.TestSuggestUseAbsolutePath,
 			},
 		},
 		{
 			name:     "current directory reference",
 			filePath: "./file.txt",
 			expectedOutput: []string{
-				shared.TestSuggestUseAbsolutePath,
+				testutil.TestSuggestUseAbsolutePath,
 				"Try:",
 			},
 		},
@@ -582,25 +568,25 @@ func TestErrorFormatterSuggestFileSystemGeneral(t *testing.T) {
 			name:     "with file path",
 			filePath: "/path/to/file.txt",
 			expectedOutput: []string{
-				shared.TestSuggestCheckPermissions,
-				shared.TestSuggestVerifyPath,
+				testutil.TestSuggestCheckPermissions,
+				testutil.TestSuggestVerifyPath,
 				"Path: /path/to/file.txt",
 			},
 		},
 		{
-			name:     shared.TestErrEmptyFilePath,
+			name:     testutil.TestErrEmptyFilePath,
 			filePath: "",
 			expectedOutput: []string{
-				shared.TestSuggestCheckPermissions,
-				shared.TestSuggestVerifyPath,
+				testutil.TestSuggestCheckPermissions,
+				testutil.TestSuggestVerifyPath,
 			},
 		},
 		{
 			name:     "relative path",
 			filePath: "../parent/file.txt",
 			expectedOutput: []string{
-				shared.TestSuggestCheckPermissions,
-				shared.TestSuggestVerifyPath,
+				testutil.TestSuggestCheckPermissions,
+				testutil.TestSuggestVerifyPath,
 				"Path: ../parent/file.txt",
 			},
 		},
@@ -647,7 +633,7 @@ func TestErrorFormatterSuggestionFunctionsIntegration(t *testing.T) {
 				FilePath: "relative/path",
 			},
 			expectedSuggestions: []string{
-				shared.TestSuggestUseAbsolutePath,
+				testutil.TestSuggestUseAbsolutePath,
 				"Try:",
 			},
 		},
@@ -660,8 +646,8 @@ func TestErrorFormatterSuggestionFunctionsIntegration(t *testing.T) {
 				FilePath: "/some/path",
 			},
 			expectedSuggestions: []string{
-				shared.TestSuggestCheckPermissions,
-				shared.TestSuggestVerifyPath,
+				testutil.TestSuggestCheckPermissions,
+				testutil.TestSuggestVerifyPath,
 				"Path: /some/path",
 			},
 		},
@@ -695,8 +681,8 @@ func BenchmarkErrorFormatterFormatError(b *testing.B) {
 	err := &shared.StructuredError{
 		Type:     shared.ErrorTypeFileSystem,
 		Code:     shared.CodeFSAccess,
-		Message:  shared.TestErrCannotAccessFile,
-		FilePath: shared.TestPathBase,
+		Message:  testutil.TestErrCannotAccessFile,
+		FilePath: testutil.TestPathBase,
 	}
 
 	b.ResetTimer()
@@ -713,7 +699,7 @@ func BenchmarkErrorFormatterFormatErrorWithContext(b *testing.B) {
 		Type:     shared.ErrorTypeValidation,
 		Code:     shared.CodeValidationFormat,
 		Message:  "validation failed",
-		FilePath: shared.TestPathBase,
+		FilePath: testutil.TestPathBase,
 		Context: map[string]any{
 			"field": "format",
 			"value": "invalid",
@@ -733,8 +719,8 @@ func BenchmarkErrorFormatterProvideSuggestions(b *testing.B) {
 	err := &shared.StructuredError{
 		Type:     shared.ErrorTypeFileSystem,
 		Code:     shared.CodeFSAccess,
-		Message:  shared.TestErrCannotAccessFile,
-		FilePath: shared.TestPathBase,
+		Message:  testutil.TestErrCannotAccessFile,
+		FilePath: testutil.TestPathBase,
 	}
 
 	b.ResetTimer()

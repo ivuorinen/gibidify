@@ -8,22 +8,20 @@ import (
 	"github.com/ivuorinen/gibidify/shared"
 )
 
-// Walker defines an interface for scanning directories.
-type Walker interface {
-	Walk(root string) ([]string, error)
-}
-
-// ProdWalker implements Walker using a custom directory walker that
-// respects .gitignore and .ignore files, configuration-defined ignore directories,
-// and ignores binary and image files by default.
+// ProdWalker is a directory walker that respects .gitignore and .ignore files,
+// configuration-defined ignore directories, and ignores binary, image and
+// credential files by default.
 type ProdWalker struct {
 	filter *FileFilter
 }
 
 // NewProdWalker creates a new production walker with current configuration.
-func NewProdWalker() *ProdWalker {
+// opts.Exclude lists absolute paths never returned, such as the output file:
+// when the destination lies inside the source tree, the previous run's output
+// would otherwise be ingested as input.
+func NewProdWalker(opts WalkOptions) *ProdWalker {
 	return &ProdWalker{
-		filter: NewFileFilter(),
+		filter: NewFileFilter(opts),
 	}
 }
 
@@ -43,11 +41,23 @@ func (w *ProdWalker) Walk(root string) ([]string, error) {
 	return w.walkDir(absRoot, []ignoreRule{})
 }
 
+// Skipped returns how many files the walk left out for exceeding the size limit
+// or as credential files. Each one was also logged at Warn.
+func (w *ProdWalker) Skipped() int {
+	return w.filter.skipped
+}
+
 // walkDir recursively walks the directory tree starting at currentDir.
 // It loads any .gitignore and .ignore files found in each directory and
 // appends the corresponding rules to the inherited list. Each file/directory is
 // then checked against the accumulated ignore rules, the configuration's list of ignored directories,
 // and a default filter that ignores binary and image files.
+//
+// Only an unreadable currentDir, or an unreadable ignore file in it, at the
+// root fails the walk. Below the root the directory is logged and skipped: one
+// root-owned cache directory must not make the whole tree unusable, and a
+// directory whose ignore file cannot be applied must not be collected as if it
+// had none.
 func (w *ProdWalker) walkDir(currentDir string, parentRules []ignoreRule) ([]string, error) {
 	var results []string
 
@@ -61,7 +71,10 @@ func (w *ProdWalker) walkDir(currentDir string, parentRules []ignoreRule) ([]str
 		).WithFilePath(currentDir)
 	}
 
-	rules := loadIgnoreRules(currentDir, parentRules)
+	rules, err := loadIgnoreRules(currentDir, parentRules)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, entry := range entries {
 		fullPath := filepath.Join(currentDir, entry.Name())
@@ -70,21 +83,19 @@ func (w *ProdWalker) walkDir(currentDir string, parentRules []ignoreRule) ([]str
 			continue
 		}
 
-		// Process entry
-		if entry.IsDir() {
-			subFiles, err := w.walkDir(fullPath, rules)
-			if err != nil {
-				return nil, shared.WrapError(
-					err,
-					shared.ErrorTypeProcessing,
-					shared.CodeProcessingTraversal,
-					"failed to traverse subdirectory",
-				).WithFilePath(fullPath)
-			}
-			results = append(results, subFiles...)
-		} else {
+		if !entry.IsDir() {
 			results = append(results, fullPath)
+
+			continue
 		}
+
+		subFiles, err := w.walkDir(fullPath, rules)
+		if err != nil {
+			shared.GetLogger().Warnf("Skipping unreadable directory %s: %v", fullPath, err)
+
+			continue
+		}
+		results = append(results, subFiles...)
 	}
 
 	return results, nil

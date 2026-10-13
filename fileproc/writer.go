@@ -2,66 +2,95 @@
 package fileproc
 
 import (
+	"bufio"
+	"io"
 	"os"
 
 	"github.com/ivuorinen/gibidify/shared"
 )
 
-// startFormatWriter handles generic writer orchestration for any format.
-// This eliminates code duplication across format-specific writer functions.
-// Uses the FormatWriter interface defined in formats.go.
-func startFormatWriter(
+// outputBufferSize is the write buffer between the format writers and the
+// output file. Unbuffered, the YAML writer issued one write(2) per content line
+// (900k syscalls for a 22 MB tree).
+const outputBufferSize = 64 << 10
+
+// runFormatWriter drives a FormatWriter over every request on writeCh and
+// returns the first error from Start, WriteFile, Close or the final flush.
+//
+// After a failure it keeps draining writeCh without writing: producers block on
+// sends to writeCh, so returning early would deadlock every worker (a full disk
+// at Start hung the process indefinitely).
+func runFormatWriter(
 	outFile *os.File,
 	writeCh <-chan WriteRequest,
-	done chan<- struct{},
 	prefix, suffix string,
-	writerFactory func(*os.File) FormatWriter,
-) {
-	defer close(done)
+	writerFactory func(io.Writer) FormatWriter,
+) error {
+	buffered := bufio.NewWriterSize(outFile, outputBufferSize)
+	writer := writerFactory(buffered)
+	err := writer.Start(prefix, suffix)
 
-	writer := writerFactory(outFile)
-
-	// Start writing
-	if err := writer.Start(prefix, suffix); err != nil {
-		shared.LogError("Failed to start writer", err)
-
-		return
-	}
-
-	// Process files
 	for req := range writeCh {
-		if err := writer.WriteFile(req); err != nil {
-			shared.LogError("Failed to write file", err)
+		if err == nil {
+			err = writer.WriteFile(req)
 		}
 	}
 
-	// Close writer
-	if err := writer.Close(); err != nil {
-		shared.LogError("Failed to close writer", err)
+	if err == nil {
+		err = writer.Close()
 	}
+	if err == nil {
+		if flushErr := buffered.Flush(); flushErr != nil {
+			err = shared.WrapError(flushErr, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to flush output")
+		}
+	}
+
+	return err
 }
 
-// StartWriter writes the output in the specified format with memory optimization.
-func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, format, prefix, suffix string) {
+// StartWriter writes every request from writeCh to outFile in the given format
+// and returns once writeCh is closed. It returns the first write error; writeCh
+// is always drained, even after an error or for an unsupported format.
+func StartWriter(outFile *os.File, writeCh <-chan WriteRequest, format, prefix, suffix string) error {
 	switch format {
 	case shared.FormatMarkdown:
-		startMarkdownWriter(outFile, writeCh, done, prefix, suffix)
+		return runFormatWriter(outFile, writeCh, prefix, suffix, func(w io.Writer) FormatWriter {
+			return NewMarkdownWriter(w)
+		})
 	case shared.FormatJSON:
-		startJSONWriter(outFile, writeCh, done, prefix, suffix)
+		return runFormatWriter(outFile, writeCh, prefix, suffix, func(w io.Writer) FormatWriter {
+			return NewJSONWriter(w)
+		})
 	case shared.FormatYAML:
-		startYAMLWriter(outFile, writeCh, done, prefix, suffix)
+		return runFormatWriter(outFile, writeCh, prefix, suffix, func(w io.Writer) FormatWriter {
+			return NewYAMLWriter(w)
+		})
 	default:
-		context := map[string]any{
-			"format": format,
-		}
-		err := shared.NewStructuredError(
-			shared.ErrorTypeValidation,
-			shared.CodeValidationFormat,
-			"unsupported format: "+format,
-			"",
-			context,
-		)
-		shared.LogError("Failed to encode output", err)
-		close(done)
+		// Through runFormatWriter so the channel is drained the same way.
+		return runFormatWriter(outFile, writeCh, prefix, suffix, func(io.Writer) FormatWriter {
+			return unsupportedFormatWriter{format: format}
+		})
 	}
 }
+
+// unsupportedFormatWriter fails at Start, writing nothing.
+type unsupportedFormatWriter struct {
+	format string
+}
+
+// Start reports the unsupported format.
+func (w unsupportedFormatWriter) Start(_, _ string) error {
+	return shared.NewStructuredError(
+		shared.ErrorTypeValidation,
+		shared.CodeValidationFormat,
+		"unsupported format: "+w.format,
+		"",
+		map[string]any{"format": w.format},
+	)
+}
+
+// WriteFile is never called: runFormatWriter stops writing after Start fails.
+func (unsupportedFormatWriter) WriteFile(WriteRequest) error { return nil }
+
+// Close is never called: runFormatWriter skips Close after Start fails.
+func (unsupportedFormatWriter) Close() error { return nil }

@@ -3,7 +3,7 @@ package fileproc
 import (
 	"testing"
 
-	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 // TestFileTypeRegistry_EdgeCases tests edge cases and boundary conditions.
@@ -40,9 +40,9 @@ func TestFileTypeRegistryEdgeCases(t *testing.T) {
 			_ = registry.Language(tc.filename)
 
 			// Global functions should also not panic
-			_ = IsImage(tc.filename)
-			_ = IsBinary(tc.filename)
-			_ = Language(tc.filename)
+			_ = DefaultRegistry().IsImage(tc.filename)
+			_ = DefaultRegistry().IsBinary(tc.filename)
+			_ = DefaultRegistry().Language(tc.filename)
 		})
 	}
 }
@@ -78,7 +78,7 @@ func TestFileTypeRegistryMinimumExtensionLength(t *testing.T) {
 // Benchmark tests for performance validation.
 func BenchmarkFileTypeRegistryIsImage(b *testing.B) {
 	registry := DefaultRegistry()
-	filename := shared.TestFilePNG
+	filename := testutil.TestFilePNG
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -88,7 +88,7 @@ func BenchmarkFileTypeRegistryIsImage(b *testing.B) {
 
 func BenchmarkFileTypeRegistryIsBinary(b *testing.B) {
 	registry := DefaultRegistry()
-	filename := shared.TestFileEXE
+	filename := testutil.TestFileEXE
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -98,7 +98,7 @@ func BenchmarkFileTypeRegistryIsBinary(b *testing.B) {
 
 func BenchmarkFileTypeRegistryLanguage(b *testing.B) {
 	registry := DefaultRegistry()
-	filename := shared.TestFileGo
+	filename := testutil.TestFileGo
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -107,24 +107,24 @@ func BenchmarkFileTypeRegistryLanguage(b *testing.B) {
 }
 
 func BenchmarkFileTypeRegistryGlobalFunctions(b *testing.B) {
-	filename := shared.TestFileGo
+	filename := testutil.TestFileGo
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = IsImage(filename)
-		_ = IsBinary(filename)
-		_ = Language(filename)
+		_ = DefaultRegistry().IsImage(filename)
+		_ = DefaultRegistry().IsBinary(filename)
+		_ = DefaultRegistry().Language(filename)
 	}
 }
 
 func BenchmarkFileTypeRegistryConcurrentAccess(b *testing.B) {
-	filename := shared.TestFileGo
+	filename := testutil.TestFileGo
 
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			_ = IsImage(filename)
-			_ = IsBinary(filename)
-			_ = Language(filename)
+			_ = DefaultRegistry().IsImage(filename)
+			_ = DefaultRegistry().IsBinary(filename)
+			_ = DefaultRegistry().Language(filename)
 		}
 	})
 }

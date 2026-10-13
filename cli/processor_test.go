@@ -16,33 +16,77 @@ import (
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
-// TestNewProcessor tests the processor constructor.
+// redirectStderrToPipe points os.Stderr at a pipe for the test, so terminal
+// detection deterministically sees a non-terminal.
+func redirectStderrToPipe(t *testing.T) {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	orig := os.Stderr
+	os.Stderr = w
+	t.Cleanup(func() {
+		os.Stderr = orig
+		_ = r.Close()
+		_ = w.Close()
+	})
+}
+
+// TestNewProcessor tests the processor constructor. Stderr is a pipe and the
+// color environment is fixed, so the flags are combined with a known terminal
+// detection result: flags may only turn features off. NewProcessor used to set
+// both from the flags alone, which wrote ANSI codes and progress redraws into
+// redirected stderr.
 func TestNewProcessor(t *testing.T) {
+	redirectStderrToPipe(t)
+	t.Setenv("TERM", testutil.TestTerminalXterm256)
+	t.Setenv("CI", "")
+	t.Setenv("NO_COLOR", "")
+
 	tests := []struct {
-		name  string
-		flags *Flags
-		want  processorValidation
+		name       string
+		forceColor string
+		flags      *Flags
+		want       processorValidation
 	}{
 		{
-			name: "basic processor creation",
+			name: "non-terminal stderr disables colors and progress",
 			flags: &Flags{
-				SourceDir:   shared.TestSourcePath,
+				SourceDir:   testutil.TestSourcePath,
 				Format:      "markdown",
 				Concurrency: 2,
-				Destination: shared.TestOutputMarkdown,
-				NoColors:    false,
-				NoProgress:  false,
+				Destination: testutil.TestOutputMarkdown,
 			},
-			want: processorValidation{
-				hasUI:           true,
-				colorsEnabled:   true,
-				progressEnabled: true,
+			want: processorValidation{hasUI: true, colorsEnabled: false, progressEnabled: false},
+		},
+		{
+			name:       "FORCE_COLOR enables colors but not progress off a terminal",
+			forceColor: "1",
+			flags: &Flags{
+				SourceDir:   testutil.TestSourcePath,
+				Format:      "markdown",
+				Concurrency: 2,
+				Destination: testutil.TestOutputMarkdown,
 			},
+			want: processorValidation{hasUI: true, colorsEnabled: true, progressEnabled: false},
+		},
+		{
+			name:       "no-colors wins over FORCE_COLOR",
+			forceColor: "1",
+			flags: &Flags{
+				SourceDir:   testutil.TestSourcePath,
+				Format:      "markdown",
+				Concurrency: 2,
+				Destination: testutil.TestOutputMarkdown,
+				NoColors:    true,
+			},
+			want: processorValidation{hasUI: true, colorsEnabled: false, progressEnabled: false},
 		},
 		{
 			name: "processor with colors and progress disabled",
 			flags: &Flags{
-				SourceDir:   shared.TestSourcePath,
+				SourceDir:   testutil.TestSourcePath,
 				Format:      "json",
 				Concurrency: 4,
 				Destination: "/test/output.json",
@@ -60,6 +104,7 @@ func TestNewProcessor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
+				t.Setenv("FORCE_COLOR", tt.forceColor)
 				processor := NewProcessor(tt.flags)
 
 				validateProcessor(t, processor, tt.want)
@@ -77,7 +122,7 @@ type configureFileTypesTestCase struct {
 	wantCustom       bool
 }
 
-// setupFileTypesConfig initializes viper config for file types test.
+// setupFileTypesConfig initializes the config store for file types test.
 func setupFileTypesConfig(t *testing.T, tt configureFileTypesTestCase) {
 	t.Helper()
 	config.Reset()
@@ -91,13 +136,13 @@ func setupFileTypesConfig(t *testing.T, tt configureFileTypesTestCase) {
 // verifyDefaultExtensions checks that default extensions are recognized.
 func verifyDefaultExtensions(t *testing.T, registry *fileproc.FileTypeRegistry) {
 	t.Helper()
-	if !registry.IsImage(shared.TestFilePNG) {
+	if !registry.IsImage(testutil.TestFilePNG) {
 		t.Error("expected .png to be recognized as image (default extension)")
 	}
-	if !registry.IsImage(shared.TestFileJPG) {
+	if !registry.IsImage(testutil.TestFileJPG) {
 		t.Error("expected .jpg to be recognized as image (default extension)")
 	}
-	if registry.Language(shared.TestFileGo) == "" {
+	if registry.Language(testutil.TestFileGo) == "" {
 		t.Error("expected .go to have language mapping (default extension)")
 	}
 }
@@ -146,10 +191,10 @@ func TestProcessorConfigureFileTypes(t *testing.T) {
 			}
 
 			flags := &Flags{
-				SourceDir:   shared.TestSourcePath,
+				SourceDir:   testutil.TestSourcePath,
 				Format:      shared.FormatMarkdown,
 				Concurrency: 1,
-				Destination: shared.TestOutputMarkdown,
+				Destination: testutil.TestOutputMarkdown,
 			}
 			processor := NewProcessor(flags)
 			processor.configureFileTypes()
@@ -181,19 +226,19 @@ func validateCollectFiles(t *testing.T, files []string, err error, wantCount int
 
 	if wantErr {
 		if err == nil {
-			t.Error(shared.TestMsgExpectedError)
+			t.Error(testutil.TestMsgExpectedError)
 
 			return
 		}
 		if errContains != "" && !strings.Contains(err.Error(), errContains) {
-			t.Errorf(shared.TestMsgErrorShouldContain, errContains, err)
+			t.Errorf(testutil.TestMsgErrorShouldContain, errContains, err)
 		}
 
 		return
 	}
 
 	if err != nil {
-		t.Errorf(shared.TestMsgUnexpectedError, err)
+		t.Errorf(testutil.TestMsgUnexpectedError, err)
 
 		return
 	}
@@ -217,8 +262,8 @@ func TestProcessorCollectFiles(t *testing.T) {
 			name: "collect valid files",
 			setupFiles: func(dir string) []string {
 				files := []testutil.FileSpec{
-					{Name: "file1.go", Content: shared.LiteralPackageMain + "\n"},
-					{Name: shared.TestFile2, Content: "text content\n"},
+					{Name: "file1.go", Content: testutil.LiteralPackageMain + "\n"},
+					{Name: testutil.TestFile2, Content: "text content\n"},
 					{Name: "subdir/file3.py", Content: "print('hello')\n"},
 				}
 
@@ -255,18 +300,18 @@ func TestProcessorCollectFiles(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				testutil.ResetViperConfig(t, "")
+				testutil.ResetConfig(t, "")
 				testDir := setupCollectFilesTest(t, tt.useNonExistent, tt.setupFiles)
 
 				flags := &Flags{
 					SourceDir:   testDir,
 					Format:      "markdown",
 					Concurrency: 1,
-					Destination: filepath.Join(t.TempDir(), shared.TestOutputMD),
+					Destination: filepath.Join(t.TempDir(), testutil.TestOutputMD),
 				}
 
 				processor := NewProcessor(flags)
-				files, err := processor.collectFiles()
+				files, _, err := processor.collectFiles()
 				validateCollectFiles(t, files, err, tt.wantCount, tt.wantErr, tt.errContains)
 			},
 		)
@@ -300,19 +345,19 @@ func validateFileCollectionResult(t *testing.T, err error, wantErr bool, errCont
 
 	if wantErr {
 		if err == nil {
-			t.Error(shared.TestMsgExpectedError)
+			t.Error(testutil.TestMsgExpectedError)
 
 			return
 		}
 		if errContains != "" && !strings.Contains(err.Error(), errContains) {
-			t.Errorf(shared.TestMsgErrorShouldContain, errContains, err)
+			t.Errorf(testutil.TestMsgErrorShouldContain, errContains, err)
 		}
 
 		return
 	}
 
 	if err != nil {
-		t.Errorf(shared.TestMsgUnexpectedError, err)
+		t.Errorf(testutil.TestMsgUnexpectedError, err)
 	}
 }
 
@@ -328,7 +373,7 @@ func TestProcessorvalidateFileCollection(t *testing.T) {
 	}{
 		{
 			name:                  "resource limits disabled",
-			files:                 []string{shared.TestFile1, shared.TestFile2},
+			files:                 []string{testutil.TestFile1, testutil.TestFile2},
 			resourceLimitsEnabled: false,
 			setupConfig: func() {
 				// No configuration needed for this test case
@@ -337,7 +382,7 @@ func TestProcessorvalidateFileCollection(t *testing.T) {
 		},
 		{
 			name:                  "within file count limit",
-			files:                 []string{shared.TestFile1},
+			files:                 []string{testutil.TestFile1},
 			resourceLimitsEnabled: true,
 			setupConfig: func() {
 				// Default configuration is sufficient for this test case
@@ -359,7 +404,7 @@ func TestProcessorvalidateFileCollection(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				testutil.ResetViperConfig(t, "")
+				testutil.ResetConfig(t, "")
 				tt.setupConfig()
 
 				tempDir := t.TempDir()
@@ -369,7 +414,7 @@ func TestProcessorvalidateFileCollection(t *testing.T) {
 					SourceDir:   tempDir,
 					Format:      "markdown",
 					Concurrency: 1,
-					Destination: filepath.Join(t.TempDir(), shared.TestOutputMD),
+					Destination: filepath.Join(t.TempDir(), testutil.TestOutputMD),
 				}
 
 				processor := NewProcessor(flags)
@@ -386,19 +431,19 @@ func validateOutputFile(t *testing.T, outFile *os.File, err error, wantErr bool,
 
 	if wantErr {
 		if err == nil {
-			t.Error(shared.TestMsgExpectedError)
+			t.Error(testutil.TestMsgExpectedError)
 
 			return
 		}
 		if errContains != "" && !strings.Contains(err.Error(), errContains) {
-			t.Errorf(shared.TestMsgErrorShouldContain, errContains, err)
+			t.Errorf(testutil.TestMsgErrorShouldContain, errContains, err)
 		}
 
 		return
 	}
 
 	if err != nil {
-		t.Errorf(shared.TestMsgUnexpectedError, err)
+		t.Errorf(testutil.TestMsgUnexpectedError, err)
 
 		return
 	}
@@ -423,14 +468,14 @@ func TestProcessorcreateOutputFile(t *testing.T) {
 		{
 			name: "create valid output file",
 			setupDest: func() string {
-				return filepath.Join(t.TempDir(), shared.TestOutputMD)
+				return filepath.Join(t.TempDir(), testutil.TestOutputMD)
 			},
 			wantErr: false,
 		},
 		{
 			name: "create file in non-existent directory",
 			setupDest: func() string {
-				return "/non/existent/dir/" + shared.TestOutputMD
+				return "/non/existent/dir/" + testutil.TestOutputMD
 			},
 			wantErr:     true,
 			errContains: "failed to create output file",
@@ -449,7 +494,12 @@ func TestProcessorcreateOutputFile(t *testing.T) {
 
 				processor := NewProcessor(flags)
 				outFile, err := processor.createOutputFile()
-				validateOutputFile(t, outFile, err, tt.wantErr, tt.errContains)
+				var f *os.File
+				if outFile != nil {
+					f = outFile.File
+					defer outFile.discard()
+				}
+				validateOutputFile(t, f, err, tt.wantErr, tt.errContains)
 			},
 		)
 	}
@@ -487,19 +537,19 @@ func validateProcessingResult(t *testing.T, err error, outputPath, format string
 
 	if wantErr {
 		if err == nil {
-			t.Error(shared.TestMsgExpectedError)
+			t.Error(testutil.TestMsgExpectedError)
 
 			return
 		}
 		if errContains != "" && !strings.Contains(err.Error(), errContains) {
-			t.Errorf(shared.TestMsgErrorShouldContain, errContains, err)
+			t.Errorf(testutil.TestMsgErrorShouldContain, errContains, err)
 		}
 
 		return
 	}
 
 	if err != nil {
-		t.Errorf(shared.TestMsgUnexpectedError, err)
+		t.Errorf(testutil.TestMsgUnexpectedError, err)
 
 		return
 	}
@@ -510,14 +560,7 @@ func validateProcessingResult(t *testing.T, err error, outputPath, format string
 		return
 	}
 
-	content, err := os.ReadFile(outputPath) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Errorf("Failed to read output file: %v", err)
-
-		return
-	}
-
-	validateOutputContent(t, string(content), format)
+	validateOutputContent(t, string(testutil.ReadFile(t, outputPath)), format)
 }
 
 // TestProcessor_Process_Integration tests the complete processing workflow.
@@ -541,7 +584,7 @@ func TestProcessorProcessIntegration(t *testing.T) {
 				files := []testutil.FileSpec{
 					{
 						Name:    "main.go",
-						Content: shared.LiteralPackageMain + "\n\nfunc main() {\n\tprintln(\"Hello\")\n}\n",
+						Content: testutil.LiteralPackageMain + "\n\nfunc main() {\n\tprintln(\"Hello\")\n}\n",
 					},
 					{Name: "README.md", Content: "# Test Project\n\nThis is a test.\n"},
 				}
@@ -582,7 +625,7 @@ func TestProcessorProcessIntegration(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				testutil.ResetViperConfig(t, "")
+				testutil.ResetConfig(t, "")
 
 				testDir := t.TempDir()
 				tt.setupFiles(testDir)
@@ -601,17 +644,17 @@ func TestProcessorProcessContextCancellation(t *testing.T) {
 	restore := testutil.SuppressAllOutput(t)
 	defer restore()
 
-	testutil.ResetViperConfig(t, "")
+	testutil.ResetConfig(t, "")
 
 	// Create test files
 	testDir := t.TempDir()
 	files := []testutil.FileSpec{
-		{Name: shared.TestFile1, Content: "content1\n"},
-		{Name: shared.TestFile2, Content: "content2\n"},
+		{Name: testutil.TestFile1, Content: "content1\n"},
+		{Name: testutil.TestFile2, Content: "content2\n"},
 	}
 	testutil.CreateTestFiles(t, testDir, files)
 
-	outputPath := filepath.Join(t.TempDir(), shared.TestOutputMD)
+	outputPath := filepath.Join(t.TempDir(), testutil.TestOutputMD)
 
 	flags := &Flags{
 		SourceDir:   testDir,
@@ -674,13 +717,13 @@ func TestProcessorProcessResourceLimits(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				testutil.ResetViperConfig(t, "")
+				testutil.ResetConfig(t, "")
 				tt.setupConfig()
 
 				testDir := t.TempDir()
 				tt.setupFiles(testDir)
 
-				outputPath := filepath.Join(t.TempDir(), shared.TestOutputMD)
+				outputPath := filepath.Join(t.TempDir(), testutil.TestOutputMD)
 
 				flags := &Flags{
 					SourceDir:   testDir,
@@ -699,15 +742,15 @@ func TestProcessorProcessResourceLimits(t *testing.T) {
 
 				if tt.wantErr {
 					if err == nil {
-						t.Error(shared.TestMsgExpectedError)
+						t.Error(testutil.TestMsgExpectedError)
 
 						return
 					}
 					if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
-						t.Errorf(shared.TestMsgErrorShouldContain, tt.errContains, err)
+						t.Errorf(testutil.TestMsgErrorShouldContain, tt.errContains, err)
 					}
 				} else if err != nil {
-					t.Errorf(shared.TestMsgUnexpectedError, err)
+					t.Errorf(testutil.TestMsgUnexpectedError, err)
 				}
 			},
 		)
@@ -788,10 +831,10 @@ func validateOutputContent(t *testing.T, content, format string) {
 
 func BenchmarkProcessorNewProcessor(b *testing.B) {
 	flags := &Flags{
-		SourceDir:   shared.TestSourcePath,
+		SourceDir:   testutil.TestSourcePath,
 		Format:      "markdown",
 		Concurrency: runtime.NumCPU(),
-		Destination: shared.TestOutputMarkdown,
+		Destination: testutil.TestOutputMarkdown,
 	}
 
 	b.ResetTimer()
@@ -804,11 +847,13 @@ func BenchmarkProcessorNewProcessor(b *testing.B) {
 func BenchmarkProcessorCollectFiles(b *testing.B) {
 	// Initialize config for file collection
 	config.Reset()
-	config.LoadConfig()
+	if err := config.LoadConfig(); err != nil {
+		b.Fatalf("loading config: %v", err)
+	}
 
 	fileSpecs := []testutil.FileSpec{
-		{Name: "file1.go", Content: shared.LiteralPackageMain + "\n"},
-		{Name: shared.TestFile2, Content: "content\n"},
+		{Name: "file1.go", Content: testutil.LiteralPackageMain + "\n"},
+		{Name: testutil.TestFile2, Content: "content\n"},
 		{Name: "file3.py", Content: "print('hello')\n"},
 	}
 
@@ -820,7 +865,7 @@ func BenchmarkProcessorCollectFiles(b *testing.B) {
 		// Create test files
 		for _, spec := range fileSpecs {
 			filePath := filepath.Join(tempDir, spec.Name)
-			if err := os.WriteFile(filePath, []byte(spec.Content), shared.TestFilePermission); err != nil {
+			if err := os.WriteFile(filePath, []byte(spec.Content), testutil.TestFilePermission); err != nil {
 				b.Fatalf("Failed to create test file %s: %v", filePath, err)
 			}
 		}
@@ -829,11 +874,11 @@ func BenchmarkProcessorCollectFiles(b *testing.B) {
 			SourceDir:   tempDir,
 			Format:      "markdown",
 			Concurrency: 1,
-			Destination: filepath.Join(outDir, shared.TestOutputMD),
+			Destination: filepath.Join(outDir, testutil.TestOutputMD),
 		}
 
 		processor := NewProcessor(flags)
-		files, err := processor.collectFiles()
+		files, _, err := processor.collectFiles()
 		if err != nil {
 			b.Fatalf("collectFiles failed: %v", err)
 		}
@@ -848,7 +893,9 @@ func BenchmarkProcessorCollectFiles(b *testing.B) {
 func BenchmarkProcessorProcess(b *testing.B) {
 	// Initialize config for file collection and processing
 	config.Reset()
-	config.LoadConfig()
+	if err := config.LoadConfig(); err != nil {
+		b.Fatalf("loading config: %v", err)
+	}
 
 	tempDir := b.TempDir()
 
@@ -856,7 +903,7 @@ func BenchmarkProcessorProcess(b *testing.B) {
 	for i := 0; i < 10; i++ {
 		filePath := filepath.Join(tempDir, fmt.Sprintf("file%d.go", i))
 		content := fmt.Sprintf("package main\n\nfunc fn%d() {}\n", i)
-		if err := os.WriteFile(filePath, []byte(content), shared.TestFilePermission); err != nil {
+		if err := os.WriteFile(filePath, []byte(content), testutil.TestFilePermission); err != nil {
 			b.Fatalf("Failed to create test file: %v", err)
 		}
 	}

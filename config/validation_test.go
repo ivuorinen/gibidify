@@ -7,6 +7,7 @@ import (
 
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 // TestValidateConfig tests the configuration validation functionality.
@@ -74,12 +75,36 @@ func TestValidateConfig(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "dot-prefixed ignore directory is valid",
+			config: map[string]any{
+				"ignoreDirectories": []string{".venv", ".next", ".terraform"},
+			},
+			wantErr: false,
+		},
+		{
+			// A dot-less entry matched no registry key and silently did nothing.
+			name: "disabled image extension without dot",
+			config: map[string]any{
+				"fileTypes": map[string]any{"disabledImageExtensions": []any{"svg"}},
+			},
+			wantErr:     true,
+			errContains: "fileTypes.disabledImageExtensions[0] (svg) must start with a dot",
+		},
+		{
+			name: "disabled language extension without dot",
+			config: map[string]any{
+				"fileTypes": map[string]any{"disabledLanguageExtensions": []any{"bat"}},
+			},
+			wantErr:     true,
+			errContains: "fileTypes.disabledLanguageExtensions[0] (bat) must start with a dot",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(
 			tt.name, func(t *testing.T) {
-				// Reset viper for each test
+				// Reset the config store for each test
 				config.Reset()
 
 				// Set test configuration
@@ -182,7 +207,7 @@ func TestValidateConcurrency(t *testing.T) {
 func validateExpectedError(t *testing.T, err error, errContains string) {
 	t.Helper()
 	if err == nil {
-		t.Error(shared.TestMsgExpectedError)
+		t.Error(testutil.TestMsgExpectedError)
 
 		return
 	}

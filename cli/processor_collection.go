@@ -10,11 +10,21 @@ import (
 	"github.com/ivuorinen/gibidify/shared"
 )
 
-// collectFiles collects all files to be processed.
-func (p *Processor) collectFiles() ([]string, error) {
-	files, err := fileproc.CollectFiles(p.flags.SourceDir)
+// collectFiles collects all files to be processed and returns them with the
+// number left out for exceeding the size limit. The destination is excluded so
+// a previous run's output inside the source tree is not ingested as input.
+func (p *Processor) collectFiles() ([]string, int, error) {
+	var exclude []string
+	if absDest, err := shared.AbsolutePath(p.flags.Destination); p.flags.Destination != "" && err == nil {
+		exclude = append(exclude, absDest)
+	}
+
+	files, skipped, err := fileproc.CollectFiles(p.flags.SourceDir, fileproc.WalkOptions{
+		Exclude:          exclude,
+		IncludeSensitive: p.flags.IncludeSensitive,
+	})
 	if err != nil {
-		return nil, shared.WrapError(
+		return nil, 0, shared.WrapError(
 			err,
 			shared.ErrorTypeProcessing,
 			shared.CodeProcessingCollection,
@@ -25,7 +35,7 @@ func (p *Processor) collectFiles() ([]string, error) {
 	logger := shared.GetLogger()
 	logger.Infof(shared.CLIMsgFoundFilesToProcess, len(files))
 
-	return files, nil
+	return files, skipped, nil
 }
 
 // validateFileCollection validates the collected files against the size caps.
