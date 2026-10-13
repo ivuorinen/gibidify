@@ -42,9 +42,9 @@ yamlfmt, yamllint)
 **Format**: line-length ≤120 chars, EditorConfig (LF, tabs), gofmt/goimports
 **Testing**: error handling best practices, 0 tolerance policy
 
-**CRITICAL**: All rules non-negotiable. `make fmt && make lint` must show 0
-issues. A rule changes only when the user explicitly asks for it (see
-revive.toml Restrictions below).
+**CRITICAL**: All rules are non-negotiable unless the user explicitly asks to
+change one (see revive.toml Restrictions below). `make fmt && make lint` must
+show 0 issues.
 
 ## Testing
 
