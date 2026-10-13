@@ -1,0 +1,24 @@
+# Release image, built by GoReleaser (dockers_v2 in .goreleaser.yaml) from the
+# binaries it already compiled: the build context holds one binary per
+# platform at $TARGETPLATFORM/gibidify, plus the files listed in extra_files.
+# For a build from a plain checkout use Dockerfile instead.
+#
+# There is no RUN step, so no foreign-architecture binary executes during the
+# build and the arm64/armv7 images build on any host without QEMU (a RUN of
+# apk/adduser failed with "exec format error" there). gibidify makes no network
+# calls, so the image needs no CA certificates.
+FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+
+ARG TARGETPLATFORM
+
+COPY --chmod=0755 $TARGETPLATFORM/gibidify /usr/local/bin/gibidify
+COPY LICENSE THIRD_PARTY_NOTICES /usr/share/doc/gibidify/
+
+# CLI image — no service to health-check
+HEALTHCHECK NONE
+
+# Numeric user and group: no passwd entry is needed, and a bare UID would run
+# with the root group (gid 0).
+USER 10001:10001
+
+ENTRYPOINT ["/usr/local/bin/gibidify"]

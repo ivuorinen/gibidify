@@ -94,6 +94,7 @@ lint-shell: ## Check shell script formatting (shfmt)
 
 lint-docker: ## Scan the Dockerfiles for misconfigurations (trivy)
 	$(MISE) trivy config --exit-code 1 Dockerfile
+	$(MISE) trivy config --exit-code 1 Dockerfile.release
 
 lint-sast: ## Static analysis with opengrep registry rule packs
 	$(MISE) opengrep scan --error --quiet \

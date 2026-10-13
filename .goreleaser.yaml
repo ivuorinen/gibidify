@@ -10,11 +10,15 @@ project_name: gibidify
 before:
   hooks:
     - go mod tidy
-    - go generate ./...
+    # License and NOTICE text of every linked module, shipped in the archives,
+    # packages and images as the dependencies' licenses require.
+    - ./scripts/third-party-notices.sh THIRD_PARTY_NOTICES
 
 builds:
-  # Linux: static linking for amd64 (validated platform)
-  - id: gibidify-linux-static
+  # Linux, every architecture. CGO_ENABLED=0 makes each binary static, so one
+  # build covers what used to be a "static" and a "dynamic" build that differed
+  # only in their architecture lists.
+  - id: gibidify-linux
     main: .
     binary: gibidify
 
@@ -24,40 +28,12 @@ builds:
       - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
       - -X main.builtBy=goreleaser
-      - -extldflags=-static
 
     goos:
       - linux
 
     goarch:
       - amd64
-
-    env:
-      - CGO_ENABLED=0
-
-    tags:
-      - netgo
-      - osusergo
-
-    flags:
-      - -trimpath
-
-  # Linux: dynamic linking for additional architectures
-  - id: gibidify-linux-dynamic
-    main: .
-    binary: gibidify
-
-    ldflags:
-      - -s -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-      - -X main.builtBy=goreleaser
-
-    goos:
-      - linux
-
-    goarch:
       - arm64
       - arm
       - "386"
@@ -193,11 +169,15 @@ builds:
 
 archives:
   - id: gibidify
-    formats: ["tar.gz", "tar.xz", "zip"]
+    formats:
+      - "tar.gz"
+      - "tar.xz"
+      - "zip"
 
     files:
       - LICENSE
       - README.md
+      - THIRD_PARTY_NOTICES
 
     wrap_in_directory: true
 
@@ -304,117 +284,38 @@ nfpms:
         dst: /usr/share/doc/gibidify/LICENSE
       - src: ./README.md
         dst: /usr/share/doc/gibidify/README.md
+      - src: ./THIRD_PARTY_NOTICES
+        dst: /usr/share/doc/gibidify/THIRD_PARTY_NOTICES
 
-dockers:
-  - image_templates:
-      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-amd64"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-amd64"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-amd64"
-      - "ghcr.io/ivuorinen/gibidify:latest-amd64"
-
-    dockerfile: |
-      FROM alpine:3.23.4
-      RUN apk --no-cache add ca-certificates && \
-          adduser -D -s /bin/sh gibidify
-      COPY --chmod=0755 gibidify /usr/local/bin/gibidify
-      HEALTHCHECK NONE
-      USER gibidify
-      ENTRYPOINT ["/usr/local/bin/gibidify"]
-
-    use: buildx
-    goos: linux
-    goarch: amd64
-
-    build_flag_templates:
+# One multi-platform image per tag. dockers_v2 replaces the per-architecture
+# dockers + docker_manifests blocks, which GoReleaser has deprecated.
+dockers_v2:
+  - ids:
+      - gibidify-linux
+    dockerfile: Dockerfile.release
+    images:
+      - ghcr.io/ivuorinen/gibidify
+    tags:
+      - "{{ .Tag }}"
+      - "v{{ .Major }}"
+      - "v{{ .Major }}.{{ .Minor }}"
+      - latest
+    platforms:
+      - linux/amd64
+      - linux/arm64
+      - linux/arm/v7
+    extra_files:
+      - LICENSE
+      - THIRD_PARTY_NOTICES
+    labels:
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.title": "{{ .ProjectName }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.source": "{{ .GitURL }}"
+      "org.opencontainers.image.licenses": "MIT"
+    flags:
       - "--pull"
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-
-  - image_templates:
-      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-arm64"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-arm64"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-arm64"
-      - "ghcr.io/ivuorinen/gibidify:latest-arm64"
-
-    dockerfile: |
-      FROM alpine:3.23.4
-      RUN apk --no-cache add ca-certificates && \
-          adduser -D -s /bin/sh gibidify
-      COPY --chmod=0755 gibidify /usr/local/bin/gibidify
-      HEALTHCHECK NONE
-      USER gibidify
-      ENTRYPOINT ["/usr/local/bin/gibidify"]
-
-    use: buildx
-    goos: linux
-    goarch: arm64
-
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-
-  - image_templates:
-      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-armv7"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-armv7"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-armv7"
-      - "ghcr.io/ivuorinen/gibidify:latest-armv7"
-
-    dockerfile: |
-      FROM alpine:3.23.4
-      RUN apk --no-cache add ca-certificates && \
-          adduser -D -s /bin/sh gibidify
-      COPY --chmod=0755 gibidify /usr/local/bin/gibidify
-      HEALTHCHECK NONE
-      USER gibidify
-      ENTRYPOINT ["/usr/local/bin/gibidify"]
-
-    use: buildx
-    goos: linux
-    goarch: arm
-    goarm: 7
-
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/arm/v7"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-
-docker_manifests:
-  - name_template: "ghcr.io/ivuorinen/gibidify:{{ .Tag }}"
-    image_templates:
-      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-amd64"
-      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-arm64"
-      - "ghcr.io/ivuorinen/gibidify:{{ .Tag }}-armv7"
-
-  - name_template: "ghcr.io/ivuorinen/gibidify:v{{ .Major }}"
-    image_templates:
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-amd64"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-arm64"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}-armv7"
-
-  - name_template: "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}"
-    image_templates:
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-amd64"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-arm64"
-      - "ghcr.io/ivuorinen/gibidify:v{{ .Major }}.{{ .Minor }}-armv7"
-
-  - name_template: "ghcr.io/ivuorinen/gibidify:latest"
-    image_templates:
-      - "ghcr.io/ivuorinen/gibidify:latest-amd64"
-      - "ghcr.io/ivuorinen/gibidify:latest-arm64"
-      - "ghcr.io/ivuorinen/gibidify:latest-armv7"
 
 announce:
   skip: false

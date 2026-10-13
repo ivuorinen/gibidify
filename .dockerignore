@@ -26,8 +26,9 @@ mise.lock
 mise.toml
 revive.toml
 
-# Scripts
+# Scripts (the notices generator runs in the build stage)
 scripts/
+!scripts/third-party-notices.sh
 
 # IDE
 .vscode
