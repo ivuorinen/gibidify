@@ -19,8 +19,11 @@ docs/
 # Config and tooling
 .checkmake
 .editorconfig
-.golangci.yml
+.mise/
+.pre-commit-config.yaml
 .yamllint
+mise.lock
+mise.toml
 revive.toml
 
 # Scripts

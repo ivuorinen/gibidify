@@ -1,6 +1,7 @@
 *.out
 .DS_Store
 .idea
+.mise/
 .serena/
 coverage.*
 gibidify
