@@ -27,22 +27,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0  # Required for changelog generation
+          fetch-depth: 0 # Required for changelog generation
           persist-credentials: false
 
       - name: Setup Go
-        uses: ./.github/actions/setup
-        with:
-          token: ${{ github.token }}
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository] actionlint rejects the $/ form
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
+      # GoReleaser version from mise.toml, checksum from mise.lock. No cache:
+      # a release run must not restore state another workflow could have saved.
       - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
         with:
-          install-only: true
-          version: "~> v2"
+          install_args: goreleaser
+          cache: false
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
@@ -52,11 +52,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
-        with:
-          version: "~> v2"
-          args: release --clean
+        run: mise exec -- goreleaser release --clean
         env:
+          # Only goreleaser was installed above; don't fetch the rest of mise.toml.
+          MISE_EXEC_AUTO_INSTALL: "false"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Optional: enable Homebrew tap publishing once the brews block in
           # .goreleaser.yaml is uncommented and the secret is configured.

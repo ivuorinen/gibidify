@@ -4,9 +4,11 @@ name: "CodeQL"
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - "main"
   pull_request:
-    branches: ["main"]
+    branches:
+      - "main"
   schedule:
     - cron: "30 1 * * 0"
   merge_group:
@@ -29,7 +31,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ["actions", "go"]
+        language:
+          - "actions"
+          - "go"
     steps:
       - name: CodeQL Analysis
         uses: ivuorinen/actions/codeql-analysis@f7725f210c6740ae8042fbe89f2024dabad8a535 # v2026.07.11

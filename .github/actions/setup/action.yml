@@ -1,11 +1,6 @@
 ---
-name: "Setup Go with Runner Hardening"
-description: "Reusable action to set up Go"
-inputs:
-  token:
-    description: "GitHub token for checkout (optional)"
-    required: false
-    default: ""
+name: "Setup Go"
+description: "Reusable action to set up Go from go.mod"
 runs:
   using: "composite"
   steps:
