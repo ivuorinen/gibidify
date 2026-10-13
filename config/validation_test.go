@@ -10,102 +10,103 @@ import (
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
+// validateConfigCases are the TestValidateConfig cases.
+var validateConfigCases = []struct {
+	name        string
+	config      map[string]any
+	wantErr     bool
+	errContains string
+}{
+	{
+		name: "valid default config",
+		config: map[string]any{
+			"fileSizeLimit":     shared.ConfigFileSizeLimitDefault,
+			"ignoreDirectories": []string{"node_modules", ".git"},
+		},
+		wantErr: false,
+	},
+	{
+		name: "file size limit too small",
+		config: map[string]any{
+			"fileSizeLimit": shared.ConfigFileSizeLimitMin - 1,
+		},
+		wantErr:     true,
+		errContains: "fileSizeLimit",
+	},
+	{
+		name: "file size limit too large",
+		config: map[string]any{
+			"fileSizeLimit": shared.ConfigFileSizeLimitMax + 1,
+		},
+		wantErr:     true,
+		errContains: "fileSizeLimit",
+	},
+	{
+		name: "empty ignore directory",
+		config: map[string]any{
+			"ignoreDirectories": []string{"node_modules", "", ".git"},
+		},
+		wantErr:     true,
+		errContains: "ignoreDirectories",
+	},
+	{
+		name: "ignore directory with path separator",
+		config: map[string]any{
+			"ignoreDirectories": []string{"node_modules", "src/build", ".git"},
+		},
+		wantErr:     true,
+		errContains: "path separator",
+	},
+	{
+		name: "invalid max concurrency",
+		config: map[string]any{
+			"maxConcurrency": 0,
+		},
+		wantErr:     true,
+		errContains: "maxConcurrency",
+	},
+	{
+		name: "valid comprehensive config",
+		config: map[string]any{
+			"fileSizeLimit":     shared.ConfigFileSizeLimitDefault,
+			"ignoreDirectories": []string{"node_modules", ".git", ".vscode"},
+			"maxConcurrency":    8,
+		},
+		wantErr: false,
+	},
+	{
+		name: "dot-prefixed ignore directory is valid",
+		config: map[string]any{
+			"ignoreDirectories": []string{".venv", ".next", ".terraform"},
+		},
+		wantErr: false,
+	},
+	{
+		// A dot-less entry matched no registry key and silently did nothing.
+		name: "disabled image extension without dot",
+		config: map[string]any{
+			"fileTypes": map[string]any{"disabledImageExtensions": []any{"svg"}},
+		},
+		wantErr:     true,
+		errContains: "fileTypes.disabledImageExtensions[0] (svg) must start with a dot",
+	},
+	{
+		name: "disabled language extension without dot",
+		config: map[string]any{
+			"fileTypes": map[string]any{"disabledLanguageExtensions": []any{"bat"}},
+		},
+		wantErr:     true,
+		errContains: "fileTypes.disabledLanguageExtensions[0] (bat) must start with a dot",
+	},
+}
+
 // TestValidateConfig tests the configuration validation functionality.
 func TestValidateConfig(t *testing.T) {
-	tests := []struct {
-		name        string
-		config      map[string]any
-		wantErr     bool
-		errContains string
-	}{
-		{
-			name: "valid default config",
-			config: map[string]any{
-				"fileSizeLimit":     shared.ConfigFileSizeLimitDefault,
-				"ignoreDirectories": []string{"node_modules", ".git"},
-			},
-			wantErr: false,
-		},
-		{
-			name: "file size limit too small",
-			config: map[string]any{
-				"fileSizeLimit": shared.ConfigFileSizeLimitMin - 1,
-			},
-			wantErr:     true,
-			errContains: "fileSizeLimit",
-		},
-		{
-			name: "file size limit too large",
-			config: map[string]any{
-				"fileSizeLimit": shared.ConfigFileSizeLimitMax + 1,
-			},
-			wantErr:     true,
-			errContains: "fileSizeLimit",
-		},
-		{
-			name: "empty ignore directory",
-			config: map[string]any{
-				"ignoreDirectories": []string{"node_modules", "", ".git"},
-			},
-			wantErr:     true,
-			errContains: "ignoreDirectories",
-		},
-		{
-			name: "ignore directory with path separator",
-			config: map[string]any{
-				"ignoreDirectories": []string{"node_modules", "src/build", ".git"},
-			},
-			wantErr:     true,
-			errContains: "path separator",
-		},
-		{
-			name: "invalid max concurrency",
-			config: map[string]any{
-				"maxConcurrency": 0,
-			},
-			wantErr:     true,
-			errContains: "maxConcurrency",
-		},
-		{
-			name: "valid comprehensive config",
-			config: map[string]any{
-				"fileSizeLimit":     shared.ConfigFileSizeLimitDefault,
-				"ignoreDirectories": []string{"node_modules", ".git", ".vscode"},
-				"maxConcurrency":    8,
-			},
-			wantErr: false,
-		},
-		{
-			name: "dot-prefixed ignore directory is valid",
-			config: map[string]any{
-				"ignoreDirectories": []string{".venv", ".next", ".terraform"},
-			},
-			wantErr: false,
-		},
-		{
-			// A dot-less entry matched no registry key and silently did nothing.
-			name: "disabled image extension without dot",
-			config: map[string]any{
-				"fileTypes": map[string]any{"disabledImageExtensions": []any{"svg"}},
-			},
-			wantErr:     true,
-			errContains: "fileTypes.disabledImageExtensions[0] (svg) must start with a dot",
-		},
-		{
-			name: "disabled language extension without dot",
-			config: map[string]any{
-				"fileTypes": map[string]any{"disabledLanguageExtensions": []any{"bat"}},
-			},
-			wantErr:     true,
-			errContains: "fileTypes.disabledLanguageExtensions[0] (bat) must start with a dot",
-		},
-	}
-
-	for _, tt := range tests {
+	for _, tt := range validateConfigCases {
 		t.Run(
 			tt.name, func(t *testing.T) {
 				// Reset the config store for each test
-				config.Reset()
+				isolateStore(t)
 
 				// Set test configuration
 				for key, value := range tt.config {
@@ -189,6 +190,7 @@ func TestValidateConcurrency(t *testing.T) {
 		{"concurrency within max", 4, 8, true, false},
 		{"concurrency exceeds max", 16, 8, true, true},
 	}
+	t.Cleanup(config.Reset)
 
 	for _, tt := range tests {
 		config.Reset()

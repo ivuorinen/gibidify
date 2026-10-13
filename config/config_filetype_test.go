@@ -9,6 +9,7 @@ import (
 // TestFileTypeRegistryDefaultValues tests default configuration values.
 func TestFileTypeRegistryDefaultValues(t *testing.T) {
 	Reset()
+	t.Cleanup(Reset)
 	SetDefaultConfig()
 
 	verifyDefaultValues(t)
@@ -17,6 +18,7 @@ func TestFileTypeRegistryDefaultValues(t *testing.T) {
 // TestFileTypeRegistrySetGet tests configuration setting and getting.
 func TestFileTypeRegistrySetGet(t *testing.T) {
 	Reset()
+	t.Cleanup(Reset)
 
 	// Set test values
 	setTestConfiguration()
@@ -28,6 +30,7 @@ func TestFileTypeRegistrySetGet(t *testing.T) {
 // TestFileTypeRegistryValidationSuccess tests successful validation.
 func TestFileTypeRegistryValidationSuccess(t *testing.T) {
 	Reset()
+	t.Cleanup(Reset)
 	SetDefaultConfig()
 
 	// Set valid configuration
@@ -41,6 +44,8 @@ func TestFileTypeRegistryValidationSuccess(t *testing.T) {
 
 // TestFileTypeRegistryValidationFailure tests validation failures.
 func TestFileTypeRegistryValidationFailure(t *testing.T) {
+	t.Cleanup(Reset)
+
 	// Test invalid custom image extensions
 	testInvalidImageExtensions(t)
 

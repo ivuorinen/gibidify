@@ -71,7 +71,6 @@ func TestValidateConfigBoundaries(t *testing.T) {
 	for _, tt := range validationBoundaryCases {
 		t.Run(tt.name, func(t *testing.T) {
 			testutil.SetConfigKeys(t, tt.settings)
-			t.Cleanup(config.Reset)
 
 			err := config.ValidateConfig()
 
@@ -91,7 +90,6 @@ func TestValidateConfigBoundaries(t *testing.T) {
 // exponent form, which YAML decodes as a float, is accepted and read back as
 // the integer it denotes.
 func TestLoadConfigAcceptsExponentIntegers(t *testing.T) {
-	t.Cleanup(config.Reset)
 	_, err := loadWithConfig(t, "maxConcurrency: 4e1\nresourceLimits:\n  maxTotalSize: 2e9\n")
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
