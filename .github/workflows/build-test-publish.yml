@@ -29,6 +29,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # Full history for SonarQube Cloud's blame and new-code detection.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Go
@@ -55,6 +57,13 @@ jobs:
           coverage="$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')"
           echo "total_coverage=$coverage" >> "$GITHUB_ENV"
           echo "Coverage: $coverage%"
+
+      # CI-based analysis, configured in sonar-project.properties; it imports
+      # coverage.out, which automatic analysis cannot.
+      - name: SonarQube Cloud scan
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Upload test results
         if: always()
