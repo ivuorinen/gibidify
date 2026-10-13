@@ -9,12 +9,13 @@ import (
 	"github.com/ivuorinen/gibidify/shared"
 )
 
-// Value kinds a configuration key can require.
+// Value kinds a configuration key can require. Each value carries its article
+// so it reads correctly in "<key> must be <kind>".
 const (
-	kindInteger = "integer"
-	kindBoolean = "boolean"
-	kindList    = "list"
-	kindMap     = "map"
+	kindInteger = "an integer"
+	kindBoolean = "a boolean"
+	kindList    = "a list"
+	kindMap     = "a map"
 )
 
 // keyKinds maps each known key to the YAML shape it must have. The getters
@@ -69,7 +70,7 @@ func validateTypes() []string {
 			continue
 		}
 		if want := keyKinds[key]; !hasKind(v, want) {
-			validationErrors = append(validationErrors, fmt.Sprintf("%s must be a %s (got %T)", key, want, v))
+			validationErrors = append(validationErrors, fmt.Sprintf("%s must be %s (got %T)", key, want, v))
 		}
 	}
 

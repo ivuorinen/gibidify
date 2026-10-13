@@ -56,11 +56,11 @@ var validationBoundaryCases = []struct {
 	{"whole float accepted as integer", map[string]any{shared.ConfigKeyResourceLimitsMaxFiles: 500.0}, ""},
 	{
 		"fractional float rejected as integer", map[string]any{shared.ConfigKeyResourceLimitsMaxFiles: 500.5},
-		shared.ConfigKeyResourceLimitsMaxFiles + " must be a integer (got float64)",
+		shared.ConfigKeyResourceLimitsMaxFiles + " must be an integer (got float64)",
 	},
 	{
 		"string rejected as integer", map[string]any{shared.ConfigKeyFileSizeLimit: "5MB"},
-		shared.ConfigKeyFileSizeLimit + " must be a integer (got string)",
+		shared.ConfigKeyFileSizeLimit + " must be an integer (got string)",
 	},
 }
 
