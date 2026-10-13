@@ -43,7 +43,8 @@ yamlfmt, yamllint)
 **Testing**: error handling best practices, 0 tolerance policy
 
 **CRITICAL**: All rules non-negotiable. `make fmt && make lint` must show 0
-issues.
+issues. A rule changes only when the user explicitly asks for it (see
+revive.toml Restrictions below).
 
 ## Testing
 
@@ -56,7 +57,7 @@ assertions
 ## Development Patterns
 
 **Logging**: Use `shared.GetLogger()` for all logging (stdlib `log/slog`
-backend). Default WARN level, set via `--log-level` flag
+backend). Default level `warn`, set via `--log-level` flag
 **Error Handling**: Use `shared.WrapError` family for structured errors with
 context
 **File reading**: Files are buffered whole, capped at `fileSizeLimit`
@@ -72,8 +73,8 @@ EditorConfig (LF, tabs), semantic commits, testing required, error wrapping
 
 ## revive.toml Restrictions
 
-**AGENTS DO NOT HAVE PERMISSION** to modify `revive.toml` configuration unless
-user explicitly requests it.
+**Agents do not have permission** to modify `revive.toml` configuration unless
+the user explicitly requests it.
 The linting configuration is carefully tuned and should not be altered during
 normal development.
 

@@ -8,8 +8,8 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/gibidify .
-RUN ./scripts/third-party-notices.sh /out/THIRD_PARTY_NOTICES
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/gibidify . \
+	&& ./scripts/third-party-notices.sh /out/THIRD_PARTY_NOTICES
 
 # Use a minimal base image
 FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
