@@ -18,7 +18,8 @@ LDFLAGS    := -s -w
 LOCAL_PKG  := github.com/ivuorinen/gibidify
 # yamllint and markdownlint-cli2 ignore .gitignore, so they get the files git would track
 # (wildcard drops paths deleted from the worktree but still in the index).
-YAML_FILES  = $(wildcard $(shell git ls-files --cached --others --exclude-standard '*.yml' '*.yaml'))
+# .mise/locks/ holds mise's generated dependency locks.
+YAML_FILES  = $(filter-out .mise/%,$(wildcard $(shell git ls-files --cached --others --exclude-standard '*.yml' '*.yaml')))
 # The findings INDEX.md is generated (findings.py index) with fixed-width paths.
 MD_FILES    = $(filter-out docs/audit/findings/INDEX.md,$(wildcard $(shell git ls-files --cached --others --exclude-standard '*.md')))
 

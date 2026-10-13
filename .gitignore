@@ -1,7 +1,9 @@
 *.out
 .DS_Store
 .idea
-.mise/
+# mise.lock references the npm and pypi dependency locks in .mise/locks/.
+.mise/*
+!.mise/locks/
 .serena/
 coverage.*
 gibidify
