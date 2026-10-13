@@ -3,6 +3,13 @@ package fileproc
 
 import "strings"
 
+// normalizeConfiguredExtension trims and lowercases an extension from the
+// config file. Validation accepts " .foo" after trimming, so storing it
+// untrimmed registered a key no file extension can equal.
+func normalizeConfiguredExtension(ext string) string {
+	return strings.ToLower(strings.TrimSpace(ext))
+}
+
 // ApplyCustomExtensions applies custom extensions from configuration.
 func (r *FileTypeRegistry) ApplyCustomExtensions(
 	customImages, customBinary []string,
@@ -16,8 +23,9 @@ func (r *FileTypeRegistry) ApplyCustomExtensions(
 
 	// Add custom language mappings
 	for ext, lang := range customLanguages {
+		ext, lang = normalizeConfiguredExtension(ext), strings.TrimSpace(lang)
 		if ext != "" && lang != "" {
-			r.AddLanguageMapping(strings.ToLower(ext), lang)
+			r.AddLanguageMapping(ext, lang)
 		}
 	}
 }
@@ -25,8 +33,8 @@ func (r *FileTypeRegistry) ApplyCustomExtensions(
 // addExtensions is a helper to add multiple extensions.
 func (r *FileTypeRegistry) addExtensions(extensions []string, adder func(string)) {
 	for _, ext := range extensions {
-		if ext != "" {
-			adder(strings.ToLower(ext))
+		if ext = normalizeConfiguredExtension(ext); ext != "" {
+			adder(ext)
 		}
 	}
 }

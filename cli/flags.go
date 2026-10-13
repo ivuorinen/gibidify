@@ -25,6 +25,8 @@ type Flags struct {
 	Verbose     bool
 	ShowVersion bool
 	LogLevel    string
+	// IncludeSensitive keeps credential files (.env, keys) skipped by default.
+	IncludeSensitive bool
 }
 
 var (
@@ -34,11 +36,12 @@ var (
 
 // ResetFlags resets the global flag parsing state for testing.
 // This function should only be used in tests to ensure proper isolation.
+// It deliberately leaves flag.CommandLine alone: ParseFlags uses its own
+// FlagSet, and replacing CommandLine drops the testing package's flags, which
+// panics under `go test -count=N`.
 func ResetFlags() {
 	flagsParsed = false
 	globalFlags = nil
-	// Reset default FlagSet to avoid duplicate flag registration across tests
-	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 }
 
 // ParseFlags parses and validates CLI flags.
@@ -48,26 +51,19 @@ func ParseFlags() (*Flags, error) {
 	}
 
 	flags := &Flags{}
-
-	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	fs.StringVar(&flags.SourceDir, shared.CLIArgSource, "", "Source directory to scan recursively")
-	fs.StringVar(&flags.Destination, "destination", "", "Output file to write aggregated code")
-	fs.StringVar(&flags.Prefix, "prefix", "", "Text to add at the beginning of the output file")
-	fs.StringVar(&flags.Suffix, "suffix", "", "Text to add at the end of the output file")
-	fs.StringVar(&flags.Format, shared.CLIArgFormat, shared.FormatJSON, "Output format (json, markdown, yaml)")
-	fs.IntVar(&flags.Concurrency, shared.CLIArgConcurrency, runtime.NumCPU(),
-		"Number of concurrent workers (default: number of CPU cores)")
-	fs.BoolVar(&flags.NoColors, "no-colors", false, "Disable colored output")
-	fs.BoolVar(&flags.NoProgress, "no-progress", false, "Disable progress bars")
-	fs.BoolVar(&flags.NoUI, "no-ui", false, "Disable all UI output (implies no-colors and no-progress)")
-	fs.BoolVar(&flags.Verbose, "verbose", false, "Enable verbose output")
-	fs.BoolVar(&flags.ShowVersion, "version", false, "Print version information and exit")
-	fs.StringVar(
-		&flags.LogLevel, "log-level", string(shared.LogLevelWarn), "Set log level (debug, info, warn, error)",
-	)
+	fs := newFlagSet(flags)
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return nil, err
+	}
+
+	if err := rejectArguments(fs); err != nil {
+		return nil, err
+	}
+
+	// --verbose only raises the default level; an explicit --log-level wins.
+	if flags.Verbose && !isFlagSet(fs, "log-level") {
+		flags.LogLevel = string(shared.LogLevelInfo)
 	}
 
 	// --version is a terminal action that does not require source/destination validation.
@@ -89,6 +85,60 @@ func ParseFlags() (*Flags, error) {
 	globalFlags = flags
 
 	return flags, nil
+}
+
+// newFlagSet returns a FlagSet that writes parsed values into flags.
+func newFlagSet(flags *Flags) *flag.FlagSet {
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	fs.StringVar(&flags.SourceDir, shared.CLIArgSource, "", "Source directory to scan recursively")
+	fs.StringVar(&flags.Destination, "destination", "", "Output file to write aggregated code")
+	fs.StringVar(&flags.Prefix, "prefix", "", "Text to add at the beginning of the output file")
+	fs.StringVar(&flags.Suffix, "suffix", "", "Text to add at the end of the output file")
+	fs.StringVar(&flags.Format, shared.CLIArgFormat, shared.FormatJSON, "Output format (json, markdown, yaml)")
+	fs.IntVar(&flags.Concurrency, shared.CLIArgConcurrency, runtime.NumCPU(),
+		"Number of concurrent workers (default: number of CPU cores)")
+	fs.BoolVar(&flags.NoColors, "no-colors", false, "Disable colored output")
+	fs.BoolVar(&flags.NoProgress, "no-progress", false, "Disable progress bars")
+	fs.BoolVar(&flags.NoUI, "no-ui", false, "Disable all UI output (implies no-colors and no-progress)")
+	fs.BoolVar(&flags.Verbose, "verbose", false, "Shorthand for --log-level info")
+	fs.BoolVar(&flags.ShowVersion, "version", false, "Print version information and exit")
+	fs.BoolVar(&flags.IncludeSensitive, "include-sensitive", false,
+		"Include credential files (.env, *.pem, *.key, id_rsa, .npmrc, .netrc) that are skipped by default")
+	fs.StringVar(
+		&flags.LogLevel, "log-level", string(shared.LogLevelWarn), "Set log level (debug, info, warn, error)",
+	)
+
+	return fs
+}
+
+// rejectArguments fails when positional arguments follow the flags.
+// flag stops at the first non-flag argument, so everything after a stray
+// word (a glob expansion, or a source given without -source) was dropped
+// and the run went on with default format and destination.
+func rejectArguments(fs *flag.FlagSet) error {
+	if fs.NArg() == 0 {
+		return nil
+	}
+
+	return shared.NewStructuredError(
+		shared.ErrorTypeValidation,
+		shared.CodeValidationArgument,
+		fmt.Sprintf("unexpected argument %q: flags must come before arguments; use -source <dir>", fs.Arg(0)),
+		"",
+		map[string]any{"arguments": fs.Args()},
+	)
+}
+
+// isFlagSet reports whether the named flag was given on the command line.
+func isFlagSet(fs *flag.FlagSet, name string) bool {
+	set := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			set = true
+		}
+	})
+
+	return set
 }
 
 // validate validates the CLI flags.

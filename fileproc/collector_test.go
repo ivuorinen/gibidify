@@ -1,54 +1,16 @@
 package fileproc_test
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/fileproc"
+	"github.com/ivuorinen/gibidify/shared"
 )
-
-func TestCollectFilesWithFakeWalker(t *testing.T) {
-	// Instead of using the production walker, use FakeWalker.
-	expectedFiles := []string{
-		"/path/to/file1.txt",
-		"/path/to/file2.go",
-	}
-	fake := fileproc.FakeWalker{
-		Files: expectedFiles,
-		Err:   nil,
-	}
-
-	// Use fake.Walk directly.
-	files, err := fake.Walk("dummyRoot")
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	if len(files) != len(expectedFiles) {
-		t.Fatalf("Expected %d files, got %d", len(expectedFiles), len(files))
-	}
-
-	for i, f := range files {
-		if f != expectedFiles[i] {
-			t.Errorf("Expected file %s, got %s", expectedFiles[i], f)
-		}
-	}
-}
-
-func TestCollectFilesError(t *testing.T) {
-	// Fake walker returns an error.
-	fake := fileproc.FakeWalker{
-		Files: nil,
-		Err:   os.ErrNotExist,
-	}
-
-	_, err := fake.Walk("dummyRoot")
-	if err == nil {
-		t.Fatal("Expected an error, got nil")
-	}
-}
 
 // TestCollectFiles tests the actual CollectFiles function with a real directory.
 func TestCollectFiles(t *testing.T) {
@@ -74,9 +36,12 @@ func TestCollectFiles(t *testing.T) {
 	}
 
 	// Test CollectFiles
-	files, err := fileproc.CollectFiles(tmpDir)
+	files, skipped, err := fileproc.CollectFiles(tmpDir, fileproc.WalkOptions{})
 	if err != nil {
 		t.Fatalf("CollectFiles failed: %v", err)
+	}
+	if skipped != 0 {
+		t.Errorf("skipped = %d, want 0", skipped)
 	}
 
 	// Verify we got the expected number of files
@@ -100,7 +65,7 @@ func TestCollectFiles(t *testing.T) {
 
 // TestCollectFiles_NonExistentDirectory tests CollectFiles with a non-existent directory.
 func TestCollectFilesNonExistentDirectory(t *testing.T) {
-	_, err := fileproc.CollectFiles("/non/existent/directory")
+	_, _, err := fileproc.CollectFiles("/non/existent/directory", fileproc.WalkOptions{})
 	if err == nil {
 		t.Error("Expected error for non-existent directory, got nil")
 	}
@@ -111,12 +76,53 @@ func TestCollectFilesEmptyDirectory(t *testing.T) {
 	tmpDir := t.TempDir()
 	// Don't create any files
 
-	files, err := fileproc.CollectFiles(tmpDir)
+	files, _, err := fileproc.CollectFiles(tmpDir, fileproc.WalkOptions{})
 	if err != nil {
 		t.Fatalf("CollectFiles failed on empty directory: %v", err)
 	}
 
 	if len(files) != 0 {
 		t.Errorf("Expected 0 files in empty directory, got %d", len(files))
+	}
+}
+
+// TestCollectFilesReportsOversizedFiles verifies a file over fileSizeLimit is
+// left out, counted, and logged at warn level with its path. It used to vanish
+// with no log line while the summary reported 0 skipped.
+func TestCollectFilesReportsOversizedFiles(t *testing.T) {
+	config.Reset()
+	config.SetDefaultConfig()
+	config.Set(shared.ConfigKeyFileSizeLimit, shared.ConfigFileSizeLimitMin)
+
+	var logs strings.Builder
+	logger := shared.GetLogger()
+	logger.SetLevel(shared.LogLevelWarn)
+	logger.SetOutput(&logs)
+	t.Cleanup(func() {
+		logger.SetOutput(os.Stderr)
+		config.Reset()
+	})
+
+	tmpDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmpDir, "small.go"), []byte("package a\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	big := bytes.Repeat([]byte("x"), shared.ConfigFileSizeLimitMin+1)
+	if err := os.WriteFile(filepath.Join(tmpDir, "big.txt"), big, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	files, skipped, err := fileproc.CollectFiles(tmpDir, fileproc.WalkOptions{})
+	if err != nil {
+		t.Fatalf("CollectFiles: %v", err)
+	}
+	if len(files) != 1 || filepath.Base(files[0]) != "small.go" {
+		t.Errorf("files = %v, want only small.go", files)
+	}
+	if skipped != 1 {
+		t.Errorf("skipped = %d, want 1", skipped)
+	}
+	if !strings.Contains(logs.String(), "big.txt") || !strings.Contains(logs.String(), "exceeds fileSizeLimit") {
+		t.Errorf("expected a warning naming big.txt, got: %q", logs.String())
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // AbsolutePath returns the absolute path for the given path.
@@ -29,85 +28,24 @@ func BaseName(absPath string) string {
 	return baseName
 }
 
-// ValidateSourcePath validates a source directory path for security.
-// It ensures the path exists, is a directory, and doesn't contain path traversal attempts.
+// ValidateSourcePath validates that the source path exists and is a directory.
+//
+// It deliberately has no ".." or working-directory containment check: this is
+// a local CLI reading the user's own files, so such checks defended no trust
+// boundary and only rejected valid input like "../sibling" or "a..b". What is
+// read is contained by the walker (symlinks are never followed).
 func ValidateSourcePath(path string) error {
 	if path == "" {
 		return NewStructuredError(
 			ErrorTypeValidation,
 			CodeValidationRequired,
-			TestMsgSourcePath+" is required",
+			"source path is required",
 			"",
 			nil,
 		)
 	}
 
-	// Check for path traversal patterns before cleaning
-	if strings.Contains(path, "..") {
-		return NewStructuredError(
-			ErrorTypeValidation, CodeValidationPath,
-			"path traversal attempt detected in "+TestMsgSourcePath, path, map[string]any{
-				"original_path": path,
-			},
-		)
-	}
-
-	// Clean and get absolute path
 	cleaned := filepath.Clean(path)
-	abs, err := filepath.Abs(cleaned)
-	if err != nil {
-		return NewStructuredError(
-			ErrorTypeFileSystem, CodeFSPathResolution, "cannot resolve "+TestMsgSourcePath, path, map[string]any{
-				"error": err.Error(),
-			},
-		)
-	}
-
-	// Get current working directory to ensure we're not escaping it for relative paths
-	if !filepath.IsAbs(path) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return NewStructuredError(
-				ErrorTypeFileSystem, CodeFSPathResolution, "cannot get current working directory", path, map[string]any{
-					"error": err.Error(),
-				},
-			)
-		}
-
-		// Ensure the resolved path is within or below the current working directory
-		cwdAbs, err := filepath.Abs(cwd)
-		if err != nil {
-			return NewStructuredError(
-				ErrorTypeFileSystem, CodeFSPathResolution,
-				"cannot resolve current working directory", path, map[string]any{
-					"error": err.Error(),
-				},
-			)
-		}
-
-		// Check if the absolute path tries to escape the current working directory.
-		// Require a path-separator boundary so /cwd does not match a sibling
-		// /cwd-evil. When cwd is the filesystem root the boundary already ends in a
-		// separator, so avoid doubling it (which would reject every path).
-		boundary := cwdAbs
-		if !strings.HasSuffix(boundary, string(filepath.Separator)) {
-			boundary += string(filepath.Separator)
-		}
-		if abs != cwdAbs && !strings.HasPrefix(abs, boundary) {
-			return NewStructuredError(
-				ErrorTypeValidation,
-				CodeValidationPath,
-				"source path attempts to access directories outside current working directory",
-				path,
-				map[string]any{
-					"resolved_path": abs,
-					"working_dir":   cwdAbs,
-				},
-			)
-		}
-	}
-
-	// Check if path exists and is a directory
 	info, err := os.Stat(cleaned)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -132,31 +70,14 @@ func ValidateSourcePath(path string) error {
 	return nil
 }
 
-// ValidateDestinationPath validates a destination file path for security.
-// It ensures the path doesn't contain path traversal attempts and the parent directory exists.
+// ValidateDestinationPath validates that the destination is not a directory and
+// that its parent directory exists.
 func ValidateDestinationPath(path string) error {
 	if path == "" {
 		return NewStructuredError(ErrorTypeValidation, CodeValidationRequired, "destination path is required", "", nil)
 	}
 
-	// Check for path traversal patterns before cleaning
-	if strings.Contains(path, "..") {
-		return NewStructuredError(
-			ErrorTypeValidation,
-			CodeValidationPath,
-			"path traversal attempt detected in destination path",
-			path,
-			map[string]any{
-				"original_path": path,
-			},
-		)
-	}
-
-	// Clean and validate the path
-	cleaned := filepath.Clean(path)
-
-	// Get absolute path to ensure it's not trying to escape current working directory
-	abs, err := filepath.Abs(cleaned)
+	abs, err := filepath.Abs(filepath.Clean(path))
 	if err != nil {
 		return NewStructuredError(
 			ErrorTypeFileSystem, CodeFSPathResolution, "cannot resolve destination path", path, map[string]any{
@@ -196,26 +117,6 @@ func ValidateDestinationPath(path string) error {
 		return NewStructuredError(
 			ErrorTypeValidation, CodeValidationPath, "destination parent is not a directory", path, map[string]any{
 				"parent_dir": parentDir,
-			},
-		)
-	}
-
-	return nil
-}
-
-// ValidateConfigPath validates a configuration file path for security.
-// It ensures the path doesn't contain path traversal attempts.
-func ValidateConfigPath(path string) error {
-	if path == "" {
-		return nil // Empty path is allowed for config
-	}
-
-	// Check for path traversal patterns before cleaning
-	if strings.Contains(path, "..") {
-		return NewStructuredError(
-			ErrorTypeValidation, CodeValidationPath,
-			"path traversal attempt detected in config path", path, map[string]any{
-				"original_path": path,
 			},
 		)
 	}

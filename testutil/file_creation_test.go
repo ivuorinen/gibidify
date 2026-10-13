@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/ivuorinen/gibidify/shared"
 )
 
 func TestCreateTestFile(t *testing.T) {
@@ -63,7 +61,7 @@ func createTestFileTestCases() []struct {
 		{
 			name:     "create file with special characters",
 			filename: "special-file_123.go",
-			content:  []byte(shared.LiteralPackageMain),
+			content:  []byte(LiteralPackageMain),
 			wantErr:  false,
 		},
 	}
@@ -89,7 +87,7 @@ func createSubdirectoryIfNeeded(t *testing.T, dir, filename string) {
 
 	if strings.ContainsRune(filename, filepath.Separator) {
 		subdir := filepath.Join(dir, filepath.Dir(filename))
-		if err := os.MkdirAll(subdir, shared.TestDirPermission); err != nil {
+		if err := os.MkdirAll(subdir, TestDirPermission); err != nil {
 			t.Fatalf("Failed to create subdirectory: %v", err)
 		}
 	}
@@ -130,8 +128,8 @@ func verifyFileType(t *testing.T, info os.FileInfo) {
 func verifyFilePermissions(t *testing.T, info os.FileInfo) {
 	t.Helper()
 
-	if info.Mode().Perm() != shared.TestFilePermission {
-		t.Errorf("File permissions = %v, want %v", info.Mode().Perm(), shared.TestFilePermission)
+	if info.Mode().Perm() != TestFilePermission {
+		t.Errorf("File permissions = %v, want %v", info.Mode().Perm(), TestFilePermission)
 	}
 }
 
@@ -139,10 +137,7 @@ func verifyFilePermissions(t *testing.T, info os.FileInfo) {
 func verifyFileContent(t *testing.T, filePath string, expectedContent []byte) {
 	t.Helper()
 
-	readContent, err := os.ReadFile(filePath) //nolint:gosec // G304: path constructed from t.TempDir()
-	if err != nil {
-		t.Fatalf("Failed to read created file: %v", err)
-	}
+	readContent := ReadFile(t, filePath)
 	if string(readContent) != string(expectedContent) {
 		t.Errorf("File content = %q, want %q", readContent, expectedContent)
 	}
@@ -261,7 +256,7 @@ func prepareNestedDirectoryPath(t *testing.T, parent, dir string) (parentPath, f
 
 	if strings.Contains(dir, "/") {
 		parentPath := filepath.Join(parent, filepath.Dir(dir))
-		if err := os.MkdirAll(parentPath, shared.TestDirPermission); err != nil {
+		if err := os.MkdirAll(parentPath, TestDirPermission); err != nil {
 			t.Fatalf("Failed to create parent directory: %v", err)
 		}
 
@@ -306,8 +301,8 @@ func verifyIsDirectory(t *testing.T, info os.FileInfo) {
 func verifyDirectoryPermissions(t *testing.T, info os.FileInfo) {
 	t.Helper()
 
-	if info.Mode().Perm() != shared.TestDirPermission {
-		t.Errorf("Directory permissions = %v, want %v", info.Mode().Perm(), shared.TestDirPermission)
+	if info.Mode().Perm() != TestDirPermission {
+		t.Errorf("Directory permissions = %v, want %v", info.Mode().Perm(), TestDirPermission)
 	}
 }
 
@@ -316,7 +311,7 @@ func verifyDirectoryUsability(t *testing.T, dirPath string) {
 	t.Helper()
 
 	testFile := filepath.Join(dirPath, "test.txt")
-	if err := os.WriteFile(testFile, []byte("test"), shared.TestFilePermission); err != nil {
+	if err := os.WriteFile(testFile, []byte("test"), TestFilePermission); err != nil {
 		t.Errorf("Cannot create file in directory: %v", err)
 	}
 }
@@ -348,7 +343,7 @@ func createTestFilesTestCases() []struct {
 			name: "create multiple files",
 			fileSpecs: []FileSpec{
 				{Name: "file1.txt", Content: "content1"},
-				{Name: "file2.go", Content: shared.LiteralPackageMain},
+				{Name: "file2.go", Content: LiteralPackageMain},
 				{Name: "file3.json", Content: `{"key": "value"}`},
 			},
 			wantCount: 3,
@@ -356,7 +351,7 @@ func createTestFilesTestCases() []struct {
 		{
 			name: "create files with subdirectories",
 			fileSpecs: []FileSpec{
-				{Name: "src/main.go", Content: shared.LiteralPackageMain},
+				{Name: "src/main.go", Content: LiteralPackageMain},
 				{Name: "test/test.go", Content: "package test"},
 			},
 			wantCount: 2,
@@ -396,7 +391,7 @@ func createNecessarySubdirectories(t *testing.T, rootDir string, fileSpecs []Fil
 	for _, spec := range fileSpecs {
 		if strings.Contains(spec.Name, "/") {
 			subdir := filepath.Join(rootDir, filepath.Dir(spec.Name))
-			if err := os.MkdirAll(subdir, shared.TestDirPermission); err != nil {
+			if err := os.MkdirAll(subdir, TestDirPermission); err != nil {
 				t.Fatalf("Failed to create subdirectory: %v", err)
 			}
 		}
@@ -417,12 +412,7 @@ func verifyCreatedFilesContent(t *testing.T, createdFiles []string, fileSpecs []
 	t.Helper()
 
 	for i, filePath := range createdFiles {
-		content, err := os.ReadFile(filePath) //nolint:gosec // G304: path constructed from t.TempDir()
-		if err != nil {
-			t.Errorf("Failed to read file %s: %v", filePath, err)
-
-			continue
-		}
+		content := ReadFile(t, filePath)
 		if string(content) != fileSpecs[i].Content {
 			t.Errorf("File %s content = %q, want %q", filePath, content, fileSpecs[i].Content)
 		}

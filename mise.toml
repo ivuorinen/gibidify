@@ -1,0 +1,45 @@
+# Development and CI tool versions: the single source for the Makefile,
+# .pre-commit-config.yaml (run by prek) and the workflows, which all call the
+# tools through `mise exec --`. Renovate's mise manager keeps them current.
+# Go itself is not here: go.mod's toolchain directive selects it (setup-go in CI).
+# mise.lock pins each tool's per-platform checksums; regenerate with `mise lock`.
+[settings]
+lockfile = true
+
+[tools]
+actionlint = "1.7.12"
+checkmake = "0.3.2"
+editorconfig-checker = "3.11.1"
+gitleaks = "8.30.1"
+"go:golang.org/x/tools/cmd/goimports" = "0.47.0"
+# govulncheck deliberately tracks latest: the vuln DB is fetched live from
+# vuln.go.dev on each run, but the binary controls reachability analysis and
+# its bug fixes. mise.lock records the version resolved at `mise lock` time;
+# `mise upgrade` moves it forward.
+"go:golang.org/x/vuln/cmd/govulncheck" = "latest"
+goreleaser = "2.18.3"
+# gosec, revive and staticcheck type-check the module, so they use the go:
+# backend and are built with the project's Go toolchain.
+# gosec is a master pseudo-version: v2.29.0 ships golang.org/x/tools v0.49.0,
+# which cannot decode go1.27 export data ("export data version 5"), so every
+# package fails type-checking and the SSA analysers are skipped (`-quiet`
+# still exits 0). Move back to a tagged release once one includes x/tools
+# v0.51.0 or newer.
+"go:github.com/securego/gosec/v2/cmd/gosec" = "2.29.1-0.20261009120814-7b1b5cebe007"
+markdownlint-cli2 = "0.23.3"
+opengrep = "1.30.2"
+prek = "0.5.5"
+# Pinned to 1.11.0: newer revive added var-naming rules that flag the existing
+# `shared` package name, and revive.toml is intentionally off-limits.
+"go:github.com/mgechev/revive" = "1.11.0"
+shfmt = "3.14.1"
+"go:honnef.co/go/tools/cmd/staticcheck" = "0.8.2"
+trivy = "0.70.0"
+# yamllint (pypi backend) installs from its uv.lock in .mise/locks/, which
+# needs uv >= 0.12.10 and a mise-installed Python; mise does not use the
+# runner's system python3 for it.
+python = "3.14.7"
+uv = "0.12.23"
+yamlfmt = "0.21.0"
+yamllint = "1.38.0"
+zizmor = "1.30.1"

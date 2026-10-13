@@ -4,14 +4,21 @@ package main
 
 import (
 	"context"
+	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/ivuorinen/gibidify/cli"
 	"github.com/ivuorinen/gibidify/config"
 	"github.com/ivuorinen/gibidify/shared"
 )
+
+// exitInterrupted is the exit status of a run stopped by a signal (128+SIGINT).
+const exitInterrupted = 130
 
 // Build information populated at link time via -ldflags by goreleaser.
 var (
@@ -26,19 +33,34 @@ func main() {
 	ui := cli.NewUIManager()
 	errorFormatter := cli.NewErrorFormatter(ui)
 
-	// In production, use a background context.
-	if err := run(context.Background()); err != nil {
-		// Handle errors with better formatting and suggestions
-		if cli.IsUserError(err) {
-			errorFormatter.FormatError(err)
-			os.Exit(1)
-		}
-		// System errors still go to logger for debugging
-		logger := shared.GetLogger()
-		logger.Errorf("System error: %v", err)
-		ui.PrintError("An unexpected error occurred. Please check the logs.")
-		os.Exit(2)
+	// Ctrl-C and SIGTERM cancel the run; processing then stops the workers,
+	// waits for the writer and discards its temporary output, leaving any
+	// previous output in place.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	err := run(ctx)
+	stop()
+
+	if err == nil {
+		return
 	}
+
+	// Ctrl-C or SIGTERM is not a failure of gibidify: report it plainly and use
+	// the conventional 128+SIGINT status instead of the "unexpected error" path.
+	if errors.Is(err, context.Canceled) {
+		ui.PrintError("Interrupted")
+		os.Exit(exitInterrupted)
+	}
+
+	// Handle errors with better formatting and suggestions
+	if cli.IsUserError(err) {
+		errorFormatter.FormatError(err)
+		os.Exit(1)
+	}
+	// System errors still go to logger for debugging
+	logger := shared.GetLogger()
+	logger.Errorf("System error: %v", err)
+	ui.PrintError("An unexpected error occurred. Please check the logs.")
+	os.Exit(2)
 }
 
 // printVersion writes build metadata to w. Extracted for testability.
@@ -50,6 +72,10 @@ func printVersion(w io.Writer) {
 func run(ctx context.Context) error {
 	// Parse CLI flags
 	flags, err := cli.ParseFlags()
+	if errors.Is(err, flag.ErrHelp) {
+		// Usage has already been printed; asking for help is not a failure.
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("parsing flags: %w", err)
 	}
@@ -64,8 +90,17 @@ func run(ctx context.Context) error {
 	logger := shared.GetLogger()
 	logger.SetLevel(shared.ParseLogLevel(flags.LogLevel))
 
-	// Load configuration
-	config.LoadConfig()
+	// A broken config aborts the run: continuing on defaults would drop the
+	// user's exclusions and send the files they excluded to the output.
+	if err := config.LoadConfig(); err != nil {
+		return fmt.Errorf("loading configuration: %w", err)
+	}
+
+	// ParseFlags runs before the config file is loaded, so it cannot apply the
+	// configured maxConcurrency ceiling; check it now that the config is in.
+	if err := config.ValidateConcurrency(flags.Concurrency); err != nil {
+		return fmt.Errorf("validating concurrency: %w", err)
+	}
 
 	// Create and run processor
 	processor := cli.NewProcessor(flags)

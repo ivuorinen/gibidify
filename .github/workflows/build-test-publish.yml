@@ -1,14 +1,15 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 ---
-name: Build, Test, Coverage, and Publish
+# Release binaries and container images are published by release.yml (GoReleaser).
+name: Build, Test, and Coverage
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
-  release:
-    types: [created]
+    branches:
+      - main
 
 permissions: {}
 
@@ -22,22 +23,18 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # write coverage/result artifacts and release assets
-      checks: write # publish the test/coverage check run
-      pull-requests: write # comment coverage results on pull requests
-      security-events: write # upload test SARIF to code scanning
-      statuses: write # set the coverage commit status
+      contents: read # checkout; upload-artifact needs no token scope
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # Full history for SonarQube Cloud's blame and new-code detection.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Setup Go
-        uses: ./.github/actions/setup
-        with:
-          token: ${{ github.token }}
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository] actionlint rejects the $/ form
 
       - name: Download dependencies
         shell: bash
@@ -60,6 +57,15 @@ jobs:
           coverage="$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')"
           echo "total_coverage=$coverage" >> "$GITHUB_ENV"
           echo "Coverage: $coverage%"
+
+      # CI-based analysis, configured in sonar-project.properties; it imports
+      # coverage.out, which automatic analysis cannot.
+      - name: SonarQube Cloud scan
+        # The pinned commit SHA after "sonarqube" matches the API-key pattern.
+        # nosemgrep: generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Upload test results
         if: always()
@@ -92,13 +98,17 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write # upload build artifacts / release assets
-      packages: write # push build artifacts to GitHub Packages
+      contents: read # checkout; upload-artifact needs no token scope
 
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
-        goarch: [amd64, arm64]
+        goos:
+          - linux
+          - darwin
+          - windows
+        goarch:
+          - amd64
+          - arm64
 
     steps:
       - name: Checkout repository
@@ -107,9 +117,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Go
-        uses: ./.github/actions/setup
-        with:
-          token: ${{ github.token }}
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository] actionlint rejects the $/ form
 
       - name: Download dependencies
         run: go mod download
@@ -139,47 +147,3 @@ jobs:
         with:
           name: gibidify-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
-
-  docker:
-    name: Build and Publish Docker Image
-    if: github.event_name == 'release'
-    needs: build
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: write # attach the built image metadata to the release
-      packages: write # push the container image to GHCR
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Setup Go
-        uses: ./.github/actions/setup
-        with:
-          token: ${{ github.token }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      - name: Log in to GitHub Container Registry
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_ACTOR: ${{ github.actor }}
-        run: |
-          echo "$GH_TOKEN" | docker login ghcr.io \
-            -u "$(echo "$GH_ACTOR" | tr '[:upper:]' '[:lower:]')" \
-            --password-stdin
-
-      - name: Build and push Docker image
-        env:
-          GH_REPOSITORY: ${{ github.repository }}
-          REF_NAME: ${{ github.ref_name }}
-        run: |
-          repo="$(echo "$GH_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
-          docker buildx build --platform linux/amd64 \
-            --tag "ghcr.io/${repo}/gibidify:${REF_NAME}" \
-            --tag "ghcr.io/${repo}/gibidify:latest" \
-            --push .

@@ -3,7 +3,7 @@ package fileproc
 import (
 	"testing"
 
-	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 const (
@@ -25,6 +25,29 @@ func TestFileTypeRegistryApplyCustomExtensions(t *testing.T) {
 	registry.ApplyCustomExtensions(customImages, customBinary, customLanguages)
 
 	verifyCustomExtensions(t, registry, customImages, customBinary, customLanguages)
+}
+
+// TestFileTypeRegistryTrimsConfiguredExtensions verifies configured extensions
+// are trimmed before use. Validation accepts " .foo" after trimming, but the
+// registry stored it untrimmed, so the setting matched nothing.
+func TestFileTypeRegistryTrimsConfiguredExtensions(t *testing.T) {
+	registry := createEmptyTestRegistry()
+	registry.ApplyCustomExtensions([]string{" .webp "}, []string{" .foo"}, map[string]string{" .zig ": " zig "})
+
+	if !registry.IsImage("a.webp") {
+		t.Error("\" .webp \" was not registered as .webp")
+	}
+	if !registry.IsBinary("data.foo") {
+		t.Error("\" .foo\" was not registered as .foo")
+	}
+	if got := registry.Language("main.zig"); got != zigLang {
+		t.Errorf("Language(main.zig) = %q, want %q", got, zigLang)
+	}
+
+	registry.DisableExtensions([]string{" .webp"}, []string{".FOO "}, []string{" .zig"})
+	if registry.IsImage("a.webp") || registry.IsBinary("data.foo") || registry.Language("main.zig") != "" {
+		t.Error("padded or mixed-case disabled extensions were not removed")
+	}
 }
 
 // TestFileTypeRegistryDisableExtensions tests disabling extensions.
@@ -53,12 +76,12 @@ func TestFileTypeRegistryDisableExtensions(t *testing.T) {
 func TestFileTypeRegistryEmptyValuesHandling(t *testing.T) {
 	registry := createEmptyTestRegistry()
 
-	customImages := []string{"", shared.TestExtensionValid, ""}
-	customBinary := []string{"", shared.TestExtensionValid}
+	customImages := []string{"", testutil.TestExtensionValid, ""}
+	customBinary := []string{"", testutil.TestExtensionValid}
 	customLanguages := map[string]string{
-		"":                        "invalid",
-		shared.TestExtensionValid: "",
-		".good":                   "good",
+		"":                          "invalid",
+		testutil.TestExtensionValid: "",
+		".good":                     "good",
 	}
 
 	registry.ApplyCustomExtensions(customImages, customBinary, customLanguages)
@@ -136,13 +159,13 @@ func setupRegistryExtensions(registry *FileTypeRegistry) {
 func verifyExtensionsEnabled(t *testing.T, registry *FileTypeRegistry) {
 	t.Helper()
 
-	if !registry.IsImage(shared.TestFilePNG) {
+	if !registry.IsImage(testutil.TestFilePNG) {
 		t.Error("Expected .png to be image before disabling")
 	}
-	if !registry.IsBinary(shared.TestFileEXE) {
+	if !registry.IsBinary(testutil.TestFileEXE) {
 		t.Error("Expected .exe to be binary before disabling")
 	}
-	if registry.Language(shared.TestFileGo) != "go" {
+	if registry.Language(testutil.TestFileGo) != "go" {
 		t.Error("Expected .go to map to go before disabling")
 	}
 }
@@ -151,13 +174,13 @@ func verifyExtensionsEnabled(t *testing.T, registry *FileTypeRegistry) {
 func verifyExtensionsDisabled(t *testing.T, registry *FileTypeRegistry) {
 	t.Helper()
 
-	if registry.IsImage(shared.TestFilePNG) {
+	if registry.IsImage(testutil.TestFilePNG) {
 		t.Error("Expected .png to not be image after disabling")
 	}
-	if registry.IsBinary(shared.TestFileEXE) {
+	if registry.IsBinary(testutil.TestFileEXE) {
 		t.Error("Expected .exe to not be binary after disabling")
 	}
-	if registry.Language(shared.TestFileGo) != "" {
+	if registry.Language(testutil.TestFileGo) != "" {
 		t.Error("Expected .go to not map to language after disabling")
 	}
 }
@@ -166,13 +189,13 @@ func verifyExtensionsDisabled(t *testing.T, registry *FileTypeRegistry) {
 func verifyRemainingExtensions(t *testing.T, registry *FileTypeRegistry) {
 	t.Helper()
 
-	if !registry.IsImage(shared.TestFileJPG) {
+	if !registry.IsImage(testutil.TestFileJPG) {
 		t.Error("Expected .jpg to still be image after disabling .png")
 	}
-	if !registry.IsBinary(shared.TestFileDLL) {
+	if !registry.IsBinary(testutil.TestFileDLL) {
 		t.Error("Expected .dll to still be binary after disabling .exe")
 	}
-	if registry.Language(shared.TestFilePy) != "python" {
+	if registry.Language(testutil.TestFilePy) != "python" {
 		t.Error("Expected .py to still map to python after disabling .go")
 	}
 }
@@ -184,19 +207,19 @@ func verifyEmptyValueHandling(t *testing.T, registry *FileTypeRegistry) {
 	if registry.IsImage("test") {
 		t.Error("Expected empty extension to not be added as image")
 	}
-	if !registry.IsImage(shared.TestFileValid) {
+	if !registry.IsImage(testutil.TestFileValid) {
 		t.Error("Expected .valid to be added as image")
 	}
 	if registry.IsBinary("test") {
 		t.Error("Expected empty extension to not be added as binary")
 	}
-	if !registry.IsBinary(shared.TestFileValid) {
+	if !registry.IsBinary(testutil.TestFileValid) {
 		t.Error("Expected .valid to be added as binary")
 	}
 	if registry.Language("test") != "" {
 		t.Error("Expected empty extension to not be added as language")
 	}
-	if registry.Language(shared.TestFileValid) != "" {
+	if registry.Language(testutil.TestFileValid) != "" {
 		t.Error("Expected .valid with empty language to not be added")
 	}
 	if registry.Language("test.good") != "good" {
@@ -208,7 +231,7 @@ func verifyEmptyValueHandling(t *testing.T, registry *FileTypeRegistry) {
 func verifyCaseInsensitiveHandling(t *testing.T, registry *FileTypeRegistry) {
 	t.Helper()
 
-	if !registry.IsImage(shared.TestFileWebP) {
+	if !registry.IsImage(testutil.TestFileWebP) {
 		t.Error("Expected .webp (lowercase) to work after adding .WEBP")
 	}
 	if !registry.IsImage("test.WEBP") {
@@ -251,35 +274,35 @@ func TestConfigureFromSettings(t *testing.T) {
 	)
 
 	// Test that custom extensions work
-	if !IsImage(shared.TestFileWebP) {
+	if !DefaultRegistry().IsImage(testutil.TestFileWebP) {
 		t.Error("Expected custom image extension .webp to work")
 	}
-	if !IsBinary("test.custom") {
+	if !DefaultRegistry().IsBinary("test.custom") {
 		t.Error("Expected custom binary extension .custom to work")
 	}
-	if Language("test.zig") != zigLang {
+	if DefaultRegistry().Language("test.zig") != zigLang {
 		t.Error("Expected custom language .zig to work")
 	}
 
 	// Test that disabled extensions don't work
-	if IsImage("test.gif") {
+	if DefaultRegistry().IsImage("test.gif") {
 		t.Error("Expected disabled image extension .gif to not work")
 	}
-	if IsBinary(shared.TestFileEXE) {
+	if DefaultRegistry().IsBinary(testutil.TestFileEXE) {
 		t.Error("Expected disabled binary extension .exe to not work")
 	}
-	if Language("test.rb") != "" {
+	if DefaultRegistry().Language("test.rb") != "" {
 		t.Error("Expected disabled language extension .rb to not work")
 	}
 
 	// Test that non-disabled defaults still work
-	if !IsImage(shared.TestFilePNG) {
+	if !DefaultRegistry().IsImage(testutil.TestFilePNG) {
 		t.Error("Expected non-disabled image extension .png to still work")
 	}
-	if !IsBinary(shared.TestFileDLL) {
+	if !DefaultRegistry().IsBinary(testutil.TestFileDLL) {
 		t.Error("Expected non-disabled binary extension .dll to still work")
 	}
-	if Language(shared.TestFileGo) != "go" {
+	if DefaultRegistry().Language(testutil.TestFileGo) != "go" {
 		t.Error("Expected non-disabled language extension .go to still work")
 	}
 
@@ -294,11 +317,11 @@ func TestConfigureFromSettings(t *testing.T) {
 	)
 
 	// Previous configuration should still work
-	if !IsImage(shared.TestFileWebP) {
+	if !DefaultRegistry().IsImage(testutil.TestFileWebP) {
 		t.Error("Expected previous configuration to persist")
 	}
 	// New configuration should also work
-	if !IsImage("test.extra") {
+	if !DefaultRegistry().IsImage("test.extra") {
 		t.Error("Expected new configuration to be applied")
 	}
 

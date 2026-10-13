@@ -28,7 +28,7 @@ func TestLogServiceLevels(t *testing.T) {
 			name:  "debug level allows debug messages",
 			level: LogLevelDebug,
 			logFunc: func(l Logger) {
-				l.Debug(TestLoggerDebugMsg)
+				l.Debugf(TestLoggerDebugMsg)
 			},
 			expected: true,
 		},
@@ -36,7 +36,7 @@ func TestLogServiceLevels(t *testing.T) {
 			name:  "info level blocks debug messages",
 			level: LogLevelInfo,
 			logFunc: func(l Logger) {
-				l.Debug(TestLoggerDebugMsg)
+				l.Debugf(TestLoggerDebugMsg)
 			},
 			expected: false,
 		},
@@ -44,7 +44,7 @@ func TestLogServiceLevels(t *testing.T) {
 			name:  "info level allows info messages",
 			level: LogLevelInfo,
 			logFunc: func(l Logger) {
-				l.Info(TestLoggerInfoMsg)
+				l.Infof(TestLoggerInfoMsg)
 			},
 			expected: true,
 		},
@@ -52,7 +52,7 @@ func TestLogServiceLevels(t *testing.T) {
 			name:  "warn level blocks info messages",
 			level: LogLevelWarn,
 			logFunc: func(l Logger) {
-				l.Info(TestLoggerInfoMsg)
+				l.Infof(TestLoggerInfoMsg)
 			},
 			expected: false,
 		},
@@ -60,7 +60,7 @@ func TestLogServiceLevels(t *testing.T) {
 			name:  "warn level allows warn messages",
 			level: LogLevelWarn,
 			logFunc: func(l Logger) {
-				l.Warn(TestLoggerWarnMsg)
+				l.Warnf(TestLoggerWarnMsg)
 			},
 			expected: true,
 		},
@@ -68,7 +68,7 @@ func TestLogServiceLevels(t *testing.T) {
 			name:  "error level blocks warn messages",
 			level: LogLevelError,
 			logFunc: func(l Logger) {
-				l.Warn(TestLoggerWarnMsg)
+				l.Warnf(TestLoggerWarnMsg)
 			},
 			expected: false,
 		},
@@ -76,7 +76,7 @@ func TestLogServiceLevels(t *testing.T) {
 			name:  "error level allows error messages",
 			level: LogLevelError,
 			logFunc: func(l Logger) {
-				l.Error("error message")
+				l.Errorf("error message")
 			},
 			expected: true,
 		},
@@ -175,7 +175,7 @@ func TestLogServiceWithFields(t *testing.T) {
 	}
 
 	fieldLogger := logger.WithFields(fields)
-	fieldLogger.Info("test message")
+	fieldLogger.Infof("test message")
 
 	output := buf.String()
 	expectedFields := []string{"component=test", "count=42", "enabled=true", "test message"}
@@ -193,11 +193,11 @@ func TestLogServiceSetOutput(t *testing.T) {
 	// Set initial output
 	logger.SetOutput(&buf1)
 	logger.SetLevel(LogLevelInfo)
-	logger.Info("message1")
+	logger.Infof("message1")
 
 	// Change output
 	logger.SetOutput(&buf2)
-	logger.Info("message2")
+	logger.Infof("message2")
 
 	// Verify messages went to correct outputs
 	if !strings.Contains(buf1.String(), "message1") {
@@ -272,14 +272,14 @@ func TestLogServiceDefaultLevel(t *testing.T) {
 	logger.SetLevel(LogLevelWarn) // Ensure we're at WARN level for this test
 
 	// Test that default level is WARN (should block info messages)
-	logger.Info(TestLoggerInfoMsg)
+	logger.Infof(TestLoggerInfoMsg)
 	if strings.TrimSpace(buf.String()) != "" {
 		t.Error("Info message should be blocked at default WARN level")
 	}
 
 	// Test that warning messages are allowed
 	buf.Reset()
-	logger.Warn(TestLoggerWarnMsg)
+	logger.Warnf(TestLoggerWarnMsg)
 	if !strings.Contains(buf.String(), TestLoggerWarnMsg) {
 		t.Error("Warn message should be allowed at default WARN level")
 	}
@@ -296,7 +296,7 @@ func TestLogServiceSetLevel(t *testing.T) {
 			name:     "set debug level allows debug",
 			setLevel: LogLevelDebug,
 			logFunc: func(l Logger) {
-				l.Debug(TestLoggerDebugMsg)
+				l.Debugf(TestLoggerDebugMsg)
 			},
 			expected: true,
 		},
@@ -304,7 +304,7 @@ func TestLogServiceSetLevel(t *testing.T) {
 			name:     "set info level blocks debug",
 			setLevel: LogLevelInfo,
 			logFunc: func(l Logger) {
-				l.Debug(TestLoggerDebugMsg)
+				l.Debugf(TestLoggerDebugMsg)
 			},
 			expected: false,
 		},
@@ -312,7 +312,7 @@ func TestLogServiceSetLevel(t *testing.T) {
 			name:     "set warn level blocks info",
 			setLevel: LogLevelWarn,
 			logFunc: func(l Logger) {
-				l.Info(TestLoggerInfoMsg)
+				l.Infof(TestLoggerInfoMsg)
 			},
 			expected: false,
 		},
@@ -320,7 +320,7 @@ func TestLogServiceSetLevel(t *testing.T) {
 			name:     "set error level blocks warn",
 			setLevel: LogLevelError,
 			logFunc: func(l Logger) {
-				l.Warn(TestLoggerWarnMsg)
+				l.Warnf(TestLoggerWarnMsg)
 			},
 			expected: false,
 		},
@@ -354,7 +354,7 @@ func BenchmarkLoggerInfo(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		logger.Info("benchmark message")
+		logger.Infof("benchmark message")
 	}
 }
 
@@ -371,6 +371,6 @@ func BenchmarkLoggerWithFields(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		fields["iteration"] = i
-		logger.WithFields(fields).Info("benchmark message")
+		logger.WithFields(fields).Infof("benchmark message")
 	}
 }

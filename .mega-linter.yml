@@ -7,6 +7,7 @@ APPLY_FIXES: all
 SHOW_ELAPSED_TIME: false # Show elapsed time at the end of MegaLinter run
 PARALLEL: true
 VALIDATE_ALL_CODEBASE: true
+FILTER_REGEX_EXCLUDE: '(^|/)\.mise/' # mise's generated dependency locks (see mise.lock)
 FILEIO_REPORTER: false # Generate file.io report
 GITHUB_STATUS_REPORTER: true # Generate GitHub status report
 IGNORE_GENERATED_FILES: true # Ignore generated files

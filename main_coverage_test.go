@@ -45,17 +45,3 @@ func TestUserErrorClassification(t *testing.T) {
 		t.Error("Expected cli.IsUserError to return false for nil error")
 	}
 }
-
-// TestMainPackageExports verifies main package exports are accessible.
-func TestMainPackageExports(t *testing.T) {
-	// The main package exports the run() function for testing
-	// Let's verify it's accessible and has the expected signature
-
-	// This is mainly for documentation and coverage tracking
-	// The actual testing of run() is done in other test files
-
-	t.Log("main package exports verified:")
-	t.Log("- run(context.Context) error function is accessible for testing")
-	t.Log("- main() function follows standard Go main conventions")
-	t.Log("- Package structure supports both execution and testing")
-}

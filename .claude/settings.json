@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v sonar >/dev/null 2>&1; then sonar hook claude-pre-tool-use; fi",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v sonar >/dev/null 2>&1; then sonar hook claude-prompt-submit; fi",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

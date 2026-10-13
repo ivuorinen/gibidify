@@ -3,7 +3,7 @@ package fileproc
 import (
 	"testing"
 
-	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 // createTestRegistry creates a fresh FileTypeRegistry instance for testing.
@@ -25,8 +25,8 @@ func TestFileTypeRegistryLanguageDetection(t *testing.T) {
 		expected string
 	}{
 		// Programming languages
-		{shared.TestFileMainGo, "go"},
-		{shared.TestFileScriptPy, "python"},
+		{testutil.TestFileMainGo, "go"},
+		{testutil.TestFileScriptPy, "python"},
 		{"app.js", "javascript"},
 		{"component.tsx", "typescript"},
 		{"service.ts", "typescript"},
@@ -114,7 +114,7 @@ func TestFileTypeRegistryImageDetection(t *testing.T) {
 	}{
 		// Common image formats
 		{"photo.png", true},
-		{shared.TestFileImageJPG, true},
+		{testutil.TestFileImageJPG, true},
 		{"picture.jpeg", true},
 		{"animation.gif", true},
 		{"bitmap.bmp", true},
@@ -214,7 +214,7 @@ func TestFileTypeRegistryBinaryDetection(t *testing.T) {
 
 		// Non-binary files
 		{"document.txt", false},
-		{shared.TestFileScriptPy, false},
+		{testutil.TestFileScriptPy, false},
 		{"config.json", false},
 		{"style.css", false},
 		{"page.html", false},

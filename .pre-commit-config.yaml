@@ -1,18 +1,52 @@
 ---
 # yaml-language-server: $schema=https://json.schemastore.org/pre-commit-config.json
-# All Go hooks invoke `go run TOOL@VERSION` so they build with the project's
-# Go toolchain (go.mod). This eliminates "tool built with old Go" failures
-# (e.g., staticcheck binary built with go1.23 against a go1.26 module).
-# Tool versions are duplicated from the Makefile; keep them in sync via Renovate.
+# Run with prek (`make lint`). Every hook is local and calls a tool through
+# `mise exec` or a Makefile target, so mise.toml is the single source of tool
+# versions: pins copied into this file drifted (staticcheck v0.7.0, gosec
+# v2.24.0 while the Makefile had moved on) until every hook crashed on go1.27
+# export data.
 repos:
-  - repo: https://github.com/editorconfig-checker/editorconfig-checker.python
-    rev: 3.11.1
-    hooks:
-      - id: editorconfig-checker
-        alias: ec
-
   - repo: local
     hooks:
+      - id: editorconfig-checker
+        name: editorconfig-checker
+        alias: ec
+        entry: mise exec -- editorconfig-checker
+        language: system
+        types:
+          - text
+
+      - id: github-actions
+        name: actionlint + zizmor
+        entry: make lint-actions
+        language: system
+        files: ^\.github/
+        pass_filenames: false
+
+      - id: markdownlint
+        name: markdownlint
+        entry: make lint-md
+        language: system
+        types:
+          - markdown
+        pass_filenames: false
+
+      - id: yamlfmt
+        name: yamlfmt
+        entry: make lint-yaml
+        language: system
+        types:
+          - yaml
+        pass_filenames: false
+
+      - id: yamllint
+        name: yamllint
+        entry: make lint-yamllint
+        language: system
+        types:
+          - yaml
+        pass_filenames: false
+
       - id: go-build
         name: go build
         entry: go build ./...
@@ -43,50 +77,38 @@ repos:
         types:
           - go
 
-      # renovate: datasource=go depName=github.com/mgechev/revive
       - id: revive
         name: revive
-        entry: go run github.com/mgechev/revive@v1.11.0 -config revive.toml -formatter friendly -set_exit_status ./...
+        entry: make lint-go
         language: system
         types:
           - go
         pass_filenames: false
 
-      # renovate: datasource=go depName=honnef.co/go/tools/cmd/staticcheck
       - id: staticcheck
         name: staticcheck
-        entry: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+        entry: make lint-static
         language: system
         types:
           - go
         pass_filenames: false
 
-      # renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
       - id: gosec
         name: gosec
-        entry: go run github.com/securego/gosec/v2/cmd/gosec@v2.24.0 -quiet ./...
+        entry: make lint-sec
         language: system
         types:
           - go
         pass_filenames: false
 
-      # govulncheck intentionally tracks @latest (see Makefile): the vuln DB is
+      # govulncheck intentionally tracks latest (see mise.toml): the vuln DB is
       # fetched live from vuln.go.dev each run; the binary controls reachability
       # analysis. Gated on go.mod/go.sum only — running it on every Go file edit
       # adds network latency to every commit, and the realistic vector for new
       # findings is dependency changes. CI re-runs it on every PR regardless.
       - id: govulncheck
         name: govulncheck
-        entry: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+        entry: make vuln-check
         language: system
         files: ^go\.(mod|sum)$
-        pass_filenames: false
-
-      # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
-      - id: golangci-lint
-        name: golangci-lint
-        entry: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.1 run
-        language: system
-        types:
-          - go
         pass_filenames: false

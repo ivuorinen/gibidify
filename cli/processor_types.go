@@ -16,9 +16,11 @@ type Processor struct {
 func NewProcessor(flags *Flags) *Processor {
 	ui := NewUIManager()
 
-	// Configure UI based on flags
-	ui.SetColorOutput(!flags.NoColors && !flags.NoUI)
-	ui.SetProgressOutput(!flags.NoProgress && !flags.NoUI)
+	// Flags can only turn features off. Setting them from the flags alone
+	// overrode NewUIManager's terminal detection, so a redirected stderr got
+	// ANSI codes and progress-bar redraws.
+	ui.SetColorOutput(ui.enableColors && !flags.NoColors && !flags.NoUI)
+	ui.SetProgressOutput(ui.enableProgress && !flags.NoProgress && !flags.NoUI)
 	ui.SetSilentMode(flags.NoUI)
 
 	return &Processor{

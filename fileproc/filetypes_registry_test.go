@@ -3,7 +3,7 @@ package fileproc
 import (
 	"testing"
 
-	"github.com/ivuorinen/gibidify/shared"
+	"github.com/ivuorinen/gibidify/testutil"
 )
 
 // TestFileTypeRegistryAddImageExtension tests adding image extensions.
@@ -42,7 +42,7 @@ func testImageExtensionModifications(t *testing.T, registry *FileTypeRegistry) {
 
 	// Add a new image extension
 	registry.AddImageExtension(".webp")
-	verifyImageExtension(t, registry, ".webp", shared.TestFileWebP, true)
+	verifyImageExtension(t, registry, ".webp", testutil.TestFileWebP, true)
 
 	// Test case-insensitive addition
 	registry.AddImageExtension(".AVIF")
@@ -67,9 +67,9 @@ func testBinaryExtensionModifications(t *testing.T, registry *FileTypeRegistry) 
 	verifyBinaryExtension(t, registry, ".custom", "file.custom", true)
 
 	// Test case-insensitive addition
-	registry.AddBinaryExtension(shared.TestExtensionSpecial)
-	verifyBinaryExtension(t, registry, shared.TestExtensionSpecial, "file.special", true)
-	verifyBinaryExtension(t, registry, shared.TestExtensionSpecial, "file.SPECIAL", true)
+	registry.AddBinaryExtension(testutil.TestExtensionSpecial)
+	verifyBinaryExtension(t, registry, testutil.TestExtensionSpecial, "file.special", true)
+	verifyBinaryExtension(t, registry, testutil.TestExtensionSpecial, "file.SPECIAL", true)
 
 	// Test with dot prefix
 	registry.AddBinaryExtension("bin")
@@ -114,7 +114,7 @@ func verifyImageExtension(t *testing.T, registry *FileTypeRegistry, ext, filenam
 		if expected {
 			t.Errorf("Expected %s to be recognized as image after adding %s", filename, ext)
 		} else {
-			t.Errorf(shared.TestMsgExpectedExtensionWithoutDot)
+			t.Errorf(testutil.TestMsgExpectedExtensionWithoutDot)
 		}
 	}
 }
@@ -127,7 +127,7 @@ func verifyBinaryExtension(t *testing.T, registry *FileTypeRegistry, ext, filena
 		if expected {
 			t.Errorf("Expected %s to be recognized as binary after adding %s", filename, ext)
 		} else {
-			t.Errorf(shared.TestMsgExpectedExtensionWithoutDot)
+			t.Errorf(testutil.TestMsgExpectedExtensionWithoutDot)
 		}
 	}
 }
@@ -148,7 +148,7 @@ func verifyLanguageMappingAbsent(t *testing.T, registry *FileTypeRegistry, _ str
 
 	lang := registry.Language(filename)
 	if lang != "" {
-		t.Errorf(shared.TestMsgExpectedExtensionWithoutDot+", but got %s", lang)
+		t.Errorf(testutil.TestMsgExpectedExtensionWithoutDot+", but got %s", lang)
 	}
 }
 
@@ -157,22 +157,22 @@ func TestFileTypeRegistryDefaultRegistryConsistency(t *testing.T) {
 	registry := DefaultRegistry()
 
 	// Test that registry methods work consistently
-	if !registry.IsImage(shared.TestFilePNG) {
+	if !registry.IsImage(testutil.TestFilePNG) {
 		t.Error("Expected .png to be recognized as image")
 	}
-	if !registry.IsBinary(shared.TestFileEXE) {
+	if !registry.IsBinary(testutil.TestFileEXE) {
 		t.Error("Expected .exe to be recognized as binary")
 	}
-	if lang := registry.Language(shared.TestFileGo); lang != "go" {
+	if lang := registry.Language(testutil.TestFileGo); lang != "go" {
 		t.Errorf("Expected go, got %s", lang)
 	}
 
 	// Test that multiple calls return consistent results
 	for i := 0; i < 5; i++ {
-		if !registry.IsImage(shared.TestFileJPG) {
+		if !registry.IsImage(testutil.TestFileJPG) {
 			t.Errorf("Iteration %d: Expected .jpg to be recognized as image", i)
 		}
-		if registry.IsBinary(shared.TestFileTXT) {
+		if registry.IsBinary(testutil.TestFileTXT) {
 			t.Errorf("Iteration %d: Expected .txt to not be recognized as binary", i)
 		}
 	}

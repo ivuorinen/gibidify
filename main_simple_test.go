@@ -3,32 +3,26 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/ivuorinen/gibidify/cli"
-	"github.com/ivuorinen/gibidify/shared"
 	"github.com/ivuorinen/gibidify/testutil"
 )
 
 // withIsolatedFlags sets up isolated flag state for testing and returns a cleanup function.
-// This helper saves the original os.Args and flag.CommandLine, resets CLI flags,
-// and creates a fresh FlagSet to avoid conflicts between tests.
+// This helper saves the original os.Args and resets CLI flags. flag.CommandLine
+// is left alone: cli.ParseFlags uses its own FlagSet.
 func withIsolatedFlags(t *testing.T) func() {
 	t.Helper()
 
 	oldArgs := os.Args
-	oldFlag := flag.CommandLine
-
 	cli.ResetFlags()
-	flag.CommandLine = flag.NewFlagSet("test", flag.ContinueOnError)
 
 	return func() {
 		os.Args = oldArgs
-		flag.CommandLine = oldFlag
 	}
 }
 
@@ -39,14 +33,14 @@ func TestRunFlagParsingErrors(t *testing.T) {
 		cleanup := withIsolatedFlags(t)
 		defer cleanup()
 
-		os.Args = []string{"test", shared.TestCLIFlagNoUI, "value"}
+		os.Args = []string{"test", testutil.TestCLIFlagNoUI, "value"}
 
 		err := run(context.Background())
 		if err == nil {
 			t.Fatal("Expected error from invalid flag")
 		}
 
-		if !strings.Contains(err.Error(), shared.TestOpParsingFlags) {
+		if !strings.Contains(err.Error(), testutil.TestOpParsingFlags) {
 			t.Errorf("Expected 'parsing flags' error, got: %v", err)
 		}
 	})
@@ -57,19 +51,19 @@ func TestRunFlagParsingErrors(t *testing.T) {
 
 		// Create temporary files for the test
 		srcDir := t.TempDir()
-		testutil.CreateTestFile(t, srcDir, shared.TestFileTXT, []byte("test"))
+		testutil.CreateTestFile(t, srcDir, testutil.TestFileTXT, []byte("test"))
 
-		outFile, outPath := testutil.CreateTempOutputFile(t, shared.TestMD)
+		outFile, outPath := testutil.CreateTempOutputFile(t, testutil.TestMD)
 		testutil.CloseFile(t, outFile)
 		defer func() {
 			if err := os.Remove(outPath); err != nil {
-				t.Logf(shared.TestMsgFailedToRemoveTempFile, err)
+				t.Logf(testutil.TestMsgFailedToRemoveTempFile, err)
 			}
 		}()
 
 		os.Args = []string{
-			"test", shared.TestCLIFlagSource, srcDir, shared.TestCLIFlagDestination, outPath,
-			shared.TestCLIFlagFormat, "invalid", shared.TestCLIFlagNoUI,
+			"test", testutil.TestCLIFlagSource, srcDir, testutil.TestCLIFlagDestination, outPath,
+			testutil.TestCLIFlagFormat, "invalid", testutil.TestCLIFlagNoUI,
 		}
 
 		err := run(context.Background())
@@ -77,7 +71,7 @@ func TestRunFlagParsingErrors(t *testing.T) {
 			t.Fatal("Expected error from invalid format")
 		}
 
-		if !strings.Contains(err.Error(), shared.TestOpParsingFlags) {
+		if !strings.Contains(err.Error(), testutil.TestOpParsingFlags) {
 			t.Errorf("Expected 'parsing flags' error, got: %v", err)
 		}
 	})
@@ -89,19 +83,19 @@ func TestRunProcessingErrors(t *testing.T) {
 		cleanup := withIsolatedFlags(t)
 		defer cleanup()
 
-		outFile, outPath := testutil.CreateTempOutputFile(t, shared.TestMD)
+		outFile, outPath := testutil.CreateTempOutputFile(t, testutil.TestMD)
 		testutil.CloseFile(t, outFile)
 		defer func() {
 			if err := os.Remove(outPath); err != nil {
-				t.Logf(shared.TestMsgFailedToRemoveTempFile, err)
+				t.Logf(testutil.TestMsgFailedToRemoveTempFile, err)
 			}
 		}()
 
 		// Use a path that doesn't exist (subpath under temp dir that was never created)
 		nonExistentDir := filepath.Join(t.TempDir(), "nonexistent", "path")
 		os.Args = []string{
-			"test", shared.TestCLIFlagSource, nonExistentDir,
-			shared.TestCLIFlagDestination, outPath, shared.TestCLIFlagNoUI,
+			"test", testutil.TestCLIFlagSource, nonExistentDir,
+			testutil.TestCLIFlagDestination, outPath, testutil.TestCLIFlagNoUI,
 		}
 
 		err := run(context.Background())
@@ -110,7 +104,7 @@ func TestRunProcessingErrors(t *testing.T) {
 		}
 
 		// Could be either parsing flags (validation) or processing error
-		if !strings.Contains(err.Error(), shared.TestOpParsingFlags) && !strings.Contains(err.Error(), "processing") {
+		if !strings.Contains(err.Error(), testutil.TestOpParsingFlags) && !strings.Contains(err.Error(), "processing") {
 			t.Errorf("Expected error from parsing or processing, got: %v", err)
 		}
 	})
@@ -119,15 +113,15 @@ func TestRunProcessingErrors(t *testing.T) {
 		cleanup := withIsolatedFlags(t)
 		defer cleanup()
 
-		outFile, outPath := testutil.CreateTempOutputFile(t, shared.TestMD)
+		outFile, outPath := testutil.CreateTempOutputFile(t, testutil.TestMD)
 		testutil.CloseFile(t, outFile)
 		defer func() {
 			if err := os.Remove(outPath); err != nil {
-				t.Logf(shared.TestMsgFailedToRemoveTempFile, err)
+				t.Logf(testutil.TestMsgFailedToRemoveTempFile, err)
 			}
 		}()
 
-		os.Args = []string{"test", shared.TestCLIFlagDestination, outPath, shared.TestCLIFlagNoUI}
+		os.Args = []string{"test", testutil.TestCLIFlagDestination, outPath, testutil.TestCLIFlagNoUI}
 
 		err := run(context.Background())
 		if err == nil {
@@ -153,21 +147,21 @@ func TestRunMarkdownExecution(t *testing.T) {
 	// Create test environment
 	srcDir := t.TempDir()
 	testutil.CreateTestFiles(t, srcDir, []testutil.FileSpec{
-		{Name: shared.TestFileMainGo, Content: shared.LiteralPackageMain + "\nfunc main() {}"},
-		{Name: shared.TestFileHelperGo, Content: shared.LiteralPackageMain + "\nfunc help() {}"},
+		{Name: testutil.TestFileMainGo, Content: testutil.LiteralPackageMain + "\nfunc main() {}"},
+		{Name: testutil.TestFileHelperGo, Content: testutil.LiteralPackageMain + "\nfunc help() {}"},
 	})
 
 	// Use non-existent output path to verify run() actually creates it
 	outPath := filepath.Join(t.TempDir(), "output.md")
 	defer func() {
 		if err := os.Remove(outPath); err != nil && !os.IsNotExist(err) {
-			t.Logf(shared.TestMsgFailedToRemoveTempFile, err)
+			t.Logf(testutil.TestMsgFailedToRemoveTempFile, err)
 		}
 	}()
 
 	os.Args = []string{
-		"test", shared.TestCLIFlagSource, srcDir, shared.TestCLIFlagDestination, outPath,
-		shared.TestCLIFlagFormat, "markdown", shared.TestCLIFlagNoUI,
+		"test", testutil.TestCLIFlagSource, srcDir, testutil.TestCLIFlagDestination, outPath,
+		testutil.TestCLIFlagFormat, "markdown", testutil.TestCLIFlagNoUI,
 	}
 
 	err := run(context.Background())
@@ -199,20 +193,20 @@ func TestRunJSONExecution(t *testing.T) {
 
 	// Create test environment with unique directories
 	srcDir := t.TempDir()
-	testutil.CreateTestFile(t, srcDir, shared.TestFileMainGo, []byte(shared.LiteralPackageMain))
+	testutil.CreateTestFile(t, srcDir, testutil.TestFileMainGo, []byte(testutil.LiteralPackageMain))
 
 	// Use non-existent output path to verify run() actually creates it
 	outPath := filepath.Join(t.TempDir(), "output.json")
 	defer func() {
 		if err := os.Remove(outPath); err != nil && !os.IsNotExist(err) {
-			t.Logf(shared.TestMsgFailedToRemoveTempFile, err)
+			t.Logf(testutil.TestMsgFailedToRemoveTempFile, err)
 		}
 	}()
 
 	// Set CLI args with fresh paths
 	os.Args = []string{
-		"test", shared.TestCLIFlagSource, srcDir, shared.TestCLIFlagDestination, outPath,
-		shared.TestCLIFlagFormat, "json", shared.TestCLIFlagNoUI,
+		"test", testutil.TestCLIFlagSource, srcDir, testutil.TestCLIFlagDestination, outPath,
+		testutil.TestCLIFlagFormat, "json", testutil.TestCLIFlagNoUI,
 	}
 
 	err := run(context.Background())
@@ -264,18 +258,18 @@ func TestRunHappyPathWithDefaultConfig(t *testing.T) {
 
 	// Create valid test setup
 	srcDir := t.TempDir()
-	testutil.CreateTestFile(t, srcDir, shared.TestFileGo, []byte(shared.LiteralPackageMain))
+	testutil.CreateTestFile(t, srcDir, testutil.TestFileGo, []byte(testutil.LiteralPackageMain))
 
-	outFile, outPath := testutil.CreateTempOutputFile(t, shared.TestMD)
+	outFile, outPath := testutil.CreateTempOutputFile(t, testutil.TestMD)
 	testutil.CloseFile(t, outFile)
 	defer func() {
 		if err := os.Remove(outPath); err != nil {
-			t.Logf(shared.TestMsgFailedToRemoveTempFile, err)
+			t.Logf(testutil.TestMsgFailedToRemoveTempFile, err)
 		}
 	}()
 
 	os.Args = []string{
-		"test", shared.TestCLIFlagSource, srcDir, shared.TestCLIFlagDestination, outPath, shared.TestCLIFlagNoUI,
+		"test", testutil.TestCLIFlagSource, srcDir, testutil.TestCLIFlagDestination, outPath, testutil.TestCLIFlagNoUI,
 	}
 
 	err := run(context.Background())
@@ -344,18 +338,18 @@ func TestRunContextCancellation(t *testing.T) {
 
 	// Create test environment
 	srcDir := t.TempDir()
-	testutil.CreateTestFile(t, srcDir, shared.TestFileGo, []byte(shared.LiteralPackageMain))
+	testutil.CreateTestFile(t, srcDir, testutil.TestFileGo, []byte(testutil.LiteralPackageMain))
 
-	outFile, outPath := testutil.CreateTempOutputFile(t, shared.TestMD)
+	outFile, outPath := testutil.CreateTempOutputFile(t, testutil.TestMD)
 	testutil.CloseFile(t, outFile)
 	defer func() {
 		if err := os.Remove(outPath); err != nil {
-			t.Logf(shared.TestMsgFailedToRemoveTempFile, err)
+			t.Logf(testutil.TestMsgFailedToRemoveTempFile, err)
 		}
 	}()
 
 	os.Args = []string{
-		"test", shared.TestCLIFlagSource, srcDir, shared.TestCLIFlagDestination, outPath, shared.TestCLIFlagNoUI,
+		"test", testutil.TestCLIFlagSource, srcDir, testutil.TestCLIFlagDestination, outPath, testutil.TestCLIFlagNoUI,
 	}
 
 	// Create pre-canceled context

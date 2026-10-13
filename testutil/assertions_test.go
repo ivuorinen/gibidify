@@ -4,18 +4,16 @@ import (
 	"errors"
 	"strings"
 	"testing"
-
-	"github.com/ivuorinen/gibidify/shared"
 )
 
 // TestAssertError tests the AssertError function.
 func TestAssertError(t *testing.T) {
 	t.Run(
-		shared.TestCaseSuccessCases, func(t *testing.T) {
+		TestCaseSuccessCases, func(t *testing.T) {
 			// Test expect error and get error
 			t.Run(
 				"expect error and get error", func(t *testing.T) {
-					AssertError(t, errors.New(shared.TestErrTestErrorMsg), true, shared.TestCaseTestOperation)
+					AssertError(t, errors.New(TestErrTestErrorMsg), true, TestCaseTestOperation)
 					// If we get here, the assertion passed
 				},
 			)
@@ -30,7 +28,7 @@ func TestAssertError(t *testing.T) {
 
 			// Test with empty operation name
 			t.Run(
-				shared.TestCaseEmptyOperationName, func(t *testing.T) {
+				TestCaseEmptyOperationName, func(t *testing.T) {
 					AssertError(t, nil, false, "")
 					// Should still work with empty operation
 				},
@@ -51,8 +49,8 @@ func TestAssertError(t *testing.T) {
 		"edge cases", func(t *testing.T) {
 			// Test various error types
 			t.Run(
-				shared.TestCaseDifferentErrorTypes, func(t *testing.T) {
-					AssertError(t, shared.ErrTestError, true, "using shared.ErrTestError")
+				TestCaseDifferentErrorTypes, func(t *testing.T) {
+					AssertError(t, ErrTestError, true, "using ErrTestError")
 					AssertError(t, errors.New("wrapped: original"), true, "wrapped error")
 				},
 			)
@@ -63,7 +61,7 @@ func TestAssertError(t *testing.T) {
 // TestAssertNoError tests the AssertNoError function.
 func TestAssertNoError(t *testing.T) {
 	t.Run(
-		shared.TestCaseSuccessCases, func(t *testing.T) {
+		TestCaseSuccessCases, func(t *testing.T) {
 			// Test with nil error
 			t.Run(
 				"nil error", func(t *testing.T) {
@@ -73,7 +71,7 @@ func TestAssertNoError(t *testing.T) {
 
 			// Test with empty operation name
 			t.Run(
-				shared.TestCaseEmptyOperationName, func(t *testing.T) {
+				TestCaseEmptyOperationName, func(t *testing.T) {
 					AssertNoError(t, nil, "")
 				},
 			)
@@ -90,7 +88,7 @@ func TestAssertNoError(t *testing.T) {
 	// We can't easily test the failure case in a unit test since it would cause test failure
 	// But we can verify the function signature and basic functionality
 	t.Run(
-		shared.TestCaseFunctionAvailability, func(t *testing.T) {
+		TestCaseFunctionAvailability, func(t *testing.T) {
 			// Verify the function doesn't panic with valid inputs
 			defer func() {
 				if r := recover(); r != nil {
@@ -99,7 +97,7 @@ func TestAssertNoError(t *testing.T) {
 			}()
 
 			// Call with success case to ensure function works
-			AssertNoError(t, nil, shared.TestCaseTestOperation)
+			AssertNoError(t, nil, TestCaseTestOperation)
 		},
 	)
 }
@@ -107,7 +105,7 @@ func TestAssertNoError(t *testing.T) {
 // TestAssertExpectedError tests the AssertExpectedError function.
 func TestAssertExpectedError(t *testing.T) {
 	t.Run(
-		shared.TestCaseSuccessCases, func(t *testing.T) {
+		TestCaseSuccessCases, func(t *testing.T) {
 			// Test with error present
 			t.Run(
 				"error present as expected", func(t *testing.T) {
@@ -117,15 +115,15 @@ func TestAssertExpectedError(t *testing.T) {
 
 			// Test with different error types
 			t.Run(
-				shared.TestCaseDifferentErrorTypes, func(t *testing.T) {
-					AssertExpectedError(t, shared.ErrTestError, "test error operation")
+				TestCaseDifferentErrorTypes, func(t *testing.T) {
+					AssertExpectedError(t, ErrTestError, "test error operation")
 					AssertExpectedError(t, errors.New("complex error with details"), "complex operation")
 				},
 			)
 
 			// Test with empty operation name
 			t.Run(
-				shared.TestCaseEmptyOperationName, func(t *testing.T) {
+				TestCaseEmptyOperationName, func(t *testing.T) {
 					AssertExpectedError(t, errors.New("error"), "")
 				},
 			)
@@ -134,7 +132,7 @@ func TestAssertExpectedError(t *testing.T) {
 
 	// Verify function availability and basic properties
 	t.Run(
-		shared.TestCaseFunctionAvailability, func(t *testing.T) {
+		TestCaseFunctionAvailability, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r != nil {
 					t.Errorf("AssertExpectedError should not panic: %v", r)
@@ -142,7 +140,7 @@ func TestAssertExpectedError(t *testing.T) {
 			}()
 
 			// Call with success case
-			AssertExpectedError(t, errors.New("test"), shared.TestCaseTestOperation)
+			AssertExpectedError(t, errors.New("test"), TestCaseTestOperation)
 		},
 	)
 }
@@ -150,7 +148,7 @@ func TestAssertExpectedError(t *testing.T) {
 // TestAssertErrorContains tests the AssertErrorContains function.
 func TestAssertErrorContains(t *testing.T) {
 	t.Run(
-		shared.TestCaseSuccessCases, func(t *testing.T) {
+		TestCaseSuccessCases, func(t *testing.T) {
 			// Test error contains substring
 			t.Run(
 				"error contains substring", func(t *testing.T) {
@@ -195,11 +193,11 @@ func TestAssertErrorContains(t *testing.T) {
 
 	// Test with various error types
 	t.Run(
-		shared.TestCaseDifferentErrorTypes, func(t *testing.T) {
+		TestCaseDifferentErrorTypes, func(t *testing.T) {
 			t.Run(
 				"standard error", func(t *testing.T) {
 					AssertErrorContains(
-						t, shared.ErrTestError, shared.TestErrTestErrorMsg, shared.TestCaseTestOperation,
+						t, ErrTestError, TestErrTestErrorMsg, TestCaseTestOperation,
 					)
 				},
 			)
@@ -215,7 +213,7 @@ func TestAssertErrorContains(t *testing.T) {
 
 	// Verify function availability
 	t.Run(
-		shared.TestCaseFunctionAvailability, func(t *testing.T) {
+		TestCaseFunctionAvailability, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r != nil {
 					t.Errorf("AssertErrorContains should not panic: %v", r)
@@ -223,7 +221,7 @@ func TestAssertErrorContains(t *testing.T) {
 			}()
 
 			// Call with success case
-			err := errors.New(shared.TestErrTestErrorMsg)
+			err := errors.New(TestErrTestErrorMsg)
 			AssertErrorContains(t, err, "test", "availability check")
 		},
 	)
@@ -233,10 +231,10 @@ func TestAssertErrorContains(t *testing.T) {
 func TestAssertionHelpers(t *testing.T) {
 	t.Run(
 		"error types compatibility", func(t *testing.T) {
-			// Test that all assertion functions work with shared.ErrTestError
-			AssertError(t, shared.ErrTestError, true, "shared.ErrTestError compatibility")
-			AssertExpectedError(t, shared.ErrTestError, "shared.ErrTestError expected")
-			AssertErrorContains(t, shared.ErrTestError, "test", "shared.ErrTestError contains")
+			// Test that all assertion functions work with ErrTestError
+			AssertError(t, ErrTestError, true, "ErrTestError compatibility")
+			AssertExpectedError(t, ErrTestError, "ErrTestError expected")
+			AssertErrorContains(t, ErrTestError, "test", "ErrTestError contains")
 		},
 	)
 
@@ -263,7 +261,7 @@ func TestAssertionHelpers(t *testing.T) {
 						AssertError(t, nil, false, op)
 						AssertNoError(t, nil, op)
 						AssertExpectedError(t, errors.New("test"), op)
-						AssertErrorContains(t, errors.New(shared.TestErrTestErrorMsg), "test", op)
+						AssertErrorContains(t, errors.New(TestErrTestErrorMsg), "test", op)
 					},
 				)
 			}
@@ -288,11 +286,11 @@ func TestAssertionHelpers(t *testing.T) {
 				t.Run(
 					"error_message_"+string(rune(i+'a')), func(t *testing.T) {
 						err := errors.New(msg)
-						AssertError(t, err, true, shared.TestCaseMessageTest)
-						AssertExpectedError(t, err, shared.TestCaseMessageTest)
+						AssertError(t, err, true, TestCaseMessageTest)
+						AssertExpectedError(t, err, TestCaseMessageTest)
 						if msg != "" {
 							// Only test contains if message is not empty
-							AssertErrorContains(t, err, msg, shared.TestCaseMessageTest)
+							AssertErrorContains(t, err, msg, TestCaseMessageTest)
 						}
 					},
 				)

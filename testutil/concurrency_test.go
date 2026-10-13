@@ -5,35 +5,48 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
-
-	"github.com/ivuorinen/gibidify/shared"
 )
 
-// Test thread safety of functions that might be called concurrently.
+// TestConcurrentOperations creates files and directories from concurrent
+// goroutines and checks every one exists afterwards. The goroutines report
+// errors instead of calling the t.Fatalf-based helpers: FailNow must run on the
+// test goroutine, and from another one it exited only that goroutine, so a
+// failure hung the test until the go test timeout.
 func TestConcurrentOperations(t *testing.T) {
 	tempDir := t.TempDir()
-	done := make(chan bool)
-
-	// Test concurrent file creation
-	for i := 0; i < 5; i++ {
-		go func(n int) {
-			CreateTestFile(t, tempDir, fmt.Sprintf("%c", 'a'+n)+".txt", []byte("content"))
-			done <- true
-		}(i)
+	const perKind = 5
+	var paths []string
+	for i := range perKind {
+		paths = append(paths,
+			filepath.Join(tempDir, fmt.Sprintf("%c.txt", 'a'+i)),
+			filepath.Join(tempDir, fmt.Sprintf("dir%d", i)))
 	}
 
-	// Test concurrent directory creation
-	for i := 0; i < 5; i++ {
-		go func(n int) {
-			CreateTestDirectory(t, tempDir, fmt.Sprintf("dir%c", '0'+n))
-			done <- true
-		}(i)
+	errs := make(chan error, len(paths))
+	var wg sync.WaitGroup
+	for _, p := range paths {
+		wg.Go(func() {
+			if strings.HasSuffix(p, ".txt") {
+				errs <- os.WriteFile(p, []byte("content"), TestFilePermission)
+			} else {
+				errs <- os.Mkdir(p, TestDirPermission)
+			}
+		})
 	}
+	wg.Wait()
+	close(errs)
 
-	// Wait for all goroutines
-	for i := 0; i < 10; i++ {
-		<-done
+	for err := range errs {
+		if err != nil {
+			t.Errorf("concurrent create: %v", err)
+		}
+	}
+	for _, p := range paths {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("expected %s to exist: %v", p, err)
+		}
 	}
 }
 
@@ -47,7 +60,7 @@ func BenchmarkCreateTestFile(b *testing.B) {
 		// Use a unique filename for each iteration to avoid conflicts
 		filename := "bench" + string(rune(i%26+'a')) + ".txt"
 		filePath := filepath.Join(tempDir, filename)
-		if err := os.WriteFile(filePath, content, shared.TestFilePermission); err != nil {
+		if err := os.WriteFile(filePath, content, TestFilePermission); err != nil {
 			b.Fatalf("Failed to write file: %v", err)
 		}
 	}
@@ -67,7 +80,7 @@ func BenchmarkCreateTestFiles(b *testing.B) {
 
 		for _, spec := range specs {
 			filePath := filepath.Join(tempDir, spec.Name)
-			if err := os.WriteFile(filePath, []byte(spec.Content), shared.TestFilePermission); err != nil {
+			if err := os.WriteFile(filePath, []byte(spec.Content), TestFilePermission); err != nil {
 				b.Fatalf("Failed to write file: %v", err)
 			}
 		}

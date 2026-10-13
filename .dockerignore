@@ -19,12 +19,16 @@ docs/
 # Config and tooling
 .checkmake
 .editorconfig
-.golangci.yml
+.mise/
+.pre-commit-config.yaml
 .yamllint
+mise.lock
+mise.toml
 revive.toml
 
-# Scripts
+# Scripts (the notices generator runs in the build stage)
 scripts/
+!scripts/third-party-notices.sh
 
 # IDE
 .vscode

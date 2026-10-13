@@ -23,14 +23,6 @@ type FileTypeRegistry struct {
 	languageMap map[string]string
 }
 
-// FileTypeResult represents a file type detection result.
-type FileTypeResult struct {
-	IsImage   bool
-	IsBinary  bool
-	Language  string
-	Extension string
-}
-
 // initRegistry initializes the default file type registry with common extensions.
 func initRegistry() *FileTypeRegistry {
 	return &FileTypeRegistry{
@@ -40,36 +32,14 @@ func initRegistry() *FileTypeRegistry {
 	}
 }
 
-// getRegistry returns the singleton file type registry, creating it if necessary.
-func getRegistry() *FileTypeRegistry {
+// DefaultRegistry returns the process-wide file type registry, creating it on
+// first use.
+func DefaultRegistry() *FileTypeRegistry {
 	registryOnce.Do(func() {
 		registry = initRegistry()
 	})
 
 	return registry
-}
-
-// DefaultRegistry returns the default file type registry.
-func DefaultRegistry() *FileTypeRegistry {
-	return getRegistry()
-}
-
-// getFileTypeResult detects the file type for filename from its extension.
-func (r *FileTypeRegistry) getFileTypeResult(filename string) FileTypeResult {
-	ext := normalizeExtension(filename)
-	result := FileTypeResult{
-		Extension: ext,
-		IsImage:   r.imageExts[ext],
-		IsBinary:  r.binaryExts[ext],
-		Language:  r.languageMap[ext],
-	}
-
-	// Handle special cases for binary detection (like .DS_Store).
-	if !result.IsBinary && isSpecialFile(filename, r.binaryExts) {
-		result.IsBinary = true
-	}
-
-	return result
 }
 
 // ResetRegistryForTesting resets the registry to its initial state.

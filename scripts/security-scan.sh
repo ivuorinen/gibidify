@@ -45,17 +45,17 @@ print_success() {
 }
 
 # Probe required tools — fail fast if anything is missing.
-# `make security-full` is opt-in heavy; rely on the user (or `make security` for a
-# lighter gosec run via `go run`).
+# `make security-full` runs this script under `mise exec`, which puts the
+# mise.toml versions on PATH.
 check_dependencies() {
   print_status "Checking dependencies..."
   local missing=()
-  for tool in go gosec govulncheck revive checkmake shfmt; do
+  for tool in go gosec govulncheck revive gitleaks checkmake shfmt yamllint; do
     command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
   done
   if ((${#missing[@]} > 0)); then
     print_error "Missing required tools: ${missing[*]}"
-    print_error "Install with: go install <tool>@latest, or run 'make security' instead."
+    print_error "Install with 'mise install', then run 'make security-full'."
     exit 1
   fi
   print_success "All dependencies are available"
@@ -65,7 +65,7 @@ check_dependencies() {
 run_gosec() {
   print_status "Running gosec security scanner..."
 
-  if gosec -fmt=json -out=gosec-report.json -stdout -verbose=text ./...; then
+  if gosec -tests -fmt=json -out=gosec-report.json -stdout -verbose=text ./...; then
     print_success "gosec scan completed successfully"
   else
     print_error "gosec found security issues!"
@@ -110,7 +110,7 @@ check_secrets() {
   print_status "Scanning for potential secrets and sensitive data with gitleaks..."
 
   local gitleaks_report="gitleaks-report.json"
-  if go run github.com/zricethezav/gitleaks/v8@latest dir \
+  if gitleaks dir \
     --config .gitleaks.toml \
     --report-format json \
     --report-path "$gitleaks_report" \
@@ -258,15 +258,11 @@ check_yaml_files() {
   print_status "Checking YAML files..."
 
   if find . -name "*.yml" -o -name "*.yaml" -type f | head -1 | grep -q .; then
-    if command -v yamllint >/dev/null 2>&1; then
-      if ! yamllint -c .yamllint .; then
-        print_error "YAML file issues detected!"
-        return 1
-      fi
-      print_success "YAML files check passed"
-    else
-      print_warning "yamllint not found, skipping YAML file check"
+    if ! make --no-print-directory lint-yamllint; then
+      print_error "YAML file issues detected!"
+      return 1
     fi
+    print_success "YAML files check passed"
   else
     print_status "No YAML files found, skipping yamllint check"
   fi

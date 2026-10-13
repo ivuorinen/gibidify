@@ -83,6 +83,10 @@ func (ef *ErrorFormatter) provideSuggestions(err *shared.StructuredError) {
 		ef.provideProcessingSuggestions(err)
 	case shared.ErrorTypeIO:
 		ef.provideIOSuggestions(err)
+	case shared.ErrorTypeConfiguration:
+		ef.ui.PrintWarning(shared.CLIMsgSuggestions)
+		ef.ui.printf("  • Fix the configuration file named above; gibidify does not run on a broken config\n")
+		ef.ui.printf("  • See config.example.yaml for every key and its valid range\n")
 	default:
 		ef.provideDefaultSuggestions()
 	}
@@ -114,6 +118,9 @@ func (ef *ErrorFormatter) provideValidationSuggestions(err *shared.StructuredErr
 	case shared.CodeValidationFormat:
 		ef.ui.printf("  • Use a supported format: markdown, json, yaml\n")
 		ef.ui.printf("  • Example: -format markdown\n")
+	case shared.CodeValidationConcurrency:
+		ef.ui.printf("  • Use a -concurrency value of at least 1 and at most maxConcurrency from config.yaml\n")
+		ef.ui.printf("  • Example: -concurrency 4\n")
 	case shared.CodeValidationSize:
 		ef.ui.printf("  • Increase file size limit in config.yaml\n")
 		ef.ui.printf("  • Use smaller files or exclude large files\n")
@@ -233,9 +240,6 @@ func (ef *ErrorFormatter) provideGenericSuggestions(err error) {
 	case strings.Contains(errorMsg, "no such file or directory"):
 		ef.ui.printf("  • Verify the file/directory path is correct\n")
 		ef.ui.printf("  • Check if the file exists\n")
-	case strings.Contains(errorMsg, "flag") && strings.Contains(errorMsg, "redefined"):
-		ef.ui.printf("  • This is likely a test environment issue\n")
-		ef.ui.printf("  • Try running the command directly instead of in tests\n")
 	default:
 		ef.provideDefaultSuggestions()
 	}
@@ -256,6 +260,12 @@ func NewCLIMissingSourceError() error {
 }
 
 // IsUserError checks if an error is a user input error that should be handled gracefully.
+//
+// Every StructuredError counts: each carries a type and code that
+// ErrorFormatter turns into specific suggestions. Accepting only the
+// Validation type sent a mistyped -source or a full disk to the generic
+// "unexpected error" path and left the FileSystem, IO and Processing
+// suggestions unreachable.
 func IsUserError(err error) bool {
 	if err == nil {
 		return false
@@ -267,12 +277,9 @@ func IsUserError(err error) bool {
 		return true
 	}
 
-	// Check for structured errors that are user-facing
 	structErr := &shared.StructuredError{}
 	if errors.As(err, &structErr) {
-		return structErr.Type == shared.ErrorTypeValidation ||
-			structErr.Code == shared.CodeValidationFormat ||
-			structErr.Code == shared.CodeValidationSize
+		return true
 	}
 
 	// Check error message patterns

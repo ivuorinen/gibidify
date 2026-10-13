@@ -5,12 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/ivuorinen/gibidify/shared"
 )
 
-// testResetViperConfigVariations tests ResetViperConfig with different paths.
-func testResetViperConfigVariations(t *testing.T) {
+// testResetConfigVariations tests ResetConfig with different paths.
+func testResetConfigVariations(t *testing.T) {
 	t.Helper()
 
 	testCases := []string{
@@ -22,7 +20,7 @@ func testResetViperConfigVariations(t *testing.T) {
 	for _, configPath := range testCases {
 		t.Run(
 			"path_"+strings.ReplaceAll(configPath, "/", "_"), func(t *testing.T) {
-				ResetViperConfig(t, configPath)
+				ResetConfig(t, configPath)
 			},
 		)
 	}
@@ -146,7 +144,7 @@ func testCloseFileScenarios(t *testing.T) {
 
 // TestCoverageImprovements focuses on improving coverage for existing functions.
 func TestCoverageImprovements(t *testing.T) {
-	t.Run("ResetViperConfig_variations", testResetViperConfigVariations)
+	t.Run("ResetConfig_variations", testResetConfigVariations)
 	t.Run("GetBaseName_comprehensive", testGetBaseNameEdgeCases)
 	t.Run("VerifyContentContains_comprehensive", testVerifyContentContainsScenarios)
 	t.Run("MustSucceed_success_cases", testMustSucceedCases)
@@ -163,7 +161,7 @@ func attemptFileCreation(t *testing.T, tempDir, specName string) {
 		}
 	}()
 
-	if _, err := os.Create(filepath.Join(tempDir, specName)); err != nil { //nolint:gosec // G304: tempDir path
+	if err := os.WriteFile(filepath.Join(tempDir, specName), nil, TestFilePermission); err != nil {
 		t.Logf("File creation failed (expected for some edge cases): %v", err)
 	}
 }
@@ -174,7 +172,7 @@ func createDirectoryIfNeeded(t *testing.T, tempDir, specName string) {
 
 	if strings.Contains(specName, "/") || strings.Contains(specName, "\\") {
 		dirPath := filepath.Dir(filepath.Join(tempDir, specName))
-		if err := os.MkdirAll(dirPath, shared.TestDirPermission); err != nil {
+		if err := os.MkdirAll(dirPath, TestDirPermission); err != nil {
 			t.Skipf("Cannot create directory %s: %v", dirPath, err)
 		}
 	}

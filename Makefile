@@ -2,44 +2,26 @@
 
 .PHONY: help all build install
 .PHONY: test test-verbose test-coverage
-.PHONY: fmt fmt-check lint lint-go lint-golangci lint-static lint-sec lint-yaml lint-actions lint-make lint-md
-.PHONY: ci ci-lint ci-test
-.PHONY: security security-full vuln-check
-.PHONY: clean update-deps dev-setup pre-commit-setup
+.PHONY: fmt fmt-check lint lint-go lint-static lint-sec lint-yaml lint-yamllint lint-actions lint-make lint-md lint-shell lint-docker lint-sast
+.PHONY: ci
+.PHONY: security security-full vuln-check gosec-sarif vuln-sarif
+.PHONY: clean update-deps dev-setup hooks-setup
 .PHONY: benchmark-go benchmark-go-cli benchmark-go-fileproc benchmark-go-shared
 
-# Tool versions (managed by Renovate)
-# renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
-GOLANGCI_LINT_VERSION := v2.14.0
-# renovate: datasource=go depName=github.com/google/yamlfmt/cmd/yamlfmt
-YAMLFMT_VERSION := v0.21.0
-# renovate: datasource=go depName=github.com/rhysd/actionlint/cmd/actionlint
-ACTIONLINT_VERSION := v1.7.12
-# renovate: datasource=go depName=golang.org/x/tools/cmd/goimports
-GOIMPORTS_VERSION := v0.47.0
-# renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
-GOSEC_VERSION := v2.29.0
-# renovate: datasource=go depName=honnef.co/go/tools/cmd/staticcheck
-STATICCHECK_VERSION := v0.8.1
-# renovate: datasource=go depName=github.com/mgechev/revive
-# Pinned to v1.11.0 — newer revive added var-naming rules that flag the existing
-# `shared` and `metrics` package names; revive.toml is intentionally off-limits.
-REVIVE_VERSION := v1.11.0
-# renovate: datasource=go depName=github.com/checkmake/checkmake/cmd/checkmake
-CHECKMAKE_VERSION := v0.3.2
-# govulncheck intentionally tracks @latest, not a pinned version:
-# the vuln DB is fetched live from vuln.go.dev each run, but the binary
-# controls reachability-analysis features and bug fixes. For a security
-# scanner, "always run the newest one" beats reproducibility.
-GOVULNCHECK_VERSION := latest
-# renovate: datasource=npm depName=markdownlint-cli2
-MARKDOWNLINT_CLI2_VERSION := 0.23.3
+# Tool versions live in mise.toml; every tool runs through mise.
+MISE := mise exec --
 
 # Default goal — invoking `make` with no args prints the help table.
 .DEFAULT_GOAL := help
 
 LDFLAGS    := -s -w
 LOCAL_PKG  := github.com/ivuorinen/gibidify
+# yamllint and markdownlint-cli2 ignore .gitignore, so they get the files git would track
+# (wildcard drops paths deleted from the worktree but still in the index).
+# .mise/locks/ holds mise's generated dependency locks.
+YAML_FILES  = $(filter-out .mise/%,$(wildcard $(shell git ls-files --cached --others --exclude-standard '*.yml' '*.yaml')))
+# The findings INDEX.md is generated (findings.py index) with fixed-width paths.
+MD_FILES    = $(filter-out docs/audit/findings/INDEX.md,$(wildcard $(shell git ls-files --cached --others --exclude-standard '*.md')))
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -73,60 +55,73 @@ test-coverage: ## Run tests with coverage profile + HTML report
 
 fmt: ## Format Go code (gofmt + goimports, mutating)
 	gofmt -w .
-	go run golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION) -w -local $(LOCAL_PKG) .
+	$(MISE) goimports -w -local $(LOCAL_PKG) .
 
 fmt-check: ## Check Go formatting without modifying files (used in CI)
 	@out=$$(gofmt -l .); test -z "$$out" || { printf 'Unformatted files:\n%s\nRun make fmt to fix\n' "$$out"; exit 1; }
-	@out=$$(go run golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION) -l -local $(LOCAL_PKG) .); test -z "$$out" || { printf 'Files need import formatting:\n%s\nRun make fmt to fix\n' "$$out"; exit 1; }
+	@out=$$($(MISE) goimports -l -local $(LOCAL_PKG) .); test -z "$$out" || { printf 'Files need import formatting:\n%s\nRun make fmt to fix\n' "$$out"; exit 1; }
 
-lint: ## Run all linters via pre-commit (preferred)
-	@pre-commit run --all-files
+lint: ## Run all linters via prek (preferred)
+	@$(MISE) prek run --all-files
 
 lint-go: ## Run only Go linters (vet + revive)
 	go vet ./...
-	go run github.com/mgechev/revive@$(REVIVE_VERSION) -config revive.toml -formatter friendly -set_exit_status ./...
-
-lint-golangci: ## Run golangci-lint (mirrors CI security scan, uses .golangci.yml)
-	go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
+	$(MISE) revive -config revive.toml -formatter friendly -set_exit_status ./...
 
 lint-static: ## Run staticcheck
-	go run honnef.co/go/tools/cmd/staticcheck@$(STATICCHECK_VERSION) ./...
+	$(MISE) staticcheck ./...
 
-lint-sec: ## Run gosec (alias for `make security`)
-	go run github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION) -quiet ./...
+lint-sec: ## Run gosec on code and tests (alias for `make security`)
+	$(MISE) gosec -quiet -tests ./...
 
-lint-yaml: ## Run only YAML linter (yamlfmt -lint)
-	go run github.com/google/yamlfmt/cmd/yamlfmt@$(YAMLFMT_VERSION) -lint -conf .yamlfmt.yml .
+lint-yaml: ## Run only YAML formatter check (yamlfmt -lint)
+	$(MISE) yamlfmt -lint -conf .yamlfmt.yml
 
-lint-actions: ## Run only GitHub Actions linter (actionlint)
-	go run github.com/rhysd/actionlint/cmd/actionlint@$(ACTIONLINT_VERSION) .github/workflows/*.yml
+lint-yamllint: ## Run yamllint in strict mode
+	$(MISE) yamllint --strict $(YAML_FILES)
+
+lint-actions: ## Run GitHub Actions linters (actionlint + zizmor)
+	$(MISE) actionlint .github/workflows/*.yml
+	$(MISE) zizmor --no-progress .github
 
 lint-make: ## Run only Makefile linter (checkmake)
-	go run github.com/checkmake/checkmake/cmd/checkmake@$(CHECKMAKE_VERSION) --config=.checkmake Makefile
+	$(MISE) checkmake --config=.checkmake Makefile
 
 lint-md: ## Run only Markdown linter (markdownlint-cli2)
-	npx --yes markdownlint-cli2@$(MARKDOWNLINT_CLI2_VERSION) "*.md" "**/*.md"
+	$(MISE) markdownlint-cli2 $(MD_FILES)
+
+lint-shell: ## Check shell script formatting (shfmt)
+	$(MISE) shfmt -d .
+
+lint-docker: ## Scan the Dockerfiles for misconfigurations (trivy)
+	$(MISE) trivy config --exit-code 1 Dockerfile
+	$(MISE) trivy config --exit-code 1 Dockerfile.release
+
+lint-sast: ## Static analysis with opengrep registry rule packs
+	$(MISE) opengrep scan --error --quiet \
+		--config p/golang --config p/secrets --config p/github-actions \
+		--config p/dockerfile --config p/security-audit --config p/trailofbits .
 
 # CI -------------------------------------------------------------------------
 
 ci: fmt-check lint test ## Run format check, lint, and test
 
-ci-lint: ## CI: revive only with strict exit
-	go run github.com/mgechev/revive@$(REVIVE_VERSION) -config revive.toml -formatter friendly -set_exit_status ./...
-
-ci-test: ## CI: tests with coverage in JSON
-	go test -race -coverprofile=coverage.out -json ./... > test-results.json
-
 # Security -------------------------------------------------------------------
 
-security: ## Run gosec security scan
-	go run github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION) ./...
+security: ## Run gosec security scan on code and tests
+	$(MISE) gosec -tests ./...
 
 security-full: ## Run comprehensive multi-tool security scan
-	@./scripts/security-scan.sh
+	@$(MISE) ./scripts/security-scan.sh
 
 vuln-check: ## Check for dependency vulnerabilities (govulncheck)
-	go run golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION) ./...
+	$(MISE) govulncheck ./...
+
+gosec-sarif: ## CI: gosec scan as gosec-results.sarif
+	$(MISE) gosec -tests -fmt sarif -out gosec-results.sarif ./...
+
+vuln-sarif: ## CI: govulncheck scan as govulncheck-results.sarif
+	$(MISE) govulncheck -format sarif ./... > govulncheck-results.sarif
 
 # Maintenance ----------------------------------------------------------------
 
@@ -137,17 +132,17 @@ update-deps: ## Update Go dependencies to latest patch versions
 	@go list -u -m all | grep '\[' || true
 
 clean: ## Remove build artifacts, coverage, test outputs
-	rm -f gibidify coverage.out coverage.html test-results.json security-report.json
+	rm -f gibidify coverage.out coverage.html test-results.json \
+		gosec-report.json govulncheck-report.json gitleaks-report.json security-report.md
 	go clean -testcache
 
 # Development setup ----------------------------------------------------------
 
-dev-setup: pre-commit-setup ## Set up development environment
+dev-setup: hooks-setup ## Set up development environment
 
-pre-commit-setup: ## Install pre-commit hooks
-	@command -v pre-commit >/dev/null 2>&1 || pip install pre-commit
-	@pre-commit install
-	@pre-commit install --install-hooks
+hooks-setup: ## Install the tools and the prek git hooks
+	mise install
+	$(MISE) prek install --prepare-hooks
 
 # Benchmarks (Go test benchmarks) --------------------------------------------
 

@@ -12,8 +12,6 @@ type ErrorType int
 const (
 	// ErrorTypeUnknown represents an unknown error type.
 	ErrorTypeUnknown ErrorType = iota
-	// ErrorTypeCLI represents command-line interface errors.
-	ErrorTypeCLI
 	// ErrorTypeFileSystem represents file system operation errors.
 	ErrorTypeFileSystem
 	// ErrorTypeProcessing represents file processing errors.
@@ -29,8 +27,6 @@ const (
 // String returns the string representation of the error type.
 func (e ErrorType) String() string {
 	switch e {
-	case ErrorTypeCLI:
-		return "CLI"
 	case ErrorTypeFileSystem:
 		return "FileSystem"
 	case ErrorTypeProcessing:
@@ -108,7 +104,6 @@ const (
 	// CodeProcessingFileRead Processing Error Codes.
 	CodeProcessingFileRead   = "FILE_READ"
 	CodeProcessingCollection = "COLLECTION"
-	CodeProcessingTraversal  = "TRAVERSAL"
 	CodeProcessingEncode     = "ENCODE"
 
 	// CodeConfigValidation Configuration Error Codes.
@@ -119,10 +114,12 @@ const (
 	CodeIOWrite      = "WRITE"
 
 	// Validation Error Codes.
-	CodeValidationFormat   = "FORMAT"
-	CodeValidationSize     = "SIZE_LIMIT"
-	CodeValidationRequired = "REQUIRED"
-	CodeValidationPath     = "PATH_TRAVERSAL"
+	CodeValidationFormat      = "FORMAT"
+	CodeValidationConcurrency = "CONCURRENCY"
+	CodeValidationSize        = "SIZE_LIMIT"
+	CodeValidationRequired    = "REQUIRED"
+	CodeValidationPath        = "INVALID_PATH"
+	CodeValidationArgument    = "UNEXPECTED_ARGUMENT"
 
 	// Resource Limit Error Codes.
 	CodeResourceLimitFiles     = "FILE_COUNT_LIMIT"
@@ -164,9 +161,3 @@ func LogErrorf(err error, format string, args ...any) {
 		LogError(format, err, args...)
 	}
 }
-
-// Test error variables.
-var (
-	// ErrTestError is a generic test error.
-	ErrTestError = errors.New(TestErrTestErrorMsg)
-)

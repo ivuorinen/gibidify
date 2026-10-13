@@ -5,9 +5,13 @@ name: PR Lint
 # yamllint disable-line rule:truthy
 on:
   push:
-    branches: [master, main]
+    branches:
+      - master
+      - main
   pull_request:
-    branches: [master, main]
+    branches:
+      - master
+      - main
 
 permissions: {}
 
@@ -31,8 +35,6 @@ jobs:
           persist-credentials: false
 
       - name: Setup Go
-        uses: ./.github/actions/setup
-        with:
-          token: ${{ github.token }}
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository] actionlint rejects the $/ form
 
       - uses: ivuorinen/actions/pr-lint@f7725f210c6740ae8042fbe89f2024dabad8a535 # v2026.07.11

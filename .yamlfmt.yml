@@ -15,4 +15,6 @@ include:
   - ./**/*.yaml
   - .github/**/*.yml
   - .github/**/*.yaml
-# exclude:
+# mise's generated dependency locks (see mise.lock).
+exclude:
+  - .mise/**

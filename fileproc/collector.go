@@ -2,9 +2,11 @@
 package fileproc
 
 // CollectFiles scans the given root directory using the default walker (ProdWalker)
-// and returns a slice of file paths.
-func CollectFiles(root string) ([]string, error) {
-	w := NewProdWalker()
+// and returns the collected file paths and the number of files skipped for
+// exceeding the size limit or as credential files.
+func CollectFiles(root string, opts WalkOptions) ([]string, int, error) {
+	w := NewProdWalker(opts)
+	files, err := w.Walk(root)
 
-	return w.Walk(root)
+	return files, w.Skipped(), err
 }

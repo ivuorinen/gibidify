@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      security-events: write # upload gosec/govulncheck SARIF to code scanning
+      security-events: write # upload gosec SARIF to code scanning
       contents: read
       actions: read # read workflow metadata for the analysis
 
@@ -37,19 +37,26 @@ jobs:
           persist-credentials: false
 
       - name: Setup Go
-        uses: ./.github/actions/setup
-        with:
-          token: ${{ github.token }}
+        uses: ./.github/actions/setup # zizmor: ignore[self-repository] actionlint rejects the $/ form
+
+      # Tools come from mise.toml (versions) and mise.lock (checksums); the
+      # Makefile targets below run them with `mise exec`. Go is set up first
+      # because the go: backend tools (goimports, govulncheck) build with it.
+      - name: Install tools
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+
+      # The mandatory Go linters. MegaLinter (pr-lint.yml) disables GO_REVIVE
+      # and has no staticcheck, so without these steps they only ran in local
+      # hooks, which Renovate PRs and --no-verify commits never execute.
+      - name: Run go vet and revive
+        run: make lint-go
+
+      - name: Run staticcheck
+        run: make lint-static
 
       # Security Scanning with gosec
-      # Using go run instead of the Docker action so the runner's Go toolchain
-      # (set up above) is used — the gosec Docker image ships an older Go and
-      # cannot analyse go 1.26+ modules with GOTOOLCHAIN=local.
       - name: Run gosec Security Scanner
-        run: |
-          # renovate: datasource=go depName=github.com/securego/gosec/v2/cmd/gosec
-          go run github.com/securego/gosec/v2/cmd/gosec@v2.26.1 \
-            -fmt sarif -out gosec-results.sarif ./...
+        run: make gosec-sarif
 
       - name: Upload gosec results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
@@ -65,10 +72,9 @@ jobs:
       # runs[].results[] carry a `level` — "error" mirrors what the
       # govulncheck CLI counts as a failing (called/reachable) finding.
       # Ref: golang.org/x/vuln/internal/sarif.
+      # govulncheck deliberately tracks latest; mise.toml records why.
       - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck -format sarif ./... > govulncheck-results.sarif
+        run: make vuln-sarif
 
       - name: Parse govulncheck results
         run: |
@@ -92,38 +98,30 @@ jobs:
             exit 1
           fi
 
-      # Additional Security Linting
-      - name: Run security-focused golangci-lint
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
-        with:
-          # renovate: datasource=go depName=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
-          version: v2.14.0
-          args: "--timeout=5m"
+      # Static analysis with opengrep registry rule packs
+      - name: Run opengrep
+        run: make lint-sast
+
+      # GitHub Actions linting (actionlint + zizmor)
+      - name: Lint workflows
+        run: make lint-actions
 
       # Makefile Linting
       - name: Run checkmake on Makefile
-        uses: Uno-Takashi/checkmake-action@bc11ee86274ceaf5710dbcd80871d7cd7ecc78ce # v2
-        with:
-          config: .checkmake
+        run: make lint-make
 
       # Shell Script Formatting Check
       - name: Check shell script formatting
-        run: |
-          go install mvdan.cc/sh/v3/cmd/shfmt@latest
-          shfmt -d .
+        run: make lint-shell
 
       - name: Run YAML linting
-        uses: ibiqlik/action-yamllint@2576378a8e339169678f9939646ee3ee325e845c # v3.1.1
-        with:
-          file_or_dir: .
-          strict: true
+        run: make lint-yamllint
 
-      # Docker Security (if Dockerfile exists)
+      # Docker Security: misconfiguration scan of the Dockerfile. It gates: the
+      # previous `docker run aquasec/trivy:latest … || true` pulled a mutable
+      # image and passed whatever happened.
       - name: Run Docker security scan
-        if: hashFiles('Dockerfile') != ''
-        run: |
-          docker run --rm -v "$PWD":/workspace \
-            aquasec/trivy:latest fs --security-checks vuln,config /workspace/Dockerfile || true
+        run: make lint-docker
 
       # Upload artifacts for review
       - name: Upload security scan results

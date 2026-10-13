@@ -1,39 +1,15 @@
 // Package fileproc handles file processing, collection, and output formatting.
 package fileproc
 
-import "strings"
-
-// Package-level detection functions
-
-// IsImage checks if the file extension indicates an image file.
-func IsImage(filename string) bool {
-	return getRegistry().IsImage(filename)
-}
-
-// IsBinary checks if the file extension indicates a binary file.
-func IsBinary(filename string) bool {
-	return getRegistry().IsBinary(filename)
-}
-
-// Language returns the language identifier for the given filename based on its extension.
-func Language(filename string) string {
-	return getRegistry().Language(filename)
-}
-
-// Registry methods for detection
-
 // IsImage checks if the file extension indicates an image file.
 func (r *FileTypeRegistry) IsImage(filename string) bool {
-	result := r.getFileTypeResult(filename)
-
-	return result.IsImage
+	return r.imageExts[normalizeExtension(filename)]
 }
 
-// IsBinary checks if the file extension indicates a binary file.
+// IsBinary checks if the file extension indicates a binary file, including
+// extensionless names listed as binary (such as .DS_Store's lowercase form).
 func (r *FileTypeRegistry) IsBinary(filename string) bool {
-	result := r.getFileTypeResult(filename)
-
-	return result.IsBinary
+	return r.binaryExts[normalizeExtension(filename)] || isSpecialFile(filename, r.binaryExts)
 }
 
 // Language returns the language identifier for the given filename based on its extension.
@@ -41,60 +17,34 @@ func (r *FileTypeRegistry) Language(filename string) string {
 	if len(filename) < minExtensionLength {
 		return ""
 	}
-	result := r.getFileTypeResult(filename)
 
-	return result.Language
+	return r.languageMap[normalizeExtension(filename)]
 }
-
-// Extension management methods
 
 // AddImageExtension adds a new image extension to the registry.
 func (r *FileTypeRegistry) AddImageExtension(ext string) {
-	r.addExtension(ext, r.imageExts)
+	r.imageExts[normalizeConfiguredExtension(ext)] = true
 }
 
 // AddBinaryExtension adds a new binary extension to the registry.
 func (r *FileTypeRegistry) AddBinaryExtension(ext string) {
-	r.addExtension(ext, r.binaryExts)
+	r.binaryExts[normalizeConfiguredExtension(ext)] = true
 }
 
 // AddLanguageMapping adds a new language mapping to the registry.
 func (r *FileTypeRegistry) AddLanguageMapping(ext, language string) {
-	r.languageMap[strings.ToLower(ext)] = language
-}
-
-// addExtension is a helper to add extensions to a map.
-func (r *FileTypeRegistry) addExtension(ext string, target map[string]bool) {
-	target[strings.ToLower(ext)] = true
-}
-
-// removeExtension is a helper to remove extensions from a map.
-func (r *FileTypeRegistry) removeExtension(ext string, target map[string]bool) {
-	delete(target, strings.ToLower(ext))
+	r.languageMap[normalizeConfiguredExtension(ext)] = language
 }
 
 // DisableExtensions removes specified extensions from the registry.
 func (r *FileTypeRegistry) DisableExtensions(disabledImages, disabledBinary, disabledLanguages []string) {
-	// Disable image extensions
 	for _, ext := range disabledImages {
-		if ext != "" {
-			r.removeExtension(ext, r.imageExts)
-		}
+		delete(r.imageExts, normalizeConfiguredExtension(ext))
 	}
-
-	// Disable binary extensions
 	for _, ext := range disabledBinary {
-		if ext != "" {
-			r.removeExtension(ext, r.binaryExts)
-		}
+		delete(r.binaryExts, normalizeConfiguredExtension(ext))
 	}
-
-	// Disable language extensions
 	for _, ext := range disabledLanguages {
-		if ext != "" {
-			delete(r.languageMap, strings.ToLower(ext))
-		}
+		delete(r.languageMap, normalizeConfiguredExtension(ext))
 	}
-
-	// Invalidate cache after all modifications
 }

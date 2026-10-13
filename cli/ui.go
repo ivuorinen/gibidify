@@ -77,7 +77,7 @@ func (ui *UIManager) StartProgress(total int, description string) {
 		progressbar.OptionThrottle(100*time.Millisecond),
 		progressbar.OptionOnCompletion(
 			func() {
-				//nolint:errcheck // UI output, errors don't affect processing
+				// UI output, errors don't affect processing
 				_, _ = fmt.Fprint(ui.output, "\n")
 			},
 		),
@@ -102,64 +102,45 @@ func (ui *UIManager) FinishProgress() {
 
 // PrintSuccess prints a success message in green.
 func (ui *UIManager) PrintSuccess(format string, args ...any) {
-	if ui.silentMode {
-		return
-	}
-	if ui.enableColors {
-		color.Green("✓ "+format, args...)
-	} else {
-		ui.printf("✓ "+format+"\n", args...)
-	}
+	ui.printStatus(color.FgGreen, "✓ "+format, args...)
 }
 
 // PrintError prints an error message in red.
 func (ui *UIManager) PrintError(format string, args ...any) {
-	if ui.silentMode {
-		return
-	}
-	if ui.enableColors {
-		color.Red("✗ "+format, args...)
-	} else {
-		ui.printf("✗ "+format+"\n", args...)
-	}
+	ui.printStatus(color.FgRed, "✗ "+format, args...)
 }
 
 // PrintWarning prints a warning message in yellow.
 func (ui *UIManager) PrintWarning(format string, args ...any) {
-	if ui.silentMode {
-		return
-	}
-	if ui.enableColors {
-		color.Yellow("⚠ "+format, args...)
-	} else {
-		ui.printf("⚠ "+format+"\n", args...)
-	}
+	ui.printStatus(color.FgYellow, "⚠ "+format, args...)
 }
 
 // PrintInfo prints an info message in blue.
 func (ui *UIManager) PrintInfo(format string, args ...any) {
-	if ui.silentMode {
-		return
-	}
-	if ui.enableColors {
-		//nolint:errcheck // UI output, errors don't affect processing
-		color.Blue("ℹ "+format, args...)
-	} else {
-		ui.printf("ℹ "+format+"\n", args...)
-	}
+	ui.printStatus(color.FgBlue, "ℹ "+format, args...)
 }
 
 // PrintHeader prints a header message in bold.
 func (ui *UIManager) PrintHeader(format string, args ...any) {
+	ui.printStatus(color.Bold, format, args...)
+}
+
+// printStatus writes one status line to ui.output, colored when enabled.
+//
+// Every path must write to ui.output (stderr). fatih/color's package helpers
+// (color.Green and friends) print to stdout, so with colors on the status lines
+// were mixed into `-destination /dev/stdout` output and broke it for piping.
+func (ui *UIManager) printStatus(attr color.Attribute, format string, args ...any) {
 	if ui.silentMode {
 		return
 	}
 	if ui.enableColors {
-		//nolint:errcheck // UI output, errors don't affect processing
-		_, _ = color.New(color.Bold).Fprintf(ui.output, format+"\n", args...)
-	} else {
-		ui.printf(format+"\n", args...)
+		// UI output, errors don't affect processing
+		_, _ = color.New(attr).Fprintf(ui.output, format+"\n", args...)
+
+		return
 	}
+	ui.printf(format+"\n", args...)
 }
 
 // isColorTerminal checks if the terminal supports colors.

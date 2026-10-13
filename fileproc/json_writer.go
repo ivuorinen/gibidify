@@ -2,52 +2,41 @@
 package fileproc
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
-	"os"
+	"io"
 
 	"github.com/ivuorinen/gibidify/shared"
 )
 
 // JSONWriter handles JSON format output.
 type JSONWriter struct {
-	outFile   *os.File
+	out       io.Writer
 	firstFile bool
 }
 
 // NewJSONWriter creates a new JSON writer.
-func NewJSONWriter(outFile *os.File) *JSONWriter {
+func NewJSONWriter(out io.Writer) *JSONWriter {
 	return &JSONWriter{
-		outFile:   outFile,
+		out:       out,
 		firstFile: true,
 	}
 }
 
-// Start writes the JSON header.
+// Start writes the prefix and suffix and opens the files array.
 func (w *JSONWriter) Start(prefix, suffix string) error {
-	// Start JSON structure
-	if _, err := w.outFile.WriteString(`{"prefix":"`); err != nil {
+	encodedPrefix, err := encodeJSON(prefix)
+	if err != nil {
+		return shared.WrapError(err, shared.ErrorTypeProcessing, shared.CodeProcessingEncode, "failed to encode prefix")
+	}
+	encodedSuffix, err := encodeJSON(suffix)
+	if err != nil {
+		return shared.WrapError(err, shared.ErrorTypeProcessing, shared.CodeProcessingEncode, "failed to encode suffix")
+	}
+
+	header := `{"prefix":` + string(encodedPrefix) + `,"suffix":` + string(encodedSuffix) + `,"files":[`
+	if _, err := io.WriteString(w.out, header); err != nil {
 		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON start")
-	}
-
-	// Write escaped prefix
-	escapedPrefix := shared.EscapeForJSON(prefix)
-	if err := shared.WriteWithErrorWrap(w.outFile, escapedPrefix, "failed to write JSON prefix", ""); err != nil {
-		return fmt.Errorf("writing JSON prefix: %w", err)
-	}
-
-	if _, err := w.outFile.WriteString(`","suffix":"`); err != nil {
-		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON middle")
-	}
-
-	// Write escaped suffix
-	escapedSuffix := shared.EscapeForJSON(suffix)
-	if err := shared.WriteWithErrorWrap(w.outFile, escapedSuffix, "failed to write JSON suffix", ""); err != nil {
-		return fmt.Errorf("writing JSON suffix: %w", err)
-	}
-
-	if _, err := w.outFile.WriteString(`","files":[`); err != nil {
-		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON files start")
 	}
 
 	return nil
@@ -56,7 +45,7 @@ func (w *JSONWriter) Start(prefix, suffix string) error {
 // WriteFile writes a file entry in JSON format.
 func (w *JSONWriter) WriteFile(req WriteRequest) error {
 	if !w.firstFile {
-		if _, err := w.outFile.WriteString(","); err != nil {
+		if _, err := io.WriteString(w.out, ","); err != nil {
 			return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON separator")
 		}
 	}
@@ -67,8 +56,7 @@ func (w *JSONWriter) WriteFile(req WriteRequest) error {
 
 // Close writes the JSON footer.
 func (w *JSONWriter) Close() error {
-	// Close JSON structure
-	if _, err := w.outFile.WriteString("]}"); err != nil {
+	if _, err := io.WriteString(w.out, "]}"); err != nil {
 		return shared.WrapError(err, shared.ErrorTypeIO, shared.CodeIOWrite, "failed to write JSON end")
 	}
 
@@ -77,14 +65,11 @@ func (w *JSONWriter) Close() error {
 
 // writeInline writes a file directly as JSON.
 func (w *JSONWriter) writeInline(req WriteRequest) error {
-	language := detectLanguage(req.Path)
-	fileData := FileData{
+	encoded, err := encodeJSON(FileData{
 		Path:     req.Path,
 		Content:  req.Content,
-		Language: language,
-	}
-
-	encoded, err := json.Marshal(fileData)
+		Language: detectLanguage(req.Path),
+	})
 	if err != nil {
 		return shared.WrapError(
 			err,
@@ -94,7 +79,7 @@ func (w *JSONWriter) writeInline(req WriteRequest) error {
 		).WithFilePath(req.Path)
 	}
 
-	if _, err := w.outFile.Write(encoded); err != nil {
+	if _, err := w.out.Write(encoded); err != nil {
 		return shared.WrapError(
 			err,
 			shared.ErrorTypeIO,
@@ -106,9 +91,16 @@ func (w *JSONWriter) writeInline(req WriteRequest) error {
 	return nil
 }
 
-// startJSONWriter handles JSON format output.
-func startJSONWriter(outFile *os.File, writeCh <-chan WriteRequest, done chan<- struct{}, prefix, suffix string) {
-	startFormatWriter(outFile, writeCh, done, prefix, suffix, func(f *os.File) FormatWriter {
-		return NewJSONWriter(f)
-	})
+// encodeJSON encodes v without HTML escaping. json.Marshal rewrites every <, >
+// and & as a six-byte \u escape, which only matters for JSON embedded in HTML;
+// this output is read by a model, where the escapes cost tokens and readability.
+func encodeJSON(v any) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
 }

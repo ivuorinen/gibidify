@@ -11,15 +11,13 @@ import (
 	"sync"
 )
 
-// Logger interface defines the logging contract for gibidify.
+// Logger interface defines the logging contract for gibidify. It carries only
+// the printf-style methods: the Sprint-style variants were never called from
+// production code.
 type Logger interface {
-	Debug(args ...any)
 	Debugf(format string, args ...any)
-	Info(args ...any)
 	Infof(format string, args ...any)
-	Warn(args ...any)
 	Warnf(format string, args ...any)
-	Error(args ...any)
 	Errorf(format string, args ...any)
 	WithFields(fields map[string]any) Logger
 	SetLevel(level LogLevel)
@@ -115,14 +113,6 @@ func slogLevel(level LogLevel) slog.Level {
 	}
 }
 
-// log emits args joined with fmt.Sprint semantics at the given level.
-func (l *logService) log(level slog.Level, args ...any) {
-	if !l.logger.Enabled(context.Background(), level) {
-		return
-	}
-	l.logger.Log(context.Background(), level, fmt.Sprint(args...))
-}
-
 // logf emits a printf-formatted message at the given level.
 func (l *logService) logf(level slog.Level, format string, args ...any) {
 	if !l.logger.Enabled(context.Background(), level) {
@@ -131,26 +121,14 @@ func (l *logService) logf(level slog.Level, format string, args ...any) {
 	l.logger.Log(context.Background(), level, fmt.Sprintf(format, args...))
 }
 
-// Debug logs a debug message.
-func (l *logService) Debug(args ...any) { l.log(slog.LevelDebug, args...) }
-
 // Debugf logs a formatted debug message.
 func (l *logService) Debugf(format string, args ...any) { l.logf(slog.LevelDebug, format, args...) }
-
-// Info logs an info message.
-func (l *logService) Info(args ...any) { l.log(slog.LevelInfo, args...) }
 
 // Infof logs a formatted info message.
 func (l *logService) Infof(format string, args ...any) { l.logf(slog.LevelInfo, format, args...) }
 
-// Warn logs a warning message.
-func (l *logService) Warn(args ...any) { l.log(slog.LevelWarn, args...) }
-
 // Warnf logs a formatted warning message.
 func (l *logService) Warnf(format string, args ...any) { l.logf(slog.LevelWarn, format, args...) }
-
-// Error logs an error message.
-func (l *logService) Error(args ...any) { l.log(slog.LevelError, args...) }
 
 // Errorf logs a formatted error message.
 func (l *logService) Errorf(format string, args ...any) { l.logf(slog.LevelError, format, args...) }

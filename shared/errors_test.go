@@ -260,11 +260,6 @@ func TestErrorTypeString(t *testing.T) {
 		expected string
 	}{
 		{
-			name:     "CLI error type",
-			errType:  ErrorTypeCLI,
-			expected: "CLI",
-		},
-		{
 			name:     "FileSystem error type",
 			errType:  ErrorTypeFileSystem,
 			expected: "FileSystem",
@@ -541,7 +536,6 @@ func TestStructuredErrorIntegration(t *testing.T) {
 func TestErrorTypeConstants(t *testing.T) {
 	// Test that all error type constants are properly defined
 	types := []ErrorType{
-		ErrorTypeCLI,
 		ErrorTypeFileSystem,
 		ErrorTypeProcessing,
 		ErrorTypeConfiguration,
@@ -573,7 +567,7 @@ func BenchmarkNewStructuredError(b *testing.B) {
 	}
 
 	for b.Loop() {
-		_ = NewStructuredError( // nolint:errcheck // benchmark test
+		_ = NewStructuredError( // benchmark test
 			ErrorTypeFileSystem,
 			"ACCESS_DENIED",
 			TestErrAccessDenied,

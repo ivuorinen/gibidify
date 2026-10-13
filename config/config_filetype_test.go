@@ -71,7 +71,7 @@ func verifyDefaultValues(t *testing.T) {
 func setTestConfiguration() {
 	Set("fileTypes.enabled", false)
 	Set(shared.ConfigKeyFileTypesCustomImageExtensions, []string{".webp", ".avif"})
-	Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{shared.TestExtensionCustom, ".mybin"})
+	Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{TestExtensionCustom, ".mybin"})
 	Set(
 		shared.ConfigKeyFileTypesCustomLanguages, map[string]string{
 			".zig": "zig",
@@ -108,7 +108,7 @@ func verifyTestConfiguration(t *testing.T) {
 // setValidConfiguration sets valid configuration for validation tests.
 func setValidConfiguration() {
 	Set(shared.ConfigKeyFileTypesCustomImageExtensions, []string{".webp", ".avif"})
-	Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{shared.TestExtensionCustom})
+	Set(shared.ConfigKeyFileTypesCustomBinaryExtensions, []string{TestExtensionCustom})
 	Set(
 		shared.ConfigKeyFileTypesCustomLanguages, map[string]string{
 			".zig": "zig",
@@ -187,7 +187,7 @@ func verifyStringSlice(t *testing.T, actual, expected []string, name string) {
 	t.Helper()
 
 	if len(actual) != len(expected) {
-		t.Errorf(shared.TestFmtExpectedCount, len(expected), name, len(actual))
+		t.Errorf(TestFmtExpectedCount, len(expected), name, len(actual))
 
 		return
 	}
@@ -203,7 +203,7 @@ func verifyStringMap(t *testing.T, actual, expected map[string]string, name stri
 	t.Helper()
 
 	if len(actual) != len(expected) {
-		t.Errorf(shared.TestFmtExpectedCount, len(expected), name, len(actual))
+		t.Errorf(TestFmtExpectedCount, len(expected), name, len(actual))
 
 		return
 	}
@@ -219,6 +219,6 @@ func verifyStringSliceLength(t *testing.T, actual, expected []string, name strin
 	t.Helper()
 
 	if len(actual) != len(expected) {
-		t.Errorf(shared.TestFmtExpectedCount, len(expected), name, len(actual))
+		t.Errorf(TestFmtExpectedCount, len(expected), name, len(actual))
 	}
 }
