@@ -9,7 +9,6 @@
 //	  - Use SetupTempDirWithStructure() for complete test environments
 //
 //	Error Assertions:
-//	  - Use AssertError() for conditional error checking
 //	  - Use AssertNoError() when expecting success
 //	  - Use AssertExpectedError() when expecting failure
 //	  - Use AssertErrorContains() for substring validation
@@ -68,16 +67,19 @@ func RunIsolated(m *testing.M) {
 
 // SuppressLogs suppresses logger output during testing to keep test output clean.
 // Returns a function that should be called to restore the original log output.
-func SuppressLogs(t *testing.T) func() {
+//
+// The logger cannot report its current writer, so restore points it at the
+// os.Stderr that was in effect when SuppressLogs was called (the logger's
+// default destination), not at whatever os.Stderr is when restore runs.
+func SuppressLogs(t testing.TB) func() {
 	t.Helper()
 	logger := shared.GetLogger()
+	previous := os.Stderr
 
-	// Capture original output by temporarily setting it to discard
 	logger.SetOutput(io.Discard)
 
-	// Return function to restore original settings (stderr)
 	return func() {
-		logger.SetOutput(os.Stderr)
+		logger.SetOutput(previous)
 	}
 }
 
@@ -87,7 +89,7 @@ type OutputRestoreFunc func()
 // SuppressAllOutput suppresses both stdout and stderr during testing.
 // This captures all output including UI messages, progress bars, and direct prints.
 // Returns a function that should be called to restore original output.
-func SuppressAllOutput(t *testing.T) OutputRestoreFunc {
+func SuppressAllOutput(t testing.TB) OutputRestoreFunc {
 	t.Helper()
 
 	// Save original stdout and stderr
@@ -123,7 +125,7 @@ func SuppressAllOutput(t *testing.T) OutputRestoreFunc {
 }
 
 // CreateTestFile creates a test file with the given content and returns its path.
-func CreateTestFile(t *testing.T, dir, filename string, content []byte) string {
+func CreateTestFile(t testing.TB, dir, filename string, content []byte) string {
 	t.Helper()
 	filePath := filepath.Join(dir, filename)
 	if err := os.WriteFile(filePath, content, TestFilePermission); err != nil {
@@ -135,7 +137,7 @@ func CreateTestFile(t *testing.T, dir, filename string, content []byte) string {
 
 // ReadFile returns the contents of a file the test created, failing the test
 // if it cannot be read.
-func ReadFile(t *testing.T, path string) []byte {
+func ReadFile(t testing.TB, path string) []byte {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
@@ -146,7 +148,7 @@ func ReadFile(t *testing.T, path string) []byte {
 }
 
 // CreateTempOutputFile creates a temporary output file and returns the file handle and path.
-func CreateTempOutputFile(t *testing.T, pattern string) (file *os.File, path string) {
+func CreateTempOutputFile(t testing.TB, pattern string) (file *os.File, path string) {
 	t.Helper()
 	outFile, err := os.CreateTemp(t.TempDir(), pattern)
 	if err != nil {
@@ -158,7 +160,7 @@ func CreateTempOutputFile(t *testing.T, pattern string) (file *os.File, path str
 }
 
 // CreateTestDirectory creates a test directory and returns its path.
-func CreateTestDirectory(t *testing.T, parent, name string) string {
+func CreateTestDirectory(t testing.TB, parent, name string) string {
 	t.Helper()
 	dirPath := filepath.Join(parent, name)
 	if err := os.Mkdir(dirPath, TestDirPermission); err != nil {
@@ -175,7 +177,7 @@ type FileSpec struct {
 }
 
 // CreateTestFiles creates multiple test files from specifications.
-func CreateTestFiles(t *testing.T, rootDir string, fileSpecs []FileSpec) []string {
+func CreateTestFiles(t testing.TB, rootDir string, fileSpecs []FileSpec) []string {
 	t.Helper()
 	createdFiles := make([]string, 0, len(fileSpecs))
 	for _, spec := range fileSpecs {
@@ -188,9 +190,11 @@ func CreateTestFiles(t *testing.T, rootDir string, fileSpecs []FileSpec) []strin
 
 // ResetConfig clears the config store, searches configPath first when it is
 // set, and loads the configuration, failing the test if it does not load.
-func ResetConfig(t *testing.T, configPath string) {
+// The store is cleared again when the test ends.
+func ResetConfig(t testing.TB, configPath string) {
 	t.Helper()
 	config.Reset()
+	t.Cleanup(config.Reset)
 	if configPath != "" {
 		config.AddConfigPath(configPath)
 	}
@@ -200,10 +204,12 @@ func ResetConfig(t *testing.T, configPath string) {
 }
 
 // SetConfigKeys resets the config store to defaults and sets keyValues as
-// explicit values, without reading any config file.
-func SetConfigKeys(t *testing.T, keyValues map[string]any) {
+// explicit values, without reading any config file. The store is cleared
+// again when the test ends.
+func SetConfigKeys(t testing.TB, keyValues map[string]any) {
 	t.Helper()
 	config.Reset()
+	t.Cleanup(config.Reset)
 	config.SetDefaultConfig()
 	for key, value := range keyValues {
 		config.Set(key, value)
@@ -224,7 +230,7 @@ func SetupCLIArgs(srcDir, outFilePath, prefix, suffix string, concurrency int) {
 }
 
 // VerifyContentContains checks that content contains all expected substrings.
-func VerifyContentContains(t *testing.T, content string, expectedSubstrings []string) {
+func VerifyContentContains(t testing.TB, content string, expectedSubstrings []string) {
 	t.Helper()
 	for _, expected := range expectedSubstrings {
 		if !strings.Contains(content, expected) {
@@ -234,7 +240,7 @@ func VerifyContentContains(t *testing.T, content string, expectedSubstrings []st
 }
 
 // MustSucceed fails the test if the error is not nil.
-func MustSucceed(t *testing.T, err error, operation string) {
+func MustSucceed(t testing.TB, err error, operation string) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf(TestMsgOperationFailed, operation, err)
@@ -242,7 +248,7 @@ func MustSucceed(t *testing.T, err error, operation string) {
 }
 
 // CloseFile closes a file and reports errors to the test.
-func CloseFile(t *testing.T, file *os.File) {
+func CloseFile(t testing.TB, file *os.File) {
 	t.Helper()
 	if err := file.Close(); err != nil {
 		t.Errorf("Failed to close file: %v", err)
@@ -263,7 +269,7 @@ type DirSpec struct {
 }
 
 // CreateTestDirectoryStructure creates multiple directories with files.
-func CreateTestDirectoryStructure(t *testing.T, rootDir string, dirSpecs []DirSpec) []string {
+func CreateTestDirectoryStructure(t testing.TB, rootDir string, dirSpecs []DirSpec) []string {
 	t.Helper()
 	createdPaths := make([]string, 0)
 
@@ -285,7 +291,7 @@ func CreateTestDirectoryStructure(t *testing.T, rootDir string, dirSpecs []DirSp
 }
 
 // SetupTempDirWithStructure creates a temp directory with a structured layout.
-func SetupTempDirWithStructure(t *testing.T, dirSpecs []DirSpec) string {
+func SetupTempDirWithStructure(t testing.TB, dirSpecs []DirSpec) string {
 	t.Helper()
 	rootDir := t.TempDir()
 	CreateTestDirectoryStructure(t, rootDir, dirSpecs)
@@ -295,22 +301,8 @@ func SetupTempDirWithStructure(t *testing.T, dirSpecs []DirSpec) string {
 
 // Error assertion helpers - safe to use across packages.
 
-// AssertError checks if an error matches the expected state.
-// If wantErr is true, expects err to be non-nil.
-// If wantErr is false, expects err to be nil and fails if it's not.
-func AssertError(t *testing.T, err error, wantErr bool, operation string) {
-	t.Helper()
-	if (err != nil) != wantErr {
-		if wantErr {
-			t.Errorf(TestMsgOperationNoError, operation)
-		} else {
-			t.Errorf("Operation %s unexpected error: %v", operation, err)
-		}
-	}
-}
-
 // AssertNoError fails the test if err is not nil.
-func AssertNoError(t *testing.T, err error, operation string) {
+func AssertNoError(t testing.TB, err error, operation string) {
 	t.Helper()
 	if err != nil {
 		t.Errorf(TestMsgOperationFailed, operation, err)
@@ -318,7 +310,7 @@ func AssertNoError(t *testing.T, err error, operation string) {
 }
 
 // AssertExpectedError fails the test if err is nil when an error is expected.
-func AssertExpectedError(t *testing.T, err error, operation string) {
+func AssertExpectedError(t testing.TB, err error, operation string) {
 	t.Helper()
 	if err == nil {
 		t.Errorf(TestMsgOperationNoError, operation)
@@ -326,7 +318,7 @@ func AssertExpectedError(t *testing.T, err error, operation string) {
 }
 
 // AssertErrorContains checks that error contains the expected substring.
-func AssertErrorContains(t *testing.T, err error, expectedSubstring, operation string) {
+func AssertErrorContains(t testing.TB, err error, expectedSubstring, operation string) {
 	t.Helper()
 	if err == nil {
 		t.Errorf("Operation %s expected error containing %q but got none", operation, expectedSubstring)

@@ -26,13 +26,6 @@ func captureLogs(t *testing.T) *bytes.Buffer {
 	return buf
 }
 
-// setTestConfig sets config keys for the test and restores the defaults after.
-func setTestConfig(t *testing.T, keyValues map[string]any) {
-	t.Helper()
-	testutil.SetConfigKeys(t, keyValues)
-	t.Cleanup(func() { testutil.ResetConfig(t, "") })
-}
-
 // assertErrorCode fails the test unless err is a StructuredError with code.
 func assertErrorCode(t *testing.T, err error, code string) {
 	t.Helper()
@@ -84,7 +77,7 @@ func TestProcessStopsBeforeWriting(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setTestConfig(t, tt.config)
+			testutil.SetConfigKeys(t, tt.config)
 			dest := filepath.Join(t.TempDir(), "out.json")
 			err := runWithTimeout(t, pipelineFlags(tt.source(t), dest, 1))
 			assertErrorCode(t, err, tt.code)
@@ -96,7 +89,7 @@ func TestProcessStopsBeforeWriting(t *testing.T) {
 // TestValidateFileCollectionTotalSize verifies the total size cap rejects the
 // collection once the running total passes it.
 func TestValidateFileCollectionTotalSize(t *testing.T) {
-	setTestConfig(t, map[string]any{shared.ConfigKeyResourceLimitsMaxTotalSize: 15})
+	testutil.SetConfigKeys(t, map[string]any{shared.ConfigKeyResourceLimitsMaxTotalSize: 15})
 	dir := t.TempDir()
 	files := []string{
 		testutil.CreateTestFile(t, dir, "a.txt", []byte("0123456789")),
@@ -111,7 +104,7 @@ func TestValidateFileCollectionTotalSize(t *testing.T) {
 // TestValidateFileCollectionUnstattableFile verifies a file that vanished
 // after collection does not fail pre-validation but is reported.
 func TestValidateFileCollectionUnstattableFile(t *testing.T) {
-	setTestConfig(t, nil)
+	testutil.SetConfigKeys(t, nil)
 	logs := captureLogs(t)
 	dir := t.TempDir()
 	files := []string{testutil.CreateTestFile(t, dir, "a.txt", []byte("x")), filepath.Join(dir, "gone.txt")}

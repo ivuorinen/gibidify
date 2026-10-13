@@ -65,6 +65,24 @@ func TestSuppressLogs(t *testing.T) {
 	verifyStderrLog(t, file, path)
 }
 
+// TestSuppressLogsRestoresStderrFromCall verifies restore uses the os.Stderr
+// in effect when SuppressLogs was called, not the one in effect at restore.
+func TestSuppressLogsRestoresStderrFromCall(t *testing.T) {
+	file, path := redirectStderr(t)
+	restore := SuppressLogs(t)
+
+	later, laterPath := CreateTempOutputFile(t, "later-stderr-*.log")
+	os.Stderr = later
+	restore()
+	shared.GetLogger().Errorf(restoredLogMsg)
+
+	verifyStderrLog(t, file, path)
+	CloseFile(t, later)
+	if content := ReadFile(t, laterPath); len(content) != 0 {
+		t.Errorf("restore followed the later os.Stderr, which got %q", content)
+	}
+}
+
 // TestSuppressAllOutput verifies stdout, stderr and the logger go to the null
 // device until restore puts the originals back and closes the null device.
 func TestSuppressAllOutput(t *testing.T) {

@@ -300,7 +300,6 @@ func TestProdWalkerSkipsSensitiveFiles(t *testing.T) {
 // token-bearing remote URLs.
 func TestProdWalkerAlwaysSkipsVCSDirectories(t *testing.T) {
 	testutil.SetConfigKeys(t, map[string]any{"ignoreDirectories": []string{"secrets"}})
-	t.Cleanup(config.Reset)
 	rootDir := t.TempDir()
 	testutil.CreateTestFile(t, rootDir, "main.go", []byte("package main"))
 	for _, vcs := range []string{".git", ".hg", ".svn"} {
@@ -320,7 +319,6 @@ func TestProdWalkerAlwaysSkipsVCSDirectories(t *testing.T) {
 // matches the directory.
 func TestProdWalkerTrimsIgnoredDirectoryNames(t *testing.T) {
 	testutil.SetConfigKeys(t, map[string]any{"ignoreDirectories": []string{" skipme "}})
-	t.Cleanup(config.Reset)
 	rootDir := t.TempDir()
 	testutil.CreateTestFile(t, rootDir, "main.go", []byte("package main"))
 	testutil.CreateTestFile(t, testutil.CreateTestDirectory(t, rootDir, "skipme"), "a.go", []byte("package a"))

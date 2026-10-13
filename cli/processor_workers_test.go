@@ -32,6 +32,7 @@ func (c *cancelAfterFirstCheck) Err() error {
 // missing file would count as failed, so the canceled cases show cancellation
 // is neither attempted nor counted.
 func TestProcessFileOutcomes(t *testing.T) {
+	testutil.SetConfigKeys(t, nil)
 	dir := t.TempDir()
 	binary := testutil.CreateTestFile(t, dir, "blob.dat", []byte{0x00, 0x01, 0x02, 0x00, 0xff})
 	missing := filepath.Join(dir, "missing.go")
