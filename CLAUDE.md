@@ -43,8 +43,9 @@ yamlfmt, yamllint)
 **Testing**: error handling best practices, 0 tolerance policy
 
 **CRITICAL**: All rules are non-negotiable unless the user explicitly asks to
-change one (see revive.toml Restrictions below). `make fmt && make lint` must
-show 0 issues.
+change one (see revive.toml Restrictions below).
+`make fmt && make lint` must show 0 issues; if one cannot be fixed, ask the
+user instead of suppressing it.
 
 ## Testing
 
