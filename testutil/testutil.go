@@ -66,15 +66,12 @@ func RunIsolated(m *testing.M) {
 }
 
 // SuppressLogs suppresses logger output during testing to keep test output clean.
-// Returns a function that should be called to restore the original log output.
-//
-// The logger cannot report its current writer, so restore points it at the
-// os.Stderr that was in effect when SuppressLogs was called (the logger's
-// default destination), not at whatever os.Stderr is when restore runs.
+// Returns a function that restores the logger output in effect when
+// SuppressLogs was called.
 func SuppressLogs(t testing.TB) func() {
 	t.Helper()
 	logger := shared.GetLogger()
-	previous := os.Stderr
+	previous := logger.Output()
 
 	logger.SetOutput(io.Discard)
 
@@ -98,6 +95,7 @@ func SuppressAllOutput(t testing.TB) OutputRestoreFunc {
 
 	// Suppress logger output as well
 	logger := shared.GetLogger()
+	originalLogOutput := logger.Output()
 	logger.SetOutput(io.Discard)
 
 	// Open /dev/null for safe redirection
@@ -120,7 +118,7 @@ func SuppressAllOutput(t testing.TB) OutputRestoreFunc {
 		// Restore original outputs
 		os.Stdout = originalStdout
 		os.Stderr = originalStderr
-		logger.SetOutput(originalStderr)
+		logger.SetOutput(originalLogOutput)
 	}
 }
 

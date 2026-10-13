@@ -211,6 +211,27 @@ func TestLogServiceSetOutput(t *testing.T) {
 	}
 }
 
+// TestLogServiceOutput verifies Output reports the writer SetOutput set, for
+// the logger and for loggers derived from it with WithFields.
+func TestLogServiceOutput(t *testing.T) {
+	logger := GetLogger()
+	original := logger.Output()
+	t.Cleanup(func() { logger.SetOutput(original) })
+
+	var buf bytes.Buffer
+	logger.SetOutput(&buf)
+	derived := logger.WithFields(map[string]any{"component": "test"})
+	if logger.Output() != &buf || derived.Output() != &buf {
+		t.Errorf("Output() = %v, derived Output() = %v, want the buffer set with SetOutput",
+			logger.Output(), derived.Output())
+	}
+
+	derived.SetOutput(io.Discard)
+	if logger.Output() != io.Discard {
+		t.Errorf("Output() after derived SetOutput = %v, want io.Discard", logger.Output())
+	}
+}
+
 func TestParseLogLevel(t *testing.T) {
 	tests := []struct {
 		input    string

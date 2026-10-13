@@ -16,81 +16,64 @@ const (
 	restoredLogMsg   = "message logged after restore"
 )
 
-// redirectStderr points os.Stderr at a temporary file and returns it with its
-// path. os.Stderr, os.Stdout and the logger output are restored on cleanup.
-func redirectStderr(t *testing.T) (file *os.File, path string) {
+// redirectOutput points os.Stderr at a temporary file and the logger at a
+// buffer, and returns both. os.Stdout, os.Stderr and the logger output are
+// restored on cleanup.
+func redirectOutput(t *testing.T) (stderr *os.File, logs *bytes.Buffer) {
 	t.Helper()
 	origStdout, origStderr := os.Stdout, os.Stderr
+	logger := shared.GetLogger()
+	origLogOutput := logger.Output()
 	t.Cleanup(func() {
 		os.Stdout, os.Stderr = origStdout, origStderr
-		shared.GetLogger().SetOutput(origStderr)
+		logger.SetOutput(origLogOutput)
 	})
 
-	file, path = CreateTempOutputFile(t, "stderr-*.log")
-	os.Stderr = file
+	stderr, _ = CreateTempOutputFile(t, "stderr-*.log")
+	os.Stderr = stderr
+	logs = &bytes.Buffer{}
+	logger.SetOutput(logs)
 
-	return file, path
+	return stderr, logs
 }
 
-// verifyStderrLog closes the redirected stderr file and checks that it holds
-// the restored message and not the suppressed one.
-func verifyStderrLog(t *testing.T, file *os.File, path string) {
+// verifyRestoredLog checks that the logger writes to logs again, that the
+// suppressed message never reached it, and that nothing reached stderr.
+func verifyRestoredLog(t *testing.T, stderr *os.File, logs *bytes.Buffer) {
 	t.Helper()
-	CloseFile(t, file)
-	content := string(ReadFile(t, path))
-	if !strings.Contains(content, restoredLogMsg) {
-		t.Errorf("stderr after restore = %q, want it to contain %q", content, restoredLogMsg)
+	shared.GetLogger().Errorf(restoredLogMsg)
+	if got := logs.String(); !strings.Contains(got, restoredLogMsg) || strings.Contains(got, suppressedLogMsg) {
+		t.Errorf("logger output after restore = %q, want only %q", got, restoredLogMsg)
 	}
-	if strings.Contains(content, suppressedLogMsg) {
-		t.Errorf("stderr = %q, suppressed message leaked", content)
+	path := stderr.Name()
+	CloseFile(t, stderr)
+	if content := ReadFile(t, path); len(content) != 0 {
+		t.Errorf("restore sent the logger to os.Stderr, which got %q", content)
 	}
 }
 
-// TestSuppressLogs verifies the logger is silenced and that restore sends it
-// to os.Stderr.
+// TestSuppressLogs verifies the logger is silenced and that restore puts back
+// the writer it had before, not os.Stderr.
 func TestSuppressLogs(t *testing.T) {
-	file, path := redirectStderr(t)
+	stderr, logs := redirectOutput(t)
 	logger := shared.GetLogger()
-	var buf bytes.Buffer
-	logger.SetOutput(&buf)
 
 	restore := SuppressLogs(t)
 	logger.Errorf(suppressedLogMsg)
-	if buf.Len() != 0 {
-		t.Errorf("logger wrote %q while suppressed", buf.String())
+	if logs.Len() != 0 {
+		t.Errorf("logger wrote %q while suppressed", logs.String())
 	}
 
 	restore()
-	logger.Errorf(restoredLogMsg)
-	verifyStderrLog(t, file, path)
-}
-
-// TestSuppressLogsRestoresStderrFromCall verifies restore uses the os.Stderr
-// in effect when SuppressLogs was called, not the one in effect at restore.
-func TestSuppressLogsRestoresStderrFromCall(t *testing.T) {
-	file, path := redirectStderr(t)
-	restore := SuppressLogs(t)
-
-	later, laterPath := CreateTempOutputFile(t, "later-stderr-*.log")
-	os.Stderr = later
-	restore()
-	shared.GetLogger().Errorf(restoredLogMsg)
-
-	verifyStderrLog(t, file, path)
-	CloseFile(t, later)
-	if content := ReadFile(t, laterPath); len(content) != 0 {
-		t.Errorf("restore followed the later os.Stderr, which got %q", content)
-	}
+	verifyRestoredLog(t, stderr, logs)
 }
 
 // TestSuppressAllOutput verifies stdout, stderr and the logger go to the null
 // device until restore puts the originals back and closes the null device.
 func TestSuppressAllOutput(t *testing.T) {
-	file, path := redirectStderr(t)
+	stderr, logs := redirectOutput(t)
 	origStdout := os.Stdout
 	logger := shared.GetLogger()
-	var buf bytes.Buffer
-	logger.SetOutput(&buf)
 
 	restore := SuppressAllOutput(t)
 	devNull := os.Stdout
@@ -101,17 +84,16 @@ func TestSuppressAllOutput(t *testing.T) {
 		t.Errorf("writing to suppressed stdout: %v", err)
 	}
 	logger.Errorf(suppressedLogMsg)
-	if buf.Len() != 0 {
-		t.Errorf("logger wrote %q while suppressed", buf.String())
+	if logs.Len() != 0 {
+		t.Errorf("logger wrote %q while suppressed", logs.String())
 	}
 
 	restore()
-	if os.Stdout != origStdout || os.Stderr != file {
+	if os.Stdout != origStdout || os.Stderr != stderr {
 		t.Error("restore did not put the original stdout and stderr back")
 	}
 	if err := devNull.Close(); !errors.Is(err, os.ErrClosed) {
 		t.Errorf("closing null device after restore: got %v, want %v", err, os.ErrClosed)
 	}
-	logger.Errorf(restoredLogMsg)
-	verifyStderrLog(t, file, path)
+	verifyRestoredLog(t, stderr, logs)
 }
