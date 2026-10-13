@@ -33,6 +33,17 @@ func redirectStderrToPipe(t *testing.T) {
 	})
 }
 
+// markdownTestFlags returns the markdown flags TestNewProcessor shares.
+func markdownTestFlags(noColors bool) *Flags {
+	return &Flags{
+		SourceDir:   testutil.TestSourcePath,
+		Format:      "markdown",
+		Concurrency: 2,
+		Destination: testutil.TestOutputMarkdown,
+		NoColors:    noColors,
+	}
+}
+
 // TestNewProcessor tests the processor constructor. Stderr is a pipe and the
 // color environment is fixed, so the flags are combined with a known terminal
 // detection result: flags may only turn features off. NewProcessor used to set
@@ -51,37 +62,21 @@ func TestNewProcessor(t *testing.T) {
 		want       processorValidation
 	}{
 		{
-			name: "non-terminal stderr disables colors and progress",
-			flags: &Flags{
-				SourceDir:   testutil.TestSourcePath,
-				Format:      "markdown",
-				Concurrency: 2,
-				Destination: testutil.TestOutputMarkdown,
-			},
-			want: processorValidation{hasUI: true, colorsEnabled: false, progressEnabled: false},
+			name:  "non-terminal stderr disables colors and progress",
+			flags: markdownTestFlags(false),
+			want:  processorValidation{hasUI: true, colorsEnabled: false, progressEnabled: false},
 		},
 		{
 			name:       "FORCE_COLOR enables colors but not progress off a terminal",
 			forceColor: "1",
-			flags: &Flags{
-				SourceDir:   testutil.TestSourcePath,
-				Format:      "markdown",
-				Concurrency: 2,
-				Destination: testutil.TestOutputMarkdown,
-			},
-			want: processorValidation{hasUI: true, colorsEnabled: true, progressEnabled: false},
+			flags:      markdownTestFlags(false),
+			want:       processorValidation{hasUI: true, colorsEnabled: true, progressEnabled: false},
 		},
 		{
 			name:       "no-colors wins over FORCE_COLOR",
 			forceColor: "1",
-			flags: &Flags{
-				SourceDir:   testutil.TestSourcePath,
-				Format:      "markdown",
-				Concurrency: 2,
-				Destination: testutil.TestOutputMarkdown,
-				NoColors:    true,
-			},
-			want: processorValidation{hasUI: true, colorsEnabled: false, progressEnabled: false},
+			flags:      markdownTestFlags(true),
+			want:       processorValidation{hasUI: true, colorsEnabled: false, progressEnabled: false},
 		},
 		{
 			name: "processor with colors and progress disabled",
@@ -93,11 +88,7 @@ func TestNewProcessor(t *testing.T) {
 				NoColors:    true,
 				NoProgress:  true,
 			},
-			want: processorValidation{
-				hasUI:           true,
-				colorsEnabled:   false,
-				progressEnabled: false,
-			},
+			want: processorValidation{hasUI: true, colorsEnabled: false, progressEnabled: false},
 		},
 	}
 
