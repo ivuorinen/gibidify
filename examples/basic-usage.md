@@ -1,10 +1,12 @@
 # Basic Usage Examples
 
-This directory contains practical examples of how to use gibidify for various use cases.
+This directory contains practical examples of how to use gibidify for various
+use cases.
 
 ## Simple Code Aggregation
 
-The most basic use case - aggregate all code files from a project into a single output:
+The most basic use case - aggregate all code files from a project into a single
+output:
 
 ```bash
 # Aggregate all files from current directory to markdown
@@ -22,11 +24,13 @@ gibidify -source ./project -format yaml -destination project.yaml -concurrency 8
 For repeatable processing with custom settings:
 
 1. Copy the configuration example:
+
 ```bash
 cp config.example.yaml ~/.config/gibidify/config.yaml
 ```
 
-2. Edit the configuration file to your needs, then run:
+1. Edit the configuration file to your needs, then run:
+
 ```bash
 gibidify -source ./my-project
 ```
@@ -34,28 +38,31 @@ gibidify -source ./my-project
 ## Output Formats
 
 ### JSON Output
+
 Best for programmatic processing and data analysis:
 
 ```bash
 gibidify -source ./src -format json -destination api-code.json
 ```
 
-Example JSON structure:
+Example JSON structure (paths are relative to `-source`):
+
 ```json
 {
   "prefix": "",
   "suffix": "",
   "files": [
     {
-      "path": "src/main.go",
-      "language": "go",
-      "content": "package main..."
+      "path": "main.go",
+      "content": "package main...",
+      "language": "go"
     }
   ]
 }
 ```
 
 ### Markdown Output  
+
 Great for documentation and code reviews:
 
 ```bash
@@ -63,6 +70,7 @@ gibidify -source ./src -format markdown -destination code-review.md
 ```
 
 ### YAML Output
+
 Structured and human-readable:
 
 ```bash
@@ -72,6 +80,7 @@ gibidify -source ./config -format yaml -destination config-dump.yaml
 ## Advanced Usage Examples
 
 ### Large Codebase Processing
+
 For processing large projects with performance optimizations:
 
 ```bash
@@ -83,6 +92,7 @@ gibidify -source ./large-project \
 ```
 
 ### Memory-Conscious Processing
+
 For systems with limited memory:
 
 ```bash
@@ -93,20 +103,14 @@ gibidify -source ./project \
 ```
 
 ### Filtered Processing
-Process only specific file types (when configured):
 
-```bash
-# Configure file patterns in config.yaml
-filePatterns:
-  - "*.go"
-  - "*.py"
-  - "*.js"
-
-# Then run
-gibidify -source ./mixed-project -destination filtered.json
-```
+There is no include-pattern setting. Exclude what you do not want with
+`.gitignore` / `.ignore` files in the source tree, `ignoreDirectories`, or the
+`fileTypes` extension lists in `config.yaml` (see
+[configuration-examples.md](configuration-examples.md)).
 
 ### CI/CD Integration
+
 For automated documentation generation:
 
 ```bash
@@ -122,41 +126,49 @@ gibidify -source . \
 ## Error Handling
 
 ### Graceful Failure Handling
+
 The tool handles common issues gracefully:
 
 ```bash
-# This will fail gracefully if source doesn't exist
+# Exits 1 with a suggestion if the source doesn't exist
 gibidify -source ./nonexistent -destination out.json
 
-# This will warn about permission issues but continue
+# Unreadable files are reported and skipped; the output is still written,
+# but the exit status is non-zero so scripts notice the missing files
 gibidify -source ./restricted-dir -destination out.md --verbose
 ```
 
+A failed write (for example a full disk) or an interrupted run (Ctrl-C, exit
+130) exits non-zero and leaves an existing output file untouched: the output is
+renamed into place only after a successful run.
+
 ### Resource Limits
-Configure resource limits in your config file:
+
+Configure the safety caps in your config file:
 
 ```yaml
 resourceLimits:
-  enabled: true
   maxFiles: 5000
   maxTotalSize: 1073741824  # 1GB
-  fileProcessingTimeoutSec: 30
-  overallTimeoutSec: 1800   # 30 minutes
-  hardMemoryLimitMB: 512
 ```
 
 ## Performance Tips
 
-1. **Adjust Concurrency**: Start with number of CPU cores, adjust based on I/O vs CPU bound work
-2. **Use Appropriate Format**: JSON is fastest, Markdown has more overhead
-3. **Configure File Limits**: Set reasonable limits in config.yaml for your use case
-4. **Monitor Memory**: Use `--verbose` to see memory usage during processing
-5. **Use Progress Indicators**: Enable progress bars for long-running operations
+1. **Adjust Concurrency**: The default is one worker per CPU core;
+    `maxConcurrency` in config.yaml caps it
+2. **Configure File Limits**: Set `fileSizeLimit` and `resourceLimits` for your
+    use case
+3. **Check Counts**: `--verbose` (shorthand for `--log-level info`) logs how
+    many files were processed, skipped and failed
+4. **Use Progress Indicators**: Progress bars show on interactive terminals;
+    disable with `--no-progress`
 
 ## Integration Examples
 
 ### With Git Hooks
-Create a pre-commit hook to generate code documentation:
+
+Create a pre-commit hook to generate code documentation. The destination may sit
+inside the source tree; gibidify never includes its own output file:
 
 ```bash
 #!/bin/sh
@@ -166,50 +178,63 @@ git add docs/current-code.md
 ```
 
 ### With Make
-Add to your Makefile:
+
+Add to your Makefile. `.RECIPEPREFIX` (GNU make 3.82+) makes `>` start a
+recipe line, so the snippet works when pasted; with the default prefix the
+recipe lines must start with a tab:
 
 ```makefile
+.RECIPEPREFIX = >
+
 .PHONY: code-dump
 code-dump:
-  gibidify -source ./src -format json -destination dist/codebase.json
+> mkdir -p dist
+> gibidify -source ./src -format json -destination dist/codebase.json
 
 .PHONY: docs
-docs:  
-  gibidify -source . -format markdown -destination docs/codebase.md
+docs:
+> gibidify -source . -format markdown -destination docs/codebase.md
 ```
 
 ### Docker Usage
+
 ```dockerfile
 FROM golang:1.26-alpine
 RUN go install github.com/ivuorinen/gibidify@latest
 WORKDIR /workspace
 COPY . .
-RUN gibidify -source . -format json -destination /output/codebase.json
+RUN mkdir -p /output && \
+    gibidify -source . -format json -destination /output/codebase.json
 ```
 
 ## Common Use Cases
 
 ### 1. Code Review Preparation
+
 ```bash
 gibidify -source ./feature-branch -format markdown -destination review.md
 ```
 
 ### 2. AI Code Analysis
+
 ```bash
 gibidify -source ./src -format json -destination ai-input.json
 ```
 
 ### 3. Documentation Generation
+
 ```bash
 gibidify -source ./lib -format markdown -destination api-docs.md
 ```
 
 ### 4. Backup Creation  
+
 ```bash
 gibidify -source ./project -format yaml -destination backup-$(date +%Y%m%d).yaml
 ```
 
 ### 5. Code Migration Prep
+
 ```bash
 gibidify -source ./legacy-code -format json -destination migration-analysis.json
 ```

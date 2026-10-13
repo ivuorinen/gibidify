@@ -2,11 +2,35 @@
 # gibidify Configuration Example
 # =============================
 # This file demonstrates all available configuration options with their defaults
-# and validation ranges. Copy this file to one of the following locations:
+# and validation ranges. Copy this file to the first location that applies:
 #
-# - $XDG_CONFIG_HOME/gibidify/config.yaml
+# - $XDG_CONFIG_HOME/gibidify/config.yaml (XDG_CONFIG_HOME must be absolute)
 # - $HOME/.config/gibidify/config.yaml
-# - Current directory (if no gibidify.yaml output file exists)
+#
+# Unknown keys are reported as warnings and ignored. A file that cannot be read
+# or parsed, or any value that fails validation, stops gibidify with exit
+# status 1 instead of running on the defaults.
+
+# =============================================================================
+# EXAMPLES OF COMMON CONFIGURATIONS
+# =============================================================================
+
+# Example 1: Minimal configuration for quick code review
+# fileSizeLimit: 1048576  # 1MB limit for faster processing
+# maxConcurrency: 4       # Lower concurrency for stability
+# ignoreDirectories: ["node_modules", "vendor"]
+
+# Example 2: High-performance configuration for large codebases
+# fileSizeLimit: 10485760     # 10MB limit
+# maxConcurrency: 16          # High concurrency
+# resourceLimits:
+#   maxFiles: 100000          # Process more files
+#   maxTotalSize: 10737418240 # 10GB total size
+
+# Example 3: Security-focused configuration
+# resourceLimits:
+#   maxFiles: 1000            # Strict file limit
+#   maxTotalSize: 104857600   # 100MB total limit
 
 # =============================================================================
 # BASIC FILE PROCESSING SETTINGS
@@ -16,46 +40,26 @@
 # Default: 5242880 (5MB), Min: 1024 (1KB), Max: 104857600 (100MB)
 fileSizeLimit: 5242880
 
-# Directories to ignore during file system traversal
-# These are sensible defaults for most projects
+# Directory names to skip at any depth (names only, no "/"). Setting this
+# replaces the default list. .gitignore and .ignore files are honoured as well,
+# and .git, .hg and .svn are always skipped whatever this list holds.
+# Default: vendor, node_modules, dist, build, target, bower_components, cache, tmp
 ignoreDirectories:
   - vendor # Go vendor directory
   - node_modules # Node.js dependencies
-  - .git # Git repository data
   - dist # Distribution/build output
   - build # Build artifacts
   - target # Maven/Rust build directory
   - bower_components # Bower dependencies
   - cache # Various cache directories
   - tmp # Temporary files
-  - .next # Next.js build directory
-  - .nuxt # Nuxt.js build directory
   - .vscode # VS Code settings
   - .idea # IntelliJ IDEA settings
   - __pycache__ # Python cache
-  - .pytest_cache # Pytest cache
 
-# Maximum number of worker goroutines for concurrent processing
-# Default: number of CPU cores, Min: 1, Max: 100
+# Optional ceiling for the -concurrency flag (which defaults to the number of
+# CPU cores). Unset by default: no ceiling. Min: 1, Max: 100
 # maxConcurrency: 8
-
-# Supported output formats for validation
-# Default: ["json", "yaml", "markdown"]
-# supportedFormats:
-#   - json
-#   - yaml
-#   - markdown
-
-# File patterns to include (glob patterns)
-# Default: empty (all files), useful for filtering specific file types
-# filePatterns:
-#   - "*.go"
-#   - "*.py"
-#   - "*.js"
-#   - "*.ts"
-#   - "*.java"
-#   - "*.c"
-#   - "*.cpp"
 
 # =============================================================================
 # FILE TYPE DETECTION AND CUSTOMIZATION
@@ -66,14 +70,16 @@ fileTypes:
   # Default: true
   enabled: true
 
-  # Add custom image extensions (beyond built-in: .png, .jpg, .jpeg, .gif, .svg, .ico, .bmp, .tiff, .webp)
+  # Add custom image extensions (the built-in list is getImageExtensions in
+  # fileproc/extensions.go)
   customImageExtensions:
     - .avif # AV1 Image File Format
     - .heic # High Efficiency Image Container
     - .jxl # JPEG XL
     - .webp # WebP (if not already included)
 
-  # Add custom binary extensions (beyond built-in: .exe, .dll, .so, .dylib, .a, .lib, .obj, .o)
+  # Add custom binary extensions (the built-in list is getBinaryExtensions in
+  # fileproc/extensions.go)
   customBinaryExtensions:
     - .custom # Custom binary format
     - .proprietary # Proprietary format
@@ -119,24 +125,3 @@ resourceLimits:
   # Maximum total size of all files combined in bytes
   # Default: 1073741824 (1GB), Min: 1048576 (1MB), Max: 107374182400 (100GB)
   maxTotalSize: 1073741824
-
-# =============================================================================
-# EXAMPLES OF COMMON CONFIGURATIONS
-# =============================================================================
-
-# Example 1: Minimal configuration for quick code review
-# fileSizeLimit: 1048576  # 1MB limit for faster processing
-# maxConcurrency: 4       # Lower concurrency for stability
-# ignoreDirectories: [".git", "node_modules", "vendor"]
-
-# Example 2: High-performance configuration for large codebases
-# fileSizeLimit: 10485760     # 10MB limit
-# maxConcurrency: 16          # High concurrency
-# resourceLimits:
-#   maxFiles: 100000          # Process more files
-#   maxTotalSize: 10737418240 # 10GB total size
-
-# Example 3: Security-focused configuration
-# resourceLimits:
-#   maxFiles: 1000            # Strict file limit
-#   maxTotalSize: 104857600   # 100MB total limit
