@@ -9,7 +9,7 @@ lockfile = true
 [tools]
 actionlint = "1.7.12"
 checkmake = "0.3.2"
-editorconfig-checker = "3.11.3"
+editorconfig-checker = "4.0.2"
 gitleaks = "8.30.1"
 "go:golang.org/x/tools/cmd/goimports" = "0.47.0"
 # govulncheck deliberately tracks latest: the vuln DB is fetched live from
