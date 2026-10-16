@@ -7,26 +7,25 @@ import (
 	"github.com/ivuorinen/gibidify/cli"
 )
 
-// TestMainFunctionComponents tests the components used by main() function.
-// Since main() calls os.Exit, we can't test it directly, but we can test
-// the components it uses to increase coverage metrics.
+// TestMainFunctionComponents tests the components exitCode() builds to report
+// errors. The exit statuses themselves are covered by TestExitCode.
 func TestMainFunctionComponents(t *testing.T) {
-	// Test UI manager creation (used in main())
+	// Test UI manager creation (used in exitCode())
 	ui := cli.NewUIManager()
 	if ui == nil {
 		t.Error("Expected NewUIManager to return non-nil UIManager")
 	}
 
-	// Test error formatter creation (used in main())
+	// Test error formatter creation (used in exitCode())
 	errorFormatter := cli.NewErrorFormatter(ui)
 	if errorFormatter == nil {
 		t.Error("Expected NewErrorFormatter to return non-nil ErrorFormatter")
 	}
 }
 
-// TestUserErrorClassification tests the error classification used in main().
+// TestUserErrorClassification tests the error classification used in exitCode().
 func TestUserErrorClassification(t *testing.T) {
-	// Test the cli.IsUserError function that main() uses for error classification
+	// Test the cli.IsUserError function that exitCode() uses for error classification
 
 	// Create a user error (MissingSourceError is a user error)
 	userErr := &cli.MissingSourceError{}

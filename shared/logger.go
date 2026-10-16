@@ -22,6 +22,7 @@ type Logger interface {
 	WithFields(fields map[string]any) Logger
 	SetLevel(level LogLevel)
 	SetOutput(output io.Writer)
+	Output() io.Writer
 }
 
 // LogLevel represents available log levels.
@@ -46,6 +47,13 @@ func (s *swappableWriter) set(w io.Writer) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.w = w
+}
+
+func (s *swappableWriter) get() io.Writer {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.w
 }
 
 // logService implements the Logger interface on top of the standard log/slog.
@@ -155,6 +163,12 @@ func (l *logService) SetLevel(level LogLevel) {
 // SetOutput sets the output destination for the whole logger tree.
 func (l *logService) SetOutput(output io.Writer) {
 	l.out.set(output)
+}
+
+// Output returns the output destination of the whole logger tree, so a caller
+// that redirects it can put it back.
+func (l *logService) Output() io.Writer {
+	return l.out.get()
 }
 
 // ParseLogLevel parses string log level to LogLevel.

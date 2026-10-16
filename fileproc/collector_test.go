@@ -97,9 +97,10 @@ func TestCollectFilesReportsOversizedFiles(t *testing.T) {
 	var logs strings.Builder
 	logger := shared.GetLogger()
 	logger.SetLevel(shared.LogLevelWarn)
+	origOutput := logger.Output()
 	logger.SetOutput(&logs)
 	t.Cleanup(func() {
-		logger.SetOutput(os.Stderr)
+		logger.SetOutput(origOutput)
 		config.Reset()
 	})
 

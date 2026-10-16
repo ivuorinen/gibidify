@@ -6,58 +6,6 @@ import (
 	"testing"
 )
 
-// TestAssertError tests the AssertError function.
-func TestAssertError(t *testing.T) {
-	t.Run(
-		TestCaseSuccessCases, func(t *testing.T) {
-			// Test expect error and get error
-			t.Run(
-				"expect error and get error", func(t *testing.T) {
-					AssertError(t, errors.New(TestErrTestErrorMsg), true, TestCaseTestOperation)
-					// If we get here, the assertion passed
-				},
-			)
-
-			// Test expect no error and get no error
-			t.Run(
-				"expect no error and get no error", func(t *testing.T) {
-					AssertError(t, nil, false, "successful operation")
-					// If we get here, the assertion passed
-				},
-			)
-
-			// Test with empty operation name
-			t.Run(
-				TestCaseEmptyOperationName, func(t *testing.T) {
-					AssertError(t, nil, false, "")
-					// Should still work with empty operation
-				},
-			)
-
-			// Test with complex operation name
-			t.Run(
-				"complex operation name", func(t *testing.T) {
-					AssertError(t, nil, false, "complex operation with special chars: !@#$%^&*()")
-					// Should handle special characters
-				},
-			)
-		},
-	)
-
-	// Test edge cases
-	t.Run(
-		"edge cases", func(t *testing.T) {
-			// Test various error types
-			t.Run(
-				TestCaseDifferentErrorTypes, func(t *testing.T) {
-					AssertError(t, ErrTestError, true, "using ErrTestError")
-					AssertError(t, errors.New("wrapped: original"), true, "wrapped error")
-				},
-			)
-		},
-	)
-}
-
 // TestAssertNoError tests the AssertNoError function.
 func TestAssertNoError(t *testing.T) {
 	t.Run(
@@ -85,8 +33,7 @@ func TestAssertNoError(t *testing.T) {
 		},
 	)
 
-	// We can't easily test the failure case in a unit test since it would cause test failure
-	// But we can verify the function signature and basic functionality
+	// The failure branch is covered with a fake testing.TB in TestHelperFailureBranches.
 	t.Run(
 		TestCaseFunctionAvailability, func(t *testing.T) {
 			// Verify the function doesn't panic with valid inputs
@@ -232,7 +179,6 @@ func TestAssertionHelpers(t *testing.T) {
 	t.Run(
 		"error types compatibility", func(t *testing.T) {
 			// Test that all assertion functions work with ErrTestError
-			AssertError(t, ErrTestError, true, "ErrTestError compatibility")
 			AssertExpectedError(t, ErrTestError, "ErrTestError expected")
 			AssertErrorContains(t, ErrTestError, "test", "ErrTestError contains")
 		},
@@ -258,7 +204,6 @@ func TestAssertionHelpers(t *testing.T) {
 				t.Run(
 					"operation_"+string(rune(i+'a')), func(t *testing.T) {
 						// Test each assertion function with this operation name
-						AssertError(t, nil, false, op)
 						AssertNoError(t, nil, op)
 						AssertExpectedError(t, errors.New("test"), op)
 						AssertErrorContains(t, errors.New(TestErrTestErrorMsg), "test", op)
@@ -286,7 +231,6 @@ func TestAssertionHelpers(t *testing.T) {
 				t.Run(
 					"error_message_"+string(rune(i+'a')), func(t *testing.T) {
 						err := errors.New(msg)
-						AssertError(t, err, true, TestCaseMessageTest)
 						AssertExpectedError(t, err, TestCaseMessageTest)
 						if msg != "" {
 							// Only test contains if message is not empty

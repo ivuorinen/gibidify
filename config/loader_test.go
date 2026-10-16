@@ -57,7 +57,7 @@ ignoreDirectories:
 	testutil.CreateTestFile(t, tmpDir, "config.yaml", configContent)
 
 	// Reset the store and point it at the new config path
-	config.Reset()
+	isolateStore(t)
 	config.AddConfigPath(tmpDir)
 
 	testutil.MustSucceed(t, config.ReadInConfig(), "reading config file")
@@ -89,6 +89,8 @@ func loadWithConfig(t *testing.T, content string) (string, error) {
 		testutil.CreateTestFile(t, dir, "config.yaml", []byte(content))
 	}
 
+	t.Cleanup(config.Reset)
+
 	var err error
 	out := captureWarnings(t, func() {
 		config.Reset()
@@ -104,8 +106,9 @@ func captureWarnings(t *testing.T, fn func()) string {
 	var buf bytes.Buffer
 	logger := shared.GetLogger()
 	logger.SetLevel(shared.LogLevelWarn)
+	origOutput := logger.Output()
 	logger.SetOutput(&buf)
-	t.Cleanup(func() { logger.SetOutput(os.Stderr) })
+	t.Cleanup(func() { logger.SetOutput(origOutput) })
 	fn()
 
 	return buf.String()
@@ -211,6 +214,7 @@ func TestLoadConfigIgnoresRelativeXDG(t *testing.T) {
 		t.Fatal(err)
 	}
 	testutil.CreateTestFile(t, dir, "config.yaml", []byte("fileSizeLimit: 4096\n"))
+	t.Cleanup(config.Reset)
 
 	var err error
 	out := captureWarnings(t, func() {
