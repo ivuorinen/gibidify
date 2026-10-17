@@ -210,9 +210,9 @@ checksum = "sha256:1314008898bd40df77af4b014f777f08873dbdfbcd3d92308728ee03304fe
 url = "https://dl.google.com/go/go1.27.2.windows-amd64.zip"
 
 [[tools."go:github.com/mgechev/revive"]]
-version = "1.11.0"
+version = "1.17.1"
 backend = "go:github.com/mgechev/revive"
-specifiers = ["1.11.0"]
+specifiers = ["v1.17.1"]
 
 [[tools."go:github.com/securego/gosec/v2/cmd/gosec"]]
 version = "2.29.1-0.20261009120814-7b1b5cebe007"

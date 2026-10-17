@@ -31,7 +31,7 @@ opengrep = "1.30.2"
 prek = "0.5.5"
 # Pinned to 1.11.0: newer revive added var-naming rules that flag the existing
 # `shared` package name, and revive.toml is intentionally off-limits.
-"go:github.com/mgechev/revive" = "1.11.0"
+"go:github.com/mgechev/revive" = "v1.17.1"
 shfmt = "3.14.1"
 "go:honnef.co/go/tools/cmd/staticcheck" = "0.8.2"
 trivy = "0.75.0"
