@@ -34,7 +34,7 @@ prek = "0.5.5"
 "go:github.com/mgechev/revive" = "1.11.0"
 shfmt = "3.14.1"
 "go:honnef.co/go/tools/cmd/staticcheck" = "0.8.2"
-trivy = "0.75.0"
+trivy = "0.76.0"
 # yamllint (pypi backend) installs from its uv.lock in .mise/locks/, which
 # needs uv >= 0.12.10 and a mise-installed Python; mise does not use the
 # runner's system python3 for it.
