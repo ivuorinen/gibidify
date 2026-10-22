@@ -288,44 +288,44 @@ backend = "npm:markdownlint-cli2"
 specifiers = ["0.23.3"]
 
 [[tools.opengrep]]
-version = "1.30.2"
+version = "1.31.0"
 backend = "aqua:opengrep/opengrep"
-specifiers = ["1.30.2"]
+specifiers = ["1.31.0"]
 
 [tools.opengrep."platforms.linux-arm64"]
-checksum = "sha256:90acea5df4b733083f388d4feeb250ca802f671b33d1f222653d1e571dd2b0d8"
-url = "https://github.com/opengrep/opengrep/releases/download/v1.30.2/opengrep_manylinux_aarch64"
-url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/619741262"
+checksum = "sha256:2b713a29a00237f85408b83002fc111db5b94c7fa8d263f0a93184a960655d9d"
+url = "https://github.com/opengrep/opengrep/releases/download/v1.31.0/opengrep_manylinux_aarch64"
+url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/643824127"
 
 [tools.opengrep."platforms.linux-arm64-musl"]
-checksum = "sha256:90acea5df4b733083f388d4feeb250ca802f671b33d1f222653d1e571dd2b0d8"
-url = "https://github.com/opengrep/opengrep/releases/download/v1.30.2/opengrep_manylinux_aarch64"
-url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/619741262"
+checksum = "sha256:2b713a29a00237f85408b83002fc111db5b94c7fa8d263f0a93184a960655d9d"
+url = "https://github.com/opengrep/opengrep/releases/download/v1.31.0/opengrep_manylinux_aarch64"
+url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/643824127"
 
 [tools.opengrep."platforms.linux-x64"]
-checksum = "sha256:a66aa3278457f02b287b985a45b6762aebcaba5000f2689245fd1ed86d1456c7"
-url = "https://github.com/opengrep/opengrep/releases/download/v1.30.2/opengrep_manylinux_x86"
-url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/619741249"
+checksum = "sha256:dbbe3c2058dbe600c449a8ba22ea79a1643a6660658400090d0323a8d0d31147"
+url = "https://github.com/opengrep/opengrep/releases/download/v1.31.0/opengrep_manylinux_x86"
+url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/643824125"
 
 [tools.opengrep."platforms.linux-x64-musl"]
-checksum = "sha256:a66aa3278457f02b287b985a45b6762aebcaba5000f2689245fd1ed86d1456c7"
-url = "https://github.com/opengrep/opengrep/releases/download/v1.30.2/opengrep_manylinux_x86"
-url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/619741249"
+checksum = "sha256:dbbe3c2058dbe600c449a8ba22ea79a1643a6660658400090d0323a8d0d31147"
+url = "https://github.com/opengrep/opengrep/releases/download/v1.31.0/opengrep_manylinux_x86"
+url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/643824125"
 
 [tools.opengrep."platforms.macos-arm64"]
-checksum = "sha256:f1aaa30b88959cb82522c4e1475816278a1f161f994509a518453c0455f9d24b"
-url = "https://github.com/opengrep/opengrep/releases/download/v1.30.2/opengrep_osx_arm64"
-url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/619741265"
+checksum = "sha256:035dd8fd2410fe68513916df0c2895257fffafcd5314b4a118484ce8db62bedb"
+url = "https://github.com/opengrep/opengrep/releases/download/v1.31.0/opengrep_osx_arm64"
+url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/643824139"
 
 [tools.opengrep."platforms.macos-x64"]
-checksum = "sha256:fcf47da30d5c3a11119f2ec4e0d1ee55e3c3822e8f90d909bf9f33dfce99044a"
-url = "https://github.com/opengrep/opengrep/releases/download/v1.30.2/opengrep_osx_x86"
-url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/619741269"
+checksum = "sha256:2f0d0c7a41a3e48dc02c30dabc4851bc37c18f021b46c9ae54b15177ece088ee"
+url = "https://github.com/opengrep/opengrep/releases/download/v1.31.0/opengrep_osx_x86"
+url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/643824141"
 
 [tools.opengrep."platforms.windows-x64"]
-checksum = "sha256:523b1074a81006436fec457e2daccf7cf7cacc04000d4482f1072a1b19bc6372"
-url = "https://github.com/opengrep/opengrep/releases/download/v1.30.2/opengrep_windows_x86.exe"
-url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/619741282"
+checksum = "sha256:fdd2e22549e7000ceb66976a01366db6910760b2aa4e457b6bda62545070d26a"
+url = "https://github.com/opengrep/opengrep/releases/download/v1.31.0/opengrep_windows_x86.exe"
+url_api = "https://api.github.com/repos/opengrep/opengrep/releases/assets/643824154"
 
 [[tools.prek]]
 version = "0.5.5"
