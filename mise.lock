@@ -282,10 +282,10 @@ url_api = "https://api.github.com/repos/goreleaser/goreleaser/releases/assets/62
 provenance = "github-attestations"
 
 [[tools.markdownlint-cli2]]
-version = "0.23.3"
-aube = { path = ".mise/locks/markdownlint-cli2/0.23.3", digest = "sha256:39523bb981360d43f75c10a114ee091e42ff45a76d3c2c666a283ff017bd4926" }
+version = "0.24.0"
+aube = { path = ".mise/locks/markdownlint-cli2/0.24.0", digest = "sha256:689e86a3f956c317400e5d3bcf0915902a43dbbb8aeec7210a3aa3efb6859684" }
 backend = "npm:markdownlint-cli2"
-specifiers = ["0.23.3"]
+specifiers = ["0.24.0"]
 
 [[tools.opengrep]]
 version = "1.30.2"
