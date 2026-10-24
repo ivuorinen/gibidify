@@ -28,7 +28,7 @@ goreleaser = "2.18.3"
 "go:github.com/securego/gosec/v2/cmd/gosec" = "2.29.1-0.20261009120814-7b1b5cebe007"
 markdownlint-cli2 = "0.23.3"
 opengrep = "1.30.2"
-prek = "0.5.5"
+prek = "0.5.7"
 # Pinned to 1.11.0: newer revive added var-naming rules that flag the existing
 # `shared` package name, and revive.toml is intentionally off-limits.
 "go:github.com/mgechev/revive" = "v1.17.1"
