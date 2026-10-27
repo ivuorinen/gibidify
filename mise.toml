@@ -26,7 +26,7 @@ goreleaser = "2.18.3"
 # still exits 0). Move back to a tagged release once one includes x/tools
 # v0.51.0 or newer.
 "go:github.com/securego/gosec/v2/cmd/gosec" = "2.29.1-0.20261009120814-7b1b5cebe007"
-markdownlint-cli2 = "0.23.3"
+markdownlint-cli2 = "0.24.0"
 opengrep = "1.30.2"
 prek = "0.5.5"
 # Pinned to 1.11.0: newer revive added var-naming rules that flag the existing
