@@ -12,7 +12,7 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/gibidify . \
 	&& ./scripts/third-party-notices.sh /out/THIRD_PARTY_NOTICES
 
 # Use a minimal base image
-FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+FROM alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 
 # Add unprivileged user with a fixed UID (Alpine uses BusyBox adduser), so the
 # runtime user resolves the same way on every host (hadolint DL3066)
