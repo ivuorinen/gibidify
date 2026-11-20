@@ -43,7 +43,7 @@ jobs:
       # Makefile targets below run them with `mise exec`. Go is set up first
       # because the go: backend tools (goimports, govulncheck) build with it.
       - name: Install tools
-        uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+        uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
 
       # The mandatory Go linters. MegaLinter (pr-lint.yml) disables GO_REVIVE
       # and has no staticcheck, so without these steps they only ran in local
