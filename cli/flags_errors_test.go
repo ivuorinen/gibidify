@@ -25,13 +25,17 @@ func parseArgs(t *testing.T, args ...string) (*Flags, error) {
 }
 
 // removedWorkingDir makes the test's working directory a directory that no
-// longer exists, so resolving a relative path fails.
+// longer exists, so resolving a relative path fails. It skips the test where
+// getcwd still resolves a removed directory (macOS).
 func removedWorkingDir(t *testing.T) {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "gone")
 	testutil.MustSucceed(t, os.Mkdir(dir, 0o750), "creating working directory")
 	t.Chdir(dir)
 	testutil.MustSucceed(t, os.Remove(dir), "removing working directory")
+	if _, err := os.Getwd(); err == nil {
+		t.Skip("getcwd still succeeds for a removed directory on this system")
+	}
 }
 
 // TestParseFlagsRejectsInvalidInput verifies ParseFlags fails, and stays

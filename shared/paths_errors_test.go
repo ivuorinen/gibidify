@@ -85,6 +85,9 @@ func TestPathResolutionWithoutWorkingDirectory(t *testing.T) {
 	if err := os.Remove(gone); err != nil {
 		t.Fatalf("removing working directory: %v", err)
 	}
+	if _, err := os.Getwd(); err == nil {
+		t.Skip("getcwd still succeeds for a removed directory on this system")
+	}
 
 	if abs, err := AbsolutePath("relative"); err == nil {
 		t.Errorf("AbsolutePath() = %q, want error without a working directory", abs)
