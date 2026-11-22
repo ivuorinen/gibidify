@@ -215,9 +215,9 @@ backend = "go:github.com/mgechev/revive"
 specifiers = ["v1.17.1"]
 
 [[tools."go:github.com/securego/gosec/v2/cmd/gosec"]]
-version = "2.29.1-0.20261009120814-7b1b5cebe007"
+version = "2.30.0"
 backend = "go:github.com/securego/gosec/v2/cmd/gosec"
-specifiers = ["2.29.1-0.20261009120814-7b1b5cebe007"]
+specifiers = ["v2.30.0"]
 
 [[tools."go:golang.org/x/tools/cmd/goimports"]]
 version = "0.47.0"
