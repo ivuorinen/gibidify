@@ -27,7 +27,7 @@ goreleaser = "2.20.3"
 # v0.51.0 or newer.
 "go:github.com/securego/gosec/v2/cmd/gosec" = "v2.30.0"
 markdownlint-cli2 = "0.24.2"
-opengrep = "1.33.1"
+opengrep = "2.0.0"
 prek = "0.5.11"
 # Pinned to 1.11.0: newer revive added var-naming rules that flag the existing
 # `shared` package name, and revive.toml is intentionally off-limits.
